@@ -48,30 +48,25 @@ function center(text, width = 38) {
 
 // ✅ Banner compacto (móvil friendly)
 function banner() {
-  const WIDTH = 38
+  const WIDTH = 34 // ancho interno del cuadro (ajustado para móvil)
+  const top    = "╔" + "═".repeat(WIDTH) + "╗"
+  const mid    = "║" + " ".repeat(WIDTH) + "║"
+  const bottom = "╚" + "═".repeat(WIDTH) + "╝"
 
-  const pad = (s) => {
-    s = String(s)
-    if (s.length > WIDTH) s = s.slice(0, WIDTH)
-    return s + " ".repeat(Math.max(0, WIDTH - s.length))
+  const center = (text) => {
+    text = String(text)
+    if (text.length > WIDTH) text = text.slice(0, WIDTH)
+    const left = Math.floor((WIDTH - text.length) / 2)
+    const right = WIDTH - text.length - left
+    return "║" + " ".repeat(left) + text + " ".repeat(right) + "║"
   }
 
-  const center = (s) => {
-    s = String(s)
-    if (s.length > WIDTH) s = s.slice(0, WIDTH)
-    const left = Math.floor((WIDTH - s.length) / 2)
-    const right = WIDTH - s.length - left
-    return " ".repeat(left) + s + " ".repeat(right)
-  }
-
-  const POWER = "𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈"
-
-  console.log(chalk.cyanBright("╔" + "═".repeat(WIDTH) + "╗"))
-  console.log(chalk.cyanBright("║") + chalk.cyanBright(pad("")) + chalk.cyanBright("║"))
-  console.log(chalk.cyanBright("║") + chalk.cyanBright(center(POWER)) + chalk.cyanBright("║"))
-  console.log(chalk.cyanBright("║") + chalk.magentaBright(center("Jose C  -  Kathy")) + chalk.cyanBright("║"))
-  console.log(chalk.cyanBright("║") + chalk.cyanBright(pad("")) + chalk.cyanBright("║"))
-  console.log(chalk.cyanBright("╚" + "═".repeat(WIDTH) + "╝"))
+  console.log(chalk.cyanBright(top))
+  console.log(chalk.cyanBright(mid))
+  console.log(chalk.cyanBright(center("POWERED BY")))
+  console.log(chalk.magentaBright(center("Jose C  -  Kathy")))
+  console.log(chalk.cyanBright(mid))
+  console.log(chalk.cyanBright(bottom))
   console.log("")
 }
 
