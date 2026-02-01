@@ -49,35 +49,41 @@ function center(text, width = 38) {
 // ✅ Banner (estilo B: limpio, pro, sin cajas raras)
 
 
+// ─────────────────────────────────────────────
+// Helpers para centrar texto aunque tenga colores (ANSI)
+// ─────────────────────────────────────────────
+const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
+const padCenterAnsi = (text, width) => {
+  const raw = stripAnsi(text)
+  if (raw.length >= width) return text
+  const left = Math.floor((width - raw.length) / 2)
+  const right = width - raw.length - left
+  return " ".repeat(left) + text + " ".repeat(right)
+}
+
+// ─────────────────────────────────────────────
+// ✅ Banner estilo “segunda imagen”
+// ─────────────────────────────────────────────
 function banner() {
-  const WIDTH = 46        // ✅ ancho fijo (móvil friendly). Si lo quieres más ancho: 48
-  const NUDGE = 1         // ✅ empuja 1 espacio a la derecha (si lo ves pasado, pon 0)
+  const W = 46 // ancho TOTAL del banner (corto y mobile-friendly)
 
-  const center = (text = "") => {
-    text = String(text)
-    if (text.length > WIDTH) text = text.slice(0, WIDTH)
-    const left = Math.floor((WIDTH - text.length) / 2) + NUDGE
-    const right = Math.max(0, WIDTH - text.length - left)
-    return " ".repeat(left) + text + " ".repeat(right)
-  }
+  const label = "( POWERED BY )"
+  const leftLen = Math.floor((W - label.length) / 2)
+  const rightLen = W - label.length - leftLen
 
-  const rule = (label) => {
-    // crea: ────────( LABEL )────────
-    const t = `( ${label} )`
-    const side = Math.floor((WIDTH - t.length) / 2)
-    const left = "─".repeat(Math.max(0, side))
-    const right = "─".repeat(Math.max(0, WIDTH - t.length - left.length))
-    return left + t + right
-  }
+  const topLine =
+    chalk.cyanBright("─".repeat(leftLen)) +
+    chalk.cyan(label) +
+    chalk.cyanBright("─".repeat(rightLen))
 
-  console.log("") // espacio arriba
+  const name = chalk.yellowBright("José C — Kathy")
+  const nameLine = padCenterAnsi(name, W)
 
-  // ─── línea + título + línea (como tu imagen #2)
-  console.log(chalk.gray(center(rule("POWERED BY"))))
-  console.log(chalk.yellowBright.bold(center("José C — Kathy")))
-  console.log(chalk.gray(center("─".repeat(WIDTH))))
+  const bottomLine = chalk.cyanBright("─".repeat(W))
 
-  console.log("") // espacio abajo
+  console.log("\n" + topLine)
+  console.log(nameLine)
+  console.log(bottomLine + "\n")
 }
 
 async function askMode() {
