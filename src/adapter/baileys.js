@@ -49,7 +49,7 @@ function center(text, width = 38) {
 // ✅ Banner (estilo B: limpio, pro, sin cajas raras)
 
 
-const stripAnsi = (s="") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
+const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 
 const centerAnsi = (txt, width) => {
   const raw = stripAnsi(txt)
@@ -60,26 +60,24 @@ const centerAnsi = (txt, width) => {
 }
 
 function banner() {
-  // Ancho real del panel (si existe). Si no, usa 60.
-  const OUT = Math.min(process.stdout.columns || 60, 60)
+  const OUT = 44       // ancho fijo para panel (evita wrap)
+  const DASH = 10      // largo de líneas a los lados (corto = no se rompe)
 
-  // Contenido interno (más corto) para que SIEMPRE se pueda centrar dentro de OUT
-  const DASH = 16 // largo de las líneas a los lados (ajusta 14–18 si quieres)
   const top =
     chalk.whiteBright("─".repeat(DASH)) +
     chalk.whiteBright("(") +
-    chalk.gray(" POWERED BY ") +      // oscuro SOLO el texto
+    chalk.gray(" POWERED BY ") +          // solo el texto en oscuro
     chalk.whiteBright(")") +
     chalk.whiteBright("─".repeat(DASH))
 
   const names = chalk.yellowBright("José C - Kathy")
+  const bottom = chalk.cyanBright("─".repeat(30))
 
-  // Línea inferior cyan (corta y centrada)
-  const bottom = chalk.cyanBright("─".repeat(34))
-
-  console.log("\n" + centerAnsi(top, OUT))
+  console.log("")
+  console.log(centerAnsi(top, OUT))
   console.log(centerAnsi(names, OUT))
-  console.log(centerAnsi(bottom, OUT) + "\n")
+  console.log(centerAnsi(bottom, OUT))
+  console.log("")
 }
 
 async function askMode() {
