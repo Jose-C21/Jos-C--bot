@@ -72,35 +72,30 @@ function banner() {
 
 async function askMode() {
   while (true) {
-    console.log(chalk.cyanBright("\n──────────────────────────────"))
-    console.log(chalk.cyanBright("VINCULACIÓN"))
-    console.log(chalk.cyanBright("──────────────────────────────"))
+    console.log(chalk.cyanBright("\nElige tu vinculación:"))
     console.log(chalk.white("  1) QR"))
-    console.log(chalk.white("  2) Código (Pairing)"))
-    console.log(chalk.cyanBright("──────────────────────────────"))
-    process.stdout.write(chalk.white("Elige 1 o 2 > "))
+    console.log(chalk.white("  2) Código (Pairing)\n"))
+    process.stdout.write(chalk.cyanBright("> "))
 
     const pick = (await inputLine()).trim()
     if (pick === "1" || pick === "2") return pick
 
-    console.log(chalk.red("Opción inválida. Escribe 1 o 2."))
+    console.log(chalk.red("Opción inválida. Escribe 1 o 2.\n"))
   }
 }
 
 async function askPhone() {
   while (true) {
-    console.log(chalk.cyanBright("\n──────────────────────────────"))
-    console.log(chalk.cyanBright("INGRESA TU NÚMERO"))
-    console.log(chalk.cyanBright("──────────────────────────────"))
-    console.log(chalk.gray("Formato: internacional (sin +)"))
-    console.log(chalk.gray("Ejemplo: 504XXXXXXXX"))
-    process.stdout.write(chalk.white("Número > "))
+    console.log(chalk.cyanBright("\nEscribe tu número (sin +):"))
+    console.log(chalk.white("Ejemplo: 504XXXXXXXX"))
+    process.stdout.write(chalk.cyanBright("> "))
 
     const phone = await inputLine()
     const clean = phone.replace(/\D/g, "")
 
     if (clean.length >= 10) return clean
-    console.log(chalk.red("Número inválido. Mínimo 10 dígitos."))
+
+    console.log(chalk.red("Número inválido. Mínimo 10 dígitos.\n"))
   }
 }
 
@@ -131,7 +126,7 @@ export async function startSock(onMessage) {
   if (!alreadyLinked && mode === "code") {
   const clean = await askPhone()
 
-  console.log(chalk.gray("\nGenerando codigo...\n"))
+  console.log(chalk.cyanBright("\nGenerando código...\n"))
 
   const code = await sock.requestPairingCode(clean)
 
@@ -144,9 +139,9 @@ export async function startSock(onMessage) {
   console.log(chalk.cyanBright("\n──────────────────────────────"))
 console.log(chalk.cyanBright("CÓDIGO GENERADO"))
 console.log(chalk.cyanBright("──────────────────────────────"))
-console.log(chalk.magentaBright(`  ${code}\n`))
-console.log(chalk.gray("WhatsApp > Dispositivos vinculados > Vincular con número"))
-console.log(chalk.gray("Ingresa el código\n"))
+console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code))
+console.log(chalk.white("WhatsApp > Dispositivos vinculados > Vincular con número"))
+console.log(chalk.white("Ingresa el código\n"))
 }
 
   sock.ev.on("connection.update", (u) => {
