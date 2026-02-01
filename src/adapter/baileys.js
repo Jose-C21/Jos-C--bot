@@ -1,4 +1,8 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers } from "baileys"
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  Browsers
+} from "baileys"
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
@@ -47,8 +51,6 @@ function center(text, width = 38) {
 }
 
 // ✅ Banner (estilo B: limpio, pro, sin cajas raras)
-
-
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 
 const centerAnsi = (txt, width) => {
@@ -80,35 +82,85 @@ function banner() {
   console.log("")
 }
 
+// ─────────────────────────────────────────────
+// ✅ UI PRO (sin emojis) - combina con el banner
+// ─────────────────────────────────────────────
+const UI = {
+  OUT: 44,
+  hrSoft(len = 34) {
+    // separador gris suave
+    console.log(centerAnsi(chalk.gray("─".repeat(len)), UI.OUT))
+  },
+  hrCyan(len = 30) {
+    // separador cyan (como tu banner)
+    console.log(centerAnsi(chalk.cyanBright("─".repeat(len)), UI.OUT))
+  },
+  title(txt) {
+    console.log(chalk.cyanBright("◆ ") + chalk.cyanBright(txt))
+  },
+  info(txt) {
+    console.log(chalk.gray("  • ") + chalk.white(txt))
+  },
+  hint(txt) {
+    console.log(chalk.gray("  • ") + chalk.gray(txt))
+  },
+  item(num, txt, highlight = false) {
+    const n = highlight ? chalk.cyanBright(String(num)) : chalk.white(String(num))
+    console.log(chalk.white("   ") + n + chalk.white(") ") + chalk.white(txt))
+  },
+  prompt(label = "▸ ") {
+    process.stdout.write(chalk.cyanBright(label))
+  },
+  error(txt) {
+    console.log(chalk.red("× ") + chalk.red(txt))
+  },
+  success(txt) {
+    console.log(chalk.greenBright(txt))
+  },
+  dim(txt) {
+    console.log(chalk.gray(txt))
+  }
+}
+
+// ─────────────────────────────────────────────
+// ✅ Menú de selección
+// ─────────────────────────────────────────────
 async function askMode() {
   while (true) {
-    console.log(chalk.cyanBright("\nElige tu vinculación:"))
-    console.log(chalk.white("  1) QR"))
-    console.log(chalk.white("  2) Código (Pairing)\n"))
-    process.stdout.write(chalk.cyanBright("> "))
+    UI.hrSoft(26)
+    UI.title("Elige tu vinculación")
+    UI.item(1, "QR")
+    UI.item(2, "Código (Pairing)", true)
+    UI.hrSoft(26)
+    UI.prompt("▸ Selecciona 1/2: ")
 
     const pick = (await inputLine()).trim()
     if (pick === "1" || pick === "2") return pick
 
-    console.log(chalk.red("Opción inválida. Escribe 1 o 2.\n"))
+    UI.error("Opción inválida. Escribe 1 o 2.")
   }
 }
 
 async function askPhone() {
   while (true) {
-    console.log(chalk.cyanBright("\nEscribe tu número (sin +):"))
-    console.log(chalk.white("Ejemplo: 504XXXXXXXX"))
-    process.stdout.write(chalk.cyanBright("> "))
+    UI.hrSoft(26)
+    UI.title("Ingresa tu número")
+    UI.hint("Formato: internacional (sin +)")
+    UI.hint("Ejemplo: 504XXXXXXXX")
+    UI.hrSoft(26)
+    UI.prompt("▸ Número: ")
 
     const phone = await inputLine()
     const clean = phone.replace(/\D/g, "")
 
     if (clean.length >= 10) return clean
-
-    console.log(chalk.red("Número inválido. Mínimo 10 dígitos.\n"))
+    UI.error("Número inválido. Mínimo 10 dígitos.")
   }
 }
 
+// ─────────────────────────────────────────────
+// ✅ Socket
+// ─────────────────────────────────────────────
 export async function startSock(onMessage) {
   const { state, saveCreds } = await useMultiFileAuthState("sessions")
   const alreadyLinked = !!state?.creds?.registered
@@ -121,7 +173,7 @@ export async function startSock(onMessage) {
     mode = pick === "2" ? "code" : "qr"
     console.log("")
   } else {
-    console.log(chalk.green("✅ Sesión ya vinculada, iniciando...\n"))
+    UI.success("Sesión ya vinculada, iniciando...\n")
   }
 
   const sock = makeWASocket({
@@ -133,33 +185,52 @@ export async function startSock(onMessage) {
 
   sock.ev.on("creds.update", saveCreds)
 
+  // ── Pairing code flow
   if (!alreadyLinked && mode === "code") {
     const clean = await askPhone()
 
-    console.log(chalk.cyanBright("\nGenerando código...\n"))
+    console.log("")
+    UI.title("Generando código")
+    UI.dim(chalk.gray("  • Espera un momento..."))
+    console.log("")
 
     const code = await sock.requestPairingCode(clean)
 
-    console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code))
-    console.log(chalk.white("WhatsApp > Dispositivos vinculados > Vincular con número"))
-    console.log(chalk.white("Ingresa el código\n"))
+    UI.hrSoft(26)
+    console.log(
+      chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code)
+    )
+    UI.info("WhatsApp > Dispositivos vinculados > Vincular con número")
+    UI.info("Ingresa el código")
+    UI.hrCyan(30)
+    console.log("")
   }
 
   sock.ev.on("connection.update", (u) => {
     const { connection, lastDisconnect, qr } = u
 
+    // ── QR flow
     if (!alreadyLinked && mode === "qr" && qr) {
-      console.log(chalk.gray("📷 Escanea el QR para vincular:\n"))
+      UI.hrSoft(26)
+      UI.title("QR de vinculación")
+      UI.info("WhatsApp > Dispositivos vinculados > Vincular dispositivo")
+      UI.info("Escanea el QR")
+      UI.hrSoft(26)
+      console.log("")
       qrcode.generate(qr, { small: true })
+      console.log("")
+      UI.hrCyan(30)
       console.log("")
     }
 
-    if (connection === "open") console.log(chalk.greenBright("✅ Conectado\n"))
+    if (connection === "open") {
+      UI.success("Conectado\n")
+    }
 
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode
       const reconnect = code !== DisconnectReason.loggedOut
-      console.log(chalk.red("⚠️ Conexión cerrada.") + " Reconnect:", reconnect, "code:", code)
+      UI.error(`Conexión cerrada. Reconnect: ${reconnect} code: ${code}`)
       if (reconnect) startSock(onMessage)
     }
   })
