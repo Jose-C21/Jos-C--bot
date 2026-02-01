@@ -50,20 +50,34 @@ function center(text, width = 38) {
 
 
 function banner() {
-  const WIDTH = 38 // prueba 38, si lo quieres un poquito más ancho: 40 o 42
+  const WIDTH = 46        // ✅ ancho fijo (móvil friendly). Si lo quieres más ancho: 48
+  const NUDGE = 1         // ✅ empuja 1 espacio a la derecha (si lo ves pasado, pon 0)
 
-  const center = (s = "") => {
-    s = String(s)
-    if (s.length > WIDTH) s = s.slice(0, WIDTH)
-    const pad = Math.floor((WIDTH - s.length) / 2)
-    return " ".repeat(pad) + s
+  const center = (text = "") => {
+    text = String(text)
+    if (text.length > WIDTH) text = text.slice(0, WIDTH)
+    const left = Math.floor((WIDTH - text.length) / 2) + NUDGE
+    const right = Math.max(0, WIDTH - text.length - left)
+    return " ".repeat(left) + text + " ".repeat(right)
   }
 
-  console.log("")
-  console.log(chalk.cyanBright(center("[ POWERED BY ]")))
-  console.log(chalk.yellowBright(center("José C  -  Kathy")))
-  console.log(chalk.gray(center("──────────────")))
-  console.log("")
+  const rule = (label) => {
+    // crea: ────────( LABEL )────────
+    const t = `( ${label} )`
+    const side = Math.floor((WIDTH - t.length) / 2)
+    const left = "─".repeat(Math.max(0, side))
+    const right = "─".repeat(Math.max(0, WIDTH - t.length - left.length))
+    return left + t + right
+  }
+
+  console.log("") // espacio arriba
+
+  // ─── línea + título + línea (como tu imagen #2)
+  console.log(chalk.gray(center(rule("POWERED BY"))))
+  console.log(chalk.yellowBright.bold(center("José C — Kathy")))
+  console.log(chalk.gray(center("─".repeat(WIDTH))))
+
+  console.log("") // espacio abajo
 }
 
 async function askMode() {
