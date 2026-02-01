@@ -49,8 +49,6 @@ function center(text, width = 38) {
 // ✅ Banner (estilo B: limpio, pro, sin cajas raras)
 
 
-
-// Quita colores para medir bien y centrar real
 const stripAnsi = (s="") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 
 const centerAnsi = (txt, width) => {
@@ -62,32 +60,26 @@ const centerAnsi = (txt, width) => {
 }
 
 function banner() {
-  const W = 42 // 👈 ajusta 36–42 si tu panel cambia
+  // Ancho real del panel (si existe). Si no, usa 60.
+  const OUT = Math.min(process.stdout.columns || 60, 60)
 
-  // texto POWERED BY (oscuro como antes)
-  const poweredTxt = "( POWERED BY )"
-  const powered = chalk.gray(poweredTxt) // oscuro (no cyan)
+  // Contenido interno (más corto) para que SIEMPRE se pueda centrar dentro de OUT
+  const DASH = 16 // largo de las líneas a los lados (ajusta 14–18 si quieres)
+  const top =
+    chalk.whiteBright("─".repeat(DASH)) +
+    chalk.whiteBright("(") +
+    chalk.gray(" POWERED BY ") +      // oscuro SOLO el texto
+    chalk.whiteBright(")") +
+    chalk.whiteBright("─".repeat(DASH))
 
-  // línea superior: "──── ( POWERED BY ) ────" en gris claro
-  const rawPoweredLen = poweredTxt.length
-  const usable = Math.max(0, W - rawPoweredLen)
-  const leftLen = Math.floor(usable / 2)
-  const rightLen = usable - leftLen
+  const names = chalk.yellowBright("José C - Kathy")
 
-  const topLine =
-    chalk.whiteBright("─".repeat(leftLen)) +
-    powered +
-    chalk.whiteBright("─".repeat(rightLen))
+  // Línea inferior cyan (corta y centrada)
+  const bottom = chalk.cyanBright("─".repeat(34))
 
-  // nombre centrado (amarillo)
-  const names = centerAnsi(chalk.yellowBright("José C - Kathy"), W)
-
-  // línea inferior cyan, corta y centrada (como tu imagen)
-  const bottomLine = centerAnsi(chalk.cyanBright("─".repeat(28)), W)
-
-  console.log("\n" + centerAnsi(topLine, W))
-  console.log(names)
-  console.log(bottomLine + "\n")
+  console.log("\n" + centerAnsi(top, OUT))
+  console.log(centerAnsi(names, OUT))
+  console.log(centerAnsi(bottom, OUT) + "\n")
 }
 
 async function askMode() {
