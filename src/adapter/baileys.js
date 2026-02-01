@@ -49,7 +49,7 @@ function center(text, width = 38) {
 // ✅ Banner compacto (móvil friendly)
 function banner() {
   line()
-  const title = figlet.textSync("Jose C", { font: "Small" }).split("\n")
+  const title = figlet.textSync("POWERED BY", { font: "Small" }).split("\n")
 
   // recorta líneas vacías y limita ancho para que no se vea feo
   const cleaned = title
@@ -59,7 +59,7 @@ function banner() {
 
   for (const l of cleaned) console.log(chalk.cyanBright(l))
 
-  console.log(chalk.magentaBright(center("Powered by José C - Kathy")))
+  console.log(chalk.magentaBright(center("José C - Kathy")))
   line()
   console.log("")
 }
