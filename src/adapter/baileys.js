@@ -149,11 +149,19 @@ export async function startSock(onMessage) {
 
     const code = await sock.requestPairingCode(clean)
 
-    line()
-    console.log(chalk.greenBright("🔢 CÓDIGO: ") + chalk.whiteBright(code))
-    line()
-    console.log(chalk.white("WhatsApp → Dispositivos vinculados → Vincular con número → ingresa el código\n"))
-  }
+const W = 34
+const top = "┌" + "─".repeat(W) + "┐"
+const bot = "└" + "─".repeat(W) + "┘"
+const row = (t = "") => "│" + t.padEnd(W, " ") + "│"
+
+console.log(chalk.cyanBright(top))
+console.log(chalk.cyanBright(row("  CODIGO GENERADO")))
+console.log(chalk.cyanBright(row("")))
+console.log(chalk.magentaBright(row(("  " + code).slice(0, W))))
+console.log(chalk.cyanBright(row("")))
+console.log(chalk.cyanBright(bot))
+console.log(chalk.gray("WhatsApp > Dispositivos vinculados > Vincular con numero"))
+console.log(chalk.gray("Ingresa el codigo\n"))
 
   sock.ev.on("connection.update", (u) => {
     const { connection, lastDisconnect, qr } = u
