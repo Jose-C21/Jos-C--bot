@@ -49,10 +49,10 @@ function center(text, width = 38) {
 // ✅ Banner (estilo B: limpio, pro, sin cajas raras)
 
 
-// ─────────────────────────────────────────────
-// Helpers para centrar texto aunque tenga colores (ANSI)
-// ─────────────────────────────────────────────
+
+// Quita colores ANSI para centrar bien
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
+
 const padCenterAnsi = (text, width) => {
   const raw = stripAnsi(text)
   if (raw.length >= width) return text
@@ -61,24 +61,24 @@ const padCenterAnsi = (text, width) => {
   return " ".repeat(left) + text + " ".repeat(right)
 }
 
-// ─────────────────────────────────────────────
-// ✅ Banner estilo “segunda imagen”
-// ─────────────────────────────────────────────
 function banner() {
-  const W = 46 // ancho TOTAL del banner (corto y mobile-friendly)
+  const W = 38 // 👈 MÁS CORTO (móvil friendly). Ajusta 36–42 si quieres.
 
   const label = "( POWERED BY )"
+
   const leftLen = Math.floor((W - label.length) / 2)
   const rightLen = W - label.length - leftLen
 
+  // Arriba gris claro (líneas + powered)
   const topLine =
-    chalk.cyanBright("─".repeat(leftLen)) +
-    chalk.cyan(label) +
-    chalk.cyanBright("─".repeat(rightLen))
+    chalk.gray("─".repeat(leftLen)) +
+    chalk.gray(label) +
+    chalk.gray("─".repeat(rightLen))
 
-  const name = chalk.yellowBright("José C — Kathy")
-  const nameLine = padCenterAnsi(name, W)
+  // Nombre amarillo centrado
+  const nameLine = padCenterAnsi(chalk.yellowBright("José C — Kathy"), W)
 
+  // Abajo cyan (una sola línea)
   const bottomLine = chalk.cyanBright("─".repeat(W))
 
   console.log("\n" + topLine)
