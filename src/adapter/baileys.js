@@ -71,51 +71,36 @@ function banner() {
 }
 
 async function askMode() {
-  const W = 34
-  const top = "┌" + "─".repeat(W) + "┐"
-  const bot = "└" + "─".repeat(W) + "┘"
-  const row = (t = "") => "│" + t.padEnd(W, " ") + "│"
-  const sep = "├" + "─".repeat(W) + "┤"
-
   while (true) {
-    console.log(chalk.cyanBright(top))
-    console.log(chalk.cyanBright(row("  MENU DE VINCULACION")))
-    console.log(chalk.cyanBright(sep))
-    console.log(chalk.cyanBright(row("  1) QR")))
-    console.log(chalk.cyanBright(row("  2) CODIGO (PAIRING)")))
-    console.log(chalk.cyanBright(bot))
-    process.stdout.write(chalk.white("Selecciona 1 o 2 > "))
+    console.log(chalk.cyanBright("\n──────────────────────────────"))
+    console.log(chalk.cyanBright("VINCULACIÓN"))
+    console.log(chalk.cyanBright("──────────────────────────────"))
+    console.log(chalk.white("  1) QR"))
+    console.log(chalk.white("  2) Código (Pairing)"))
+    console.log(chalk.cyanBright("──────────────────────────────"))
+    process.stdout.write(chalk.white("Elige 1 o 2 > "))
 
     const pick = (await inputLine()).trim()
     if (pick === "1" || pick === "2") return pick
 
-    console.log(chalk.red("\nOpcion invalida. Escribe 1 o 2.\n"))
+    console.log(chalk.red("Opción inválida. Escribe 1 o 2."))
   }
 }
 
 async function askPhone() {
-  const W = 34
-  const top = "┌" + "─".repeat(W) + "┐"
-  const bot = "└" + "─".repeat(W) + "┘"
-  const row = (t = "") => "│" + t.padEnd(W, " ") + "│"
-  const sep = "├" + "─".repeat(W) + "┤"
-
   while (true) {
-    console.log("")
-    console.log(chalk.cyanBright(top))
-    console.log(chalk.cyanBright(row("  INGRESA TU NUMERO")))
-    console.log(chalk.cyanBright(sep))
-    console.log(chalk.cyanBright(row("  Formato: internacional")))
-    console.log(chalk.cyanBright(row("  Sin +")))
-    console.log(chalk.cyanBright(row("  Ejemplo: 504XXXXXXXX")))
-    console.log(chalk.cyanBright(bot))
-    process.stdout.write(chalk.white("Numero > "))
+    console.log(chalk.cyanBright("\n──────────────────────────────"))
+    console.log(chalk.cyanBright("INGRESA TU NÚMERO"))
+    console.log(chalk.cyanBright("──────────────────────────────"))
+    console.log(chalk.gray("Formato: internacional (sin +)"))
+    console.log(chalk.gray("Ejemplo: 504XXXXXXXX"))
+    process.stdout.write(chalk.white("Número > "))
 
     const phone = await inputLine()
     const clean = phone.replace(/\D/g, "")
 
     if (clean.length >= 10) return clean
-    console.log(chalk.red("\nNumero invalido. Minimo 10 digitos.\n"))
+    console.log(chalk.red("Número inválido. Mínimo 10 dígitos."))
   }
 }
 
@@ -156,15 +141,12 @@ export async function startSock(onMessage) {
   const bot = "└" + "─".repeat(W) + "┘"
   const row = (t = "") => "│" + String(t).padEnd(W, " ") + "│"
 
-  console.log(chalk.cyanBright(top))
-  console.log(chalk.cyanBright(row("  CODIGO GENERADO")))
-  console.log(chalk.cyanBright(row("")))
-  console.log(chalk.magentaBright(row(("  " + code).slice(0, W))))
-  console.log(chalk.cyanBright(row("")))
-  console.log(chalk.cyanBright(bot))
-
-  console.log(chalk.gray("WhatsApp > Dispositivos vinculados > Vincular con numero"))
-  console.log(chalk.gray("Ingresa el codigo\n"))
+  console.log(chalk.cyanBright("\n──────────────────────────────"))
+console.log(chalk.cyanBright("CÓDIGO GENERADO"))
+console.log(chalk.cyanBright("──────────────────────────────"))
+console.log(chalk.magentaBright(`  ${code}\n`))
+console.log(chalk.gray("WhatsApp > Dispositivos vinculados > Vincular con número"))
+console.log(chalk.gray("Ingresa el código\n"))
 }
 
   sock.ev.on("connection.update", (u) => {
