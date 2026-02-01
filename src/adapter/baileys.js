@@ -64,10 +64,11 @@ function banner() {
     return " ".repeat(left) + s + " ".repeat(right)
   }
 
-  // marco doble
+  const POWER = "𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈"
+
   console.log(chalk.cyanBright("╔" + "═".repeat(WIDTH) + "╗"))
   console.log(chalk.cyanBright("║") + chalk.cyanBright(pad("")) + chalk.cyanBright("║"))
-  console.log(chalk.cyanBright("║") + chalk.cyanBright(center("POWERED BY")) + chalk.cyanBright("║"))
+  console.log(chalk.cyanBright("║") + chalk.cyanBright(center(POWER)) + chalk.cyanBright("║"))
   console.log(chalk.cyanBright("║") + chalk.magentaBright(center("Jose C  -  Kathy")) + chalk.cyanBright("║"))
   console.log(chalk.cyanBright("║") + chalk.cyanBright(pad("")) + chalk.cyanBright("║"))
   console.log(chalk.cyanBright("╚" + "═".repeat(WIDTH) + "╝"))
