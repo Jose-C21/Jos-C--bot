@@ -123,25 +123,16 @@ export async function startSock(onMessage) {
 
   sock.ev.on("creds.update", saveCreds)
 
-  if (!alreadyLinked && mode === "code") {
+if (!alreadyLinked && mode === "code") {
   const clean = await askPhone()
 
   console.log(chalk.cyanBright("\nGenerando código...\n"))
 
   const code = await sock.requestPairingCode(clean)
 
-  // Caja pro para mostrar el código
-  const W = 34
-  const top = "┌" + "─".repeat(W) + "┐"
-  const bot = "└" + "─".repeat(W) + "┘"
-  const row = (t = "") => "│" + String(t).padEnd(W, " ") + "│"
-
-  console.log(chalk.cyanBright("\n──────────────────────────────"))
-console.log(chalk.cyanBright("CÓDIGO GENERADO"))
-console.log(chalk.cyanBright("──────────────────────────────"))
-console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code))
-console.log(chalk.white("WhatsApp > Dispositivos vinculados > Vincular con número"))
-console.log(chalk.white("Ingresa el código\n"))
+  console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code))
+  console.log(chalk.white("WhatsApp > Dispositivos vinculados > Vincular con número"))
+  console.log(chalk.white("Ingresa el código\n"))
 }
 
   sock.ev.on("connection.update", (u) => {
