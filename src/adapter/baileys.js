@@ -48,20 +48,17 @@ function center(text, width = 38) {
 
 // ✅ Banner compacto (móvil friendly)
 function banner() {
-  line()
-  const title = figlet.textSync("POWERED BY", { font: "Small" }).split("\n")
+  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 
-  // recorta líneas vacías y limita ancho para que no se vea feo
-  const cleaned = title
-    .map(l => l.replace(/\s+$/, ""))
-    .filter(l => l.trim().length > 0)
-    .slice(0, 4) // mantiene el banner pequeñito
+  // 1) ASCII pequeño: POWERED BY
+  const pb = figlet.textSync("Powered By", { font: "Small" }).split("\n")
+  const pbClean = pb.map(l => l.replace(/\s+$/, "")).filter(l => l.trim().length)
+  for (const l of pbClean) console.log(chalk.cyanBright(l))
 
-  for (const l of cleaned) console.log(chalk.cyanBright(l))
+  // 2) Línea de nombres
+  console.log(chalk.magentaBright(center("José C  -  Kathy")))
 
-  console.log(chalk.magentaBright(center("José C - Kathy")))
-  line()
-  console.log("")
+  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"))
 }
 
 async function askMode() {
