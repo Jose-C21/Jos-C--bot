@@ -48,7 +48,7 @@ function center(text, width = 38) {
 
 // ✅ Banner compacto (móvil friendly)
 function banner() {
-  const WIDTH = 38
+  const WIDTH = 44
 
   const pad = (s) => {
     s = String(s)
