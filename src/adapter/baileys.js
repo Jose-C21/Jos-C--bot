@@ -50,40 +50,38 @@ function center(text, width = 38) {
 
 
 
-// Quita colores ANSI para centrar bien
+
+
+// Quita ANSI para calcular el ancho real y centrar perfecto
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 
-const padCenterAnsi = (text, width) => {
-  const raw = stripAnsi(text)
-  if (raw.length >= width) return text
+const centerAnsi = (txt, width) => {
+  const raw = stripAnsi(txt)
+  if (raw.length >= width) return txt
   const left = Math.floor((width - raw.length) / 2)
   const right = width - raw.length - left
-  return " ".repeat(left) + text + " ".repeat(right)
+  return " ".repeat(left) + txt + " ".repeat(right)
 }
 
 function banner() {
-  const W = 38 // 👈 MÁS CORTO (móvil friendly). Ajusta 36–42 si quieres.
+  const W = 36 // 👈 Ajusta 34–40 según tu panel (36 se ve bien en móvil)
 
-  const label = "( POWERED BY )"
+  // Decoración superior (blanco claro)
+  const top = centerAnsi(chalk.whiteBright("════════════════════"), W)
 
-  const leftLen = Math.floor((W - label.length) / 2)
-  const rightLen = W - label.length - leftLen
+  // POWERED BY (mantén el color actual)
+  const powered = centerAnsi(chalk.cyanBright("( POWERED BY )"), W)
 
-  // Arriba gris claro (líneas + powered)
-  const topLine =
-    chalk.gray("─".repeat(leftLen)) +
-    chalk.gray(label) +
-    chalk.gray("─".repeat(rightLen))
+  // Nombre (amarillo)
+  const names = centerAnsi(chalk.yellowBright("José C - Kathy"), W)
 
-  // Nombre amarillo centrado
-  const nameLine = padCenterAnsi(chalk.yellowBright("José C — Kathy"), W)
+  // Línea inferior (cyan)
+  const bottom = centerAnsi(chalk.cyanBright("════════════════════"), W)
 
-  // Abajo cyan (una sola línea)
-  const bottomLine = chalk.cyanBright("─".repeat(W))
-
-  console.log("\n" + topLine)
-  console.log(nameLine)
-  console.log(bottomLine + "\n")
+  console.log("\n" + top)
+  console.log(powered)
+  console.log(names)
+  console.log(bottom + "\n")
 }
 
 async function askMode() {
