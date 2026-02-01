@@ -144,24 +144,28 @@ export async function startSock(onMessage) {
   sock.ev.on("creds.update", saveCreds)
 
   if (!alreadyLinked && mode === "code") {
-    const clean = await askPhone()
-    console.log(chalk.gray("\n⏳ Generando código...\n"))
+  const clean = await askPhone()
 
-    const code = await sock.requestPairingCode(clean)
+  console.log(chalk.gray("\nGenerando codigo...\n"))
 
-const W = 34
-const top = "┌" + "─".repeat(W) + "┐"
-const bot = "└" + "─".repeat(W) + "┘"
-const row = (t = "") => "│" + t.padEnd(W, " ") + "│"
+  const code = await sock.requestPairingCode(clean)
 
-console.log(chalk.cyanBright(top))
-console.log(chalk.cyanBright(row("  CODIGO GENERADO")))
-console.log(chalk.cyanBright(row("")))
-console.log(chalk.magentaBright(row(("  " + code).slice(0, W))))
-console.log(chalk.cyanBright(row("")))
-console.log(chalk.cyanBright(bot))
-console.log(chalk.gray("WhatsApp > Dispositivos vinculados > Vincular con numero"))
-console.log(chalk.gray("Ingresa el codigo\n"))
+  // Caja pro para mostrar el código
+  const W = 34
+  const top = "┌" + "─".repeat(W) + "┐"
+  const bot = "└" + "─".repeat(W) + "┘"
+  const row = (t = "") => "│" + String(t).padEnd(W, " ") + "│"
+
+  console.log(chalk.cyanBright(top))
+  console.log(chalk.cyanBright(row("  CODIGO GENERADO")))
+  console.log(chalk.cyanBright(row("")))
+  console.log(chalk.magentaBright(row(("  " + code).slice(0, W))))
+  console.log(chalk.cyanBright(row("")))
+  console.log(chalk.cyanBright(bot))
+
+  console.log(chalk.gray("WhatsApp > Dispositivos vinculados > Vincular con numero"))
+  console.log(chalk.gray("Ingresa el codigo\n"))
+}
 
   sock.ev.on("connection.update", (u) => {
     const { connection, lastDisconnect, qr } = u
