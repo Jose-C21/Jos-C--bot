@@ -33,17 +33,35 @@ function createInput() {
     return await new Promise((res) => (resolver = res))
   }
 }
-
 const inputLine = createInput()
 
-function banner() {
+function line() {
   console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+}
 
-  const ascii = figlet.textSync("Powered by", { font: "Small" })
-  console.log(chalk.cyanBright(ascii))
+function center(text, width = 38) {
+  const s = String(text)
+  if (s.length >= width) return s
+  const left = Math.floor((width - s.length) / 2)
+  return " ".repeat(left) + s
+}
 
-  console.log(chalk.magentaBright("      José C  -  Kathy"))
-  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"))
+// ✅ Banner compacto (móvil friendly)
+function banner() {
+  line()
+  const title = figlet.textSync("Jose C", { font: "Small" }).split("\n")
+
+  // recorta líneas vacías y limita ancho para que no se vea feo
+  const cleaned = title
+    .map(l => l.replace(/\s+$/, ""))
+    .filter(l => l.trim().length > 0)
+    .slice(0, 4) // mantiene el banner pequeñito
+
+  for (const l of cleaned) console.log(chalk.cyanBright(l))
+
+  console.log(chalk.magentaBright(center("Powered by José C - Kathy")))
+  line()
+  console.log("")
 }
 
 async function askMode() {
@@ -62,14 +80,14 @@ async function askMode() {
 async function askPhone() {
   while (true) {
     console.log("")
-    console.log(chalk.yellow("📱 Escribe tu número en formato internacional (sin +)."))
-    console.log(chalk.gray("Ejemplo: 504XXXXXXXX"))
+    console.log(chalk.yellow("📱 Escribe tu número (sin +)"))
+    console.log(chalk.gray("Ej: 504XXXXXXXX"))
     process.stdout.write(chalk.white("> "))
 
     const phone = await inputLine()
     const clean = phone.replace(/\D/g, "")
-
     if (clean.length >= 10) return clean
+
     console.log(chalk.red("\n❌ Número inválido. Debe tener al menos 10 dígitos.\n"))
   }
 }
@@ -98,23 +116,21 @@ export async function startSock(onMessage) {
 
   sock.ev.on("creds.update", saveCreds)
 
-  // ✅ Pairing Code
   if (!alreadyLinked && mode === "code") {
     const clean = await askPhone()
     console.log(chalk.gray("\n⏳ Generando código...\n"))
 
     const code = await sock.requestPairingCode(clean)
 
-    console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+    line()
     console.log(chalk.greenBright("🔢 CÓDIGO: ") + chalk.whiteBright(code))
-    console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+    line()
     console.log(chalk.white("WhatsApp → Dispositivos vinculados → Vincular con número → ingresa el código\n"))
   }
 
   sock.ev.on("connection.update", (u) => {
     const { connection, lastDisconnect, qr } = u
 
-    // ✅ QR
     if (!alreadyLinked && mode === "qr" && qr) {
       console.log(chalk.gray("📷 Escanea el QR para vincular:\n"))
       qrcode.generate(qr, { small: true })
