@@ -48,20 +48,28 @@ function center(text, width = 38) {
 
 // ✅ Banner compacto (móvil friendly)
 function banner() {
+  const WIDTH = 38
+
+  const padCenter = (line, width = WIDTH) => {
+    const s = String(line).replace(/\s+$/, "")
+    if (s.length >= width) return s.slice(0, width)
+    const left = Math.floor((width - s.length) / 2)
+    return " ".repeat(left) + s
+  }
+
   console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 
-  // ASCII principal: POWERED BY (bonito y no tan gigante)
-  const pb = figlet.textSync("POWERED BY", { font: "Standard" }).split("\n")
-  const pbClean = pb.map(l => l.replace(/\s+$/, "")).filter(l => l.trim().length)
+  // ASCII principal pequeño: POWERED BY
+  const pb = figlet.textSync("POWERED BY", { font: "Small" }).split("\n")
+  const pbClean = pb.map(l => l.trimEnd()).filter(l => l.trim().length)
+  for (const l of pbClean) console.log(chalk.cyanBright(padCenter(l)))
 
-  // recorte para móvil
-  for (const l of pbClean) console.log(chalk.cyanBright(l.slice(0, 38)))
-
-  // línea fina
   console.log(chalk.cyanBright("──────────────────────────────────────"))
 
-  // nombres abajo (centrado)
-  console.log(chalk.magentaBright(center("José C  -  Kathy")))
+  // ASCII pequeño centrado para nombres
+  const names = figlet.textSync("Jose C - Kathy", { font: "Small" }).split("\n")
+  const namesClean = names.map(l => l.trimEnd()).filter(l => l.trim().length)
+  for (const l of namesClean) console.log(chalk.magentaBright(padCenter(l)))
 
   console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"))
 }
