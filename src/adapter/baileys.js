@@ -50,28 +50,28 @@ function center(text, width = 38) {
 function banner() {
   const WIDTH = 38
 
-  const padCenter = (line, width = WIDTH) => {
-    const s = String(line).replace(/\s+$/, "")
-    if (s.length >= width) return s.slice(0, width)
-    const left = Math.floor((width - s.length) / 2)
-    return " ".repeat(left) + s
+  const pad = (s) => {
+    s = String(s)
+    if (s.length > WIDTH) s = s.slice(0, WIDTH)
+    return s + " ".repeat(Math.max(0, WIDTH - s.length))
   }
 
-  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+  const center = (s) => {
+    s = String(s)
+    if (s.length > WIDTH) s = s.slice(0, WIDTH)
+    const left = Math.floor((WIDTH - s.length) / 2)
+    const right = WIDTH - s.length - left
+    return " ".repeat(left) + s + " ".repeat(right)
+  }
 
-  // ASCII principal pequeño: POWERED BY
-  const pb = figlet.textSync("POWERED BY", { font: "Small" }).split("\n")
-  const pbClean = pb.map(l => l.trimEnd()).filter(l => l.trim().length)
-  for (const l of pbClean) console.log(chalk.cyanBright(padCenter(l)))
-
-  console.log(chalk.cyanBright("──────────────────────────────────────"))
-
-  // ASCII pequeño centrado para nombres
-  const names = figlet.textSync("Jose C - Kathy", { font: "Small" }).split("\n")
-  const namesClean = names.map(l => l.trimEnd()).filter(l => l.trim().length)
-  for (const l of namesClean) console.log(chalk.magentaBright(padCenter(l)))
-
-  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"))
+  // marco doble
+  console.log(chalk.cyanBright("╔" + "═".repeat(WIDTH) + "╗"))
+  console.log(chalk.cyanBright("║") + chalk.cyanBright(pad("")) + chalk.cyanBright("║"))
+  console.log(chalk.cyanBright("║") + chalk.cyanBright(center("POWERED BY")) + chalk.cyanBright("║"))
+  console.log(chalk.cyanBright("║") + chalk.magentaBright(center("Jose C  -  Kathy")) + chalk.cyanBright("║"))
+  console.log(chalk.cyanBright("║") + chalk.cyanBright(pad("")) + chalk.cyanBright("║"))
+  console.log(chalk.cyanBright("╚" + "═".repeat(WIDTH) + "╝"))
+  console.log("")
 }
 
 async function askMode() {
