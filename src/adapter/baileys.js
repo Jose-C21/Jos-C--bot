@@ -2,6 +2,7 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers } from 
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
+import figlet from "figlet"
 
 // ─────────────────────────────────────────────
 // ✅ INPUT SIMPLE (sin readline) para panel web
@@ -37,7 +38,11 @@ const inputLine = createInput()
 
 function banner() {
   console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
-  console.log(chalk.magentaBright("   ⚡ Powered by José C - Kathy ⚡"))
+
+  const ascii = figlet.textSync("Powered by", { font: "Small" })
+  console.log(chalk.cyanBright(ascii))
+
+  console.log(chalk.magentaBright("      José C  -  Kathy"))
   console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"))
 }
 
@@ -93,9 +98,11 @@ export async function startSock(onMessage) {
 
   sock.ev.on("creds.update", saveCreds)
 
+  // ✅ Pairing Code
   if (!alreadyLinked && mode === "code") {
     const clean = await askPhone()
     console.log(chalk.gray("\n⏳ Generando código...\n"))
+
     const code = await sock.requestPairingCode(clean)
 
     console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
@@ -107,6 +114,7 @@ export async function startSock(onMessage) {
   sock.ev.on("connection.update", (u) => {
     const { connection, lastDisconnect, qr } = u
 
+    // ✅ QR
     if (!alreadyLinked && mode === "qr" && qr) {
       console.log(chalk.gray("📷 Escanea el QR para vincular:\n"))
       qrcode.generate(qr, { small: true })
