@@ -62,7 +62,7 @@ const centerAnsi = (txt, width) => {
 }
 
 function banner() {
-  const W = 40 // 👈 ajusta 36–42 si tu panel cambia
+  const W = 42 // 👈 ajusta 36–42 si tu panel cambia
 
   // texto POWERED BY (oscuro como antes)
   const poweredTxt = "( POWERED BY )"
