@@ -48,7 +48,7 @@ function center(text, width = 38) {
 
 // ✅ Banner compacto (móvil friendly)
 function banner() {
-  const WIDTH = 34 // ancho interno del cuadro (ajustado para móvil)
+  const WIDTH = 38 // ancho interno del cuadro (ajustado para móvil)
   const top    = "╔" + "═".repeat(WIDTH) + "╗"
   const mid    = "║" + " ".repeat(WIDTH) + "║"
   const bottom = "╚" + "═".repeat(WIDTH) + "╝"
