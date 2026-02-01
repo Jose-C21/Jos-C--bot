@@ -50,12 +50,17 @@ function center(text, width = 38) {
 function banner() {
   console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
 
-  // 1) ASCII pequeño: POWERED BY
-  const pb = figlet.textSync("Powered By", { font: "Small" }).split("\n")
+  // ASCII principal: POWERED BY (bonito y no tan gigante)
+  const pb = figlet.textSync("POWERED BY", { font: "Standard" }).split("\n")
   const pbClean = pb.map(l => l.replace(/\s+$/, "")).filter(l => l.trim().length)
-  for (const l of pbClean) console.log(chalk.cyanBright(l))
 
-  // 2) Línea de nombres
+  // recorte para móvil
+  for (const l of pbClean) console.log(chalk.cyanBright(l.slice(0, 38)))
+
+  // línea fina
+  console.log(chalk.cyanBright("──────────────────────────────────────"))
+
+  // nombres abajo (centrado)
   console.log(chalk.magentaBright(center("José C  -  Kathy")))
 
   console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"))
