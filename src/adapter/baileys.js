@@ -2,7 +2,7 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason, Browsers } from 
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
-import figlet from "figlet"
+import figlet from "figlet" // lo dejo por si luego lo quieres usar
 
 // ─────────────────────────────────────────────
 // ✅ INPUT SIMPLE (sin readline) para panel web
@@ -46,27 +46,21 @@ function center(text, width = 38) {
   return " ".repeat(left) + s
 }
 
-// ✅ Banner compacto (móvil friendly)
+// ✅ Banner (estilo B: limpio, pro, sin cajas raras)
 function banner() {
-  const WIDTH = 38 // ancho interno del cuadro (ajustado para móvil)
-  const top    = "╔" + "═".repeat(WIDTH) + "╗"
-  const mid    = "║" + " ".repeat(WIDTH) + "║"
-  const bottom = "╚" + "═".repeat(WIDTH) + "╝"
+  // ancho dinámico pero con límite para que se vea bien en móvil/panel
+  const cols = Math.min(process.stdout.columns || 60, 60)
 
-  const center = (text) => {
-    text = String(text)
-    if (text.length > WIDTH) text = text.slice(0, WIDTH)
-    const left = Math.floor((WIDTH - text.length) / 2)
-    const right = WIDTH - text.length - left
-    return "║" + " ".repeat(left) + text + " ".repeat(right) + "║"
+  const centerDyn = (s = "") => {
+    s = String(s)
+    const pad = Math.max(0, Math.floor((cols - s.length) / 2))
+    return " ".repeat(pad) + s
   }
 
-  console.log(chalk.cyanBright(top))
-  console.log(chalk.cyanBright(mid))
-  console.log(chalk.cyanBright(center("POWERED BY")))
-  console.log(chalk.magentaBright(center("Jose C  -  Kathy")))
-  console.log(chalk.cyanBright(mid))
-  console.log(chalk.cyanBright(bottom))
+  console.log("")
+  console.log(chalk.cyanBright(centerDyn("[ POWERED BY ]")))
+  console.log(chalk.yellowBright(centerDyn("José C  -  Kathy")))
+  console.log(chalk.gray(centerDyn("──────────────")))
   console.log("")
 }
 
@@ -123,17 +117,17 @@ export async function startSock(onMessage) {
 
   sock.ev.on("creds.update", saveCreds)
 
-if (!alreadyLinked && mode === "code") {
-  const clean = await askPhone()
+  if (!alreadyLinked && mode === "code") {
+    const clean = await askPhone()
 
-  console.log(chalk.cyanBright("\nGenerando código...\n"))
+    console.log(chalk.cyanBright("\nGenerando código...\n"))
 
-  const code = await sock.requestPairingCode(clean)
+    const code = await sock.requestPairingCode(clean)
 
-  console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code))
-  console.log(chalk.white("WhatsApp > Dispositivos vinculados > Vincular con número"))
-  console.log(chalk.white("Ingresa el código\n"))
-}
+    console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code))
+    console.log(chalk.white("WhatsApp > Dispositivos vinculados > Vincular con número"))
+    console.log(chalk.white("Ingresa el código\n"))
+  }
 
   sock.ev.on("connection.update", (u) => {
     const { connection, lastDisconnect, qr } = u
