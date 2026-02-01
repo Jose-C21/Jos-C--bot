@@ -47,20 +47,22 @@ function center(text, width = 38) {
 }
 
 // ✅ Banner (estilo B: limpio, pro, sin cajas raras)
-function banner() {
-  // ancho dinámico pero con límite para que se vea bien en móvil/panel
-  const cols = Math.min(process.stdout.columns || 60, 60)
 
-  const centerDyn = (s = "") => {
+
+function banner() {
+  const WIDTH = 38 // prueba 38, si lo quieres un poquito más ancho: 40 o 42
+
+  const center = (s = "") => {
     s = String(s)
-    const pad = Math.max(0, Math.floor((cols - s.length) / 2))
+    if (s.length > WIDTH) s = s.slice(0, WIDTH)
+    const pad = Math.floor((WIDTH - s.length) / 2)
     return " ".repeat(pad) + s
   }
 
   console.log("")
-  console.log(chalk.cyanBright(centerDyn("[ POWERED BY ]")))
-  console.log(chalk.yellowBright(centerDyn("José C  -  Kathy")))
-  console.log(chalk.gray(centerDyn("──────────────")))
+  console.log(chalk.cyanBright(center("[ POWERED BY ]")))
+  console.log(chalk.yellowBright(center("José C  -  Kathy")))
+  console.log(chalk.gray(center("──────────────")))
   console.log("")
 }
 
