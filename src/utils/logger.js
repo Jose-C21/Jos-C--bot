@@ -1,2 +1,6 @@
 import pino from "pino"
-export const logger = pino({ level: "info" })
+
+// ✅ Logger silencioso para que no ensucie el prompt
+export const logger = pino({
+  level: "silent"
+})
