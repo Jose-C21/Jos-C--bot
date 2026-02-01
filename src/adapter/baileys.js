@@ -71,30 +71,51 @@ function banner() {
 }
 
 async function askMode() {
+  const W = 34
+  const top = "┌" + "─".repeat(W) + "┐"
+  const bot = "└" + "─".repeat(W) + "┘"
+  const row = (t = "") => "│" + t.padEnd(W, " ") + "│"
+  const sep = "├" + "─".repeat(W) + "┤"
+
   while (true) {
-    console.log(chalk.yellow("Elige vinculación:"))
-    console.log(chalk.green("  1) QR"))
-    console.log(chalk.green("  2) Código (Pairing)\n"))
-    process.stdout.write(chalk.white("> "))
+    console.log(chalk.cyanBright(top))
+    console.log(chalk.cyanBright(row("  MENU DE VINCULACION")))
+    console.log(chalk.cyanBright(sep))
+    console.log(chalk.cyanBright(row("  1) QR")))
+    console.log(chalk.cyanBright(row("  2) CODIGO (PAIRING)")))
+    console.log(chalk.cyanBright(bot))
+    process.stdout.write(chalk.white("Selecciona 1 o 2 > "))
 
     const pick = (await inputLine()).trim()
     if (pick === "1" || pick === "2") return pick
-    console.log(chalk.red("\n❌ Opción inválida. Escribe 1 o 2.\n"))
+
+    console.log(chalk.red("\nOpcion invalida. Escribe 1 o 2.\n"))
   }
 }
 
 async function askPhone() {
+  const W = 34
+  const top = "┌" + "─".repeat(W) + "┐"
+  const bot = "└" + "─".repeat(W) + "┘"
+  const row = (t = "") => "│" + t.padEnd(W, " ") + "│"
+  const sep = "├" + "─".repeat(W) + "┤"
+
   while (true) {
     console.log("")
-    console.log(chalk.yellow("📱 Escribe tu número (sin +)"))
-    console.log(chalk.gray("Ej: 504XXXXXXXX"))
-    process.stdout.write(chalk.white("> "))
+    console.log(chalk.cyanBright(top))
+    console.log(chalk.cyanBright(row("  INGRESA TU NUMERO")))
+    console.log(chalk.cyanBright(sep))
+    console.log(chalk.cyanBright(row("  Formato: internacional")))
+    console.log(chalk.cyanBright(row("  Sin +")))
+    console.log(chalk.cyanBright(row("  Ejemplo: 504XXXXXXXX")))
+    console.log(chalk.cyanBright(bot))
+    process.stdout.write(chalk.white("Numero > "))
 
     const phone = await inputLine()
     const clean = phone.replace(/\D/g, "")
-    if (clean.length >= 10) return clean
 
-    console.log(chalk.red("\n❌ Número inválido. Debe tener al menos 10 dígitos.\n"))
+    if (clean.length >= 10) return clean
+    console.log(chalk.red("\nNumero invalido. Minimo 10 digitos.\n"))
   }
 }
 
