@@ -6,9 +6,15 @@ import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
 const MUTE_PATH = path.join(process.cwd(), "data", "mute.json")
 
+function ensureDB() {
+  const dir = path.dirname(MUTE_PATH)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  if (!fs.existsSync(MUTE_PATH)) fs.writeFileSync(MUTE_PATH, "{}")
+}
+
 function readDB() {
   try {
-    if (!fs.existsSync(MUTE_PATH)) return {}
+    ensureDB()
     return JSON.parse(fs.readFileSync(MUTE_PATH, "utf8") || "{}")
   } catch {
     return {}
@@ -16,7 +22,7 @@ function readDB() {
 }
 
 function writeDB(db) {
-  fs.mkdirSync(path.dirname(MUTE_PATH), { recursive: true })
+  ensureDB()
   fs.writeFileSync(MUTE_PATH, JSON.stringify(db, null, 2))
 }
 
@@ -44,39 +50,40 @@ export default async function unmute(sock, msg, { isOwner }) {
     return
   }
 
-  const senderJid = getSenderJid(msg)
-  const targetJid = getTargetFromMessage(msg)
+  // sender
+  const senderJidRaw = getSenderJid(msg)
+  let senderJid = senderJidRaw
+  try { if (sock?.decodeJid) senderJid = sock.decodeJid(senderJidRaw) } catch {}
+  const senderNum = jidToNumber(senderJid) || jidToNumber(senderJidRaw)
 
+  const targetJid = getTargetFromMessage(msg)
   if (!targetJid) {
     await sock.sendMessage(chatId, { text: "⚠️ Responde al mensaje o menciona al usuario que quieres desmutear." }, { quoted: msg })
     return
   }
 
-  // normalizamos target -> número limpio (sirve lid y normal)
+  // target
   let decodedTarget = targetJid
   try { if (sock?.decodeJid) decodedTarget = sock.decodeJid(targetJid) } catch {}
   const targetNum = jidToNumber(decodedTarget) || jidToNumber(targetJid)
-
-  // ✅ PROTECCIÓN: no tocar owners (nadie)
-  if (isOwnerNumber(targetNum)) {
-    await sock.sendMessage(chatId, { text: "⛔ No puedes desmutear a un *owner*." }, { quoted: msg })
-    return
-  }
+  const keyNum = String(targetNum)
 
   // metadata para admin checks
   const md = await sock.groupMetadata(chatId)
   const parts = md?.participants || []
 
-  const senderP = parts.find(p => p.id === senderJid || p.id === msg.key.participant)
+  // ✅ sender admin check robusto (por número)
+  const senderP = parts.find(p => String(jidToNumber(p.id)) === String(senderNum))
   const senderIsAdmin = senderP?.admin === "admin" || senderP?.admin === "superadmin"
 
-  // Si no es owner, debe ser admin para usar unmute
+  // Si no es owner, debe ser admin
   if (!isOwner && !senderIsAdmin) {
     await sock.sendMessage(chatId, { text: "❌ Solo *admins* o *owner* pueden usar este comando." }, { quoted: msg })
     return
   }
 
-  const targetP = parts.find(p => p.id === decodedTarget || p.id === targetJid)
+  // ✅ target admin check robusto (por número)
+  const targetP = parts.find(p => String(jidToNumber(p.id)) === String(targetNum))
   const targetIsAdmin = targetP?.admin === "admin" || targetP?.admin === "superadmin"
 
   // ✅ Admin NO puede desmutear admins
@@ -85,12 +92,17 @@ export default async function unmute(sock, msg, { isOwner }) {
     return
   }
 
+  // ✅ owners: nadie debería mutearlos, pero si por error quedaron en JSON:
+  // solo owner puede limpiar
+  if (isOwnerNumber(targetNum) && !isOwner) {
+    await sock.sendMessage(chatId, { text: "⛔ No puedes desmutear a un *owner*." }, { quoted: msg })
+    return
+  }
+
   const db = readDB()
   const list = db[chatId] || []
 
-  const keyNum = String(targetNum)
   const idx = list.indexOf(keyNum)
-
   if (idx === -1) {
     await sock.sendMessage(chatId, { text: "⚠️ Este usuario no está muteado." }, { quoted: msg })
     return
@@ -98,16 +110,15 @@ export default async function unmute(sock, msg, { isOwner }) {
 
   list.splice(idx, 1)
 
-  if (list.length === 0) {
-    delete db[chatId]
-  } else {
-    db[chatId] = list
-  }
+  if (list.length === 0) delete db[chatId]
+  else db[chatId] = list
 
   writeDB(db)
 
+  const mentionJid = decodedTarget || targetJid
+
   await sock.sendMessage(chatId, {
     text: `> 🔊 Usuario @${keyNum} ha sido *desmuteado*.`,
-    mentions: [targetJid]
+    mentions: [mentionJid]
   }, { quoted: msg })
 }
