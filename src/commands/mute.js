@@ -6,9 +6,15 @@ import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
 const MUTE_PATH = path.join(process.cwd(), "data", "mute.json")
 
+function ensureDB() {
+  const dir = path.dirname(MUTE_PATH)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  if (!fs.existsSync(MUTE_PATH)) fs.writeFileSync(MUTE_PATH, "{}")
+}
+
 function readDB() {
   try {
-    if (!fs.existsSync(MUTE_PATH)) return {}
+    ensureDB()
     return JSON.parse(fs.readFileSync(MUTE_PATH, "utf8") || "{}")
   } catch {
     return {}
@@ -16,7 +22,7 @@ function readDB() {
 }
 
 function writeDB(db) {
-  fs.mkdirSync(path.dirname(MUTE_PATH), { recursive: true })
+  ensureDB()
   fs.writeFileSync(MUTE_PATH, JSON.stringify(db, null, 2))
 }
 
@@ -44,9 +50,13 @@ export default async function mute(sock, msg, { isOwner }) {
     return
   }
 
-  const senderJid = getSenderJid(msg)
-  const senderNum = jidToNumber(senderJid)
+  // sender
+  const senderJidRaw = getSenderJid(msg)
+  let senderJid = senderJidRaw
+  try { if (sock?.decodeJid) senderJid = sock.decodeJid(senderJidRaw) } catch {}
+  const senderNum = jidToNumber(senderJid) || jidToNumber(senderJidRaw)
 
+  // target
   const targetJid = getTargetFromMessage(msg)
   if (!targetJid) {
     await sock.sendMessage(chatId, { text: "⚠️ Responde al mensaje o menciona al usuario que quieres mutear." }, { quoted: msg })
@@ -68,7 +78,11 @@ export default async function mute(sock, msg, { isOwner }) {
   const md = await sock.groupMetadata(chatId)
   const parts = md?.participants || []
 
-  const senderP = parts.find(p => p.id === senderJid || p.id === msg.key.participant)
+  // ✅ sender admin check robusto (por número)
+  const senderP = parts.find(p => {
+    const n = jidToNumber(p.id)
+    return n && n === String(senderNum)
+  })
   const senderIsAdmin = senderP?.admin === "admin" || senderP?.admin === "superadmin"
 
   // Si no es owner, debe ser admin para usar mute
@@ -77,7 +91,11 @@ export default async function mute(sock, msg, { isOwner }) {
     return
   }
 
-  const targetP = parts.find(p => p.id === decodedTarget || p.id === targetJid)
+  // ✅ target admin check robusto (por número)
+  const targetP = parts.find(p => {
+    const n = jidToNumber(p.id)
+    return n && n === String(targetNum)
+  })
   const targetIsAdmin = targetP?.admin === "admin" || targetP?.admin === "superadmin"
 
   // ✅ Admin NO puede mutear admins
@@ -86,7 +104,7 @@ export default async function mute(sock, msg, { isOwner }) {
     return
   }
 
-  // ✅ Owner SI puede mutear admins y usuarios normales (ya pasó checks)
+  // ✅ Owner SI puede mutear admins y usuarios normales
 
   const db = readDB()
   if (!db[chatId]) db[chatId] = []
@@ -97,9 +115,12 @@ export default async function mute(sock, msg, { isOwner }) {
     db[chatId].push(keyNum)
     writeDB(db)
 
+    // mentions: preferimos el jid decodificado si existe
+    const mentionJid = decodedTarget || targetJid
+
     await sock.sendMessage(chatId, {
       text: `> 🔇 Usuario @${keyNum} ha sido *muteado*.`,
-      mentions: [targetJid]
+      mentions: [mentionJid]
     }, { quoted: msg })
   } else {
     await sock.sendMessage(chatId, { text: "⚠️ Este usuario ya está muteado." }, { quoted: msg })
