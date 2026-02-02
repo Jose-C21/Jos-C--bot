@@ -1,2 +1,4 @@
 import { startSock } from "./adapter/baileys.js"
-await startSock()
+import { routeMessage } from "./core/router.js"
+
+await startSock(routeMessage)
