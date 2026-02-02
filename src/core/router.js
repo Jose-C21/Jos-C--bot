@@ -4,9 +4,7 @@ import { isAllowedPrivate } from "./middleware/allowlist.js"
 
 import resetsession from "../commands/resetsession.js"
 
-const COMMANDS = {
-  resetsession
-}
+const COMMANDS = { resetsession }
 
 function getText(msg) {
   const m = msg?.message || {}
@@ -20,28 +18,60 @@ function getText(msg) {
 }
 
 export async function routeMessage(sock, msg) {
-  if (!msg?.message) return
-  if (msg.key?.fromMe) return
+  try {
+    if (!msg?.message) return
+    if (msg.key?.fromMe) return
 
-  // ✅ Primero detectamos sender/owner
-  const senderNum = jidToNumber(getSenderJid(msg))
-  const isOwner = (config.owners || []).includes(senderNum)
+    const chatId = msg?.key?.remoteJid || "unknown"
+    const senderJid = getSenderJid(msg)
+    const senderNum = jidToNumber(senderJid)
+    const isOwner = (config.owners || []).includes(senderNum)
 
-  // ✅ filtro allowlist en privado (pero owner SIEMPRE pasa)
-  if (!isOwner && !isAllowedPrivate(msg)) return
+    const text = getText(msg)
 
-  const text = getText(msg)
-  if (!text) return
+    console.log("[ROUTER] msg:", {
+      chatId,
+      senderJid,
+      senderNum,
+      isOwner,
+      prefix: config.prefix,
+      text: text?.slice(0, 80)
+    })
 
-  const prefix = config.prefix || "."
-  if (!text.startsWith(prefix)) return
+    // ✅ privado: allowlist SOLO para no-owners
+    const allowed = isAllowedPrivate(msg)
+    if (!isOwner && !allowed) {
+      console.log("[ROUTER] blocked by allowlist (private).", { senderNum })
+      return
+    }
 
-  const parts = text.slice(prefix.length).trim().split(/\s+/)
-  const command = (parts.shift() || "").toLowerCase()
-  const args = parts
+    if (!text) {
+      console.log("[ROUTER] no text/caption")
+      return
+    }
 
-  const handler = COMMANDS[command]
-  if (!handler) return
+    const prefix = config.prefix || "."
+    if (!text.startsWith(prefix)) {
+      console.log("[ROUTER] no prefix match", { prefix, text: text.slice(0, 30) })
+      return
+    }
 
-  await handler(sock, msg, { args, command, isOwner, usedPrefix: prefix })
+    const parts = text.slice(prefix.length).trim().split(/\s+/)
+    const command = (parts.shift() || "").toLowerCase()
+    const args = parts
+
+    console.log("[ROUTER] parsed:", { command, args })
+
+    const handler = COMMANDS[command]
+    if (!handler) {
+      console.log("[ROUTER] command not found:", command)
+      return
+    }
+
+    console.log("[ROUTER] running handler:", command)
+    await handler(sock, msg, { args, command, isOwner, usedPrefix: prefix })
+    console.log("[ROUTER] handler done:", command)
+  } catch (e) {
+    console.error("[ROUTER] error:", e)
+  }
 }
