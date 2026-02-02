@@ -19,7 +19,7 @@ export default async function resetsession(sock, msg, { isOwner }) {
         "⚠️ Reset de sesión\n\n" +
         "1) Cerrar sesión (logout)\n" +
         "2) Borrar carpeta sessions\n" +
-        "3) Reiniciar proceso"\n" +
+        "3) Reiniciar proceso\n" +
         "Sesión Cerrada Con Éxito ✅"
     }, { quoted: msg })
   } catch (e) {
