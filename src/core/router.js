@@ -6,8 +6,6 @@ import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
 
-import chalk from "chalk"
-
 const COMMANDS = {
   resetsession,
   s: sticker,
@@ -38,167 +36,152 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ LOG UI (bonito y ordenado)
+// ✅ LOG COMPACTO (móvil/panel friendly)
 // ─────────────────────────────────────────────
-const LOG = (() => {
-  const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
-  const OUT = 62
+const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
+const padRightAnsi = (txt, width) => {
+  const raw = stripAnsi(txt)
+  if (raw.length >= width) return txt
+  return txt + " ".repeat(width - raw.length)
+}
+const short = (s = "", n = 46) => {
+  s = String(s)
+  if (s.length <= n) return s
+  return s.slice(0, n - 1) + "…"
+}
+const now = () => {
+  const d = new Date()
+  const hh = String(d.getHours()).padStart(2, "0")
+  const mm = String(d.getMinutes()).padStart(2, "0")
+  const ss = String(d.getSeconds()).padStart(2, "0")
+  return `${hh}:${mm}:${ss}`
+}
 
-  const centerAnsi = (txt, width = OUT) => {
-    const raw = stripAnsi(txt)
-    if (raw.length >= width) return txt
-    const left = Math.floor((width - raw.length) / 2)
-    const right = width - raw.length - left
-    return " ".repeat(left) + txt + " ".repeat(right)
-  }
+function logRouter(chalk, data) {
+  // Toggle: si quieres apagar logs, pon en config: debugRouter: false
+  if (config.debugRouter === false) return
 
-  const hr = (len = OUT) => chalk.gray("─".repeat(len))
-  const tag = (t) => chalk.gray("[") + chalk.cyanBright(t) + chalk.gray("]")
+  const OUT = 44 // ancho cómodo en panel
+  const tag = padRightAnsi(chalk.cyanBright("[ROUTER]"), 10)
 
-  const k = (key) => chalk.gray(key)
-  const v = (val) => chalk.white(val)
-  const dim = (val) => chalk.gray(val)
+  const where = data.isGroup ? chalk.blueBright("GROUP") : chalk.magentaBright("PRIVATE")
+  const owner = data.isOwner ? chalk.greenBright("OWNER") : chalk.gray("USER")
+  const allow = data.allowed ? chalk.greenBright("ALLOW") : chalk.redBright("BLOCK")
 
-  const ok = (s) => chalk.greenBright(s)
-  const warn = (s) => chalk.yellowBright(s)
-  const bad = (s) => chalk.redBright(s)
+  // header compacto en una línea
+  const head = `${tag} ${where} ${owner} ${allow} ${chalk.gray(now())}`
 
-  const badge = {
-    owner: (b) => (b ? ok("OWNER") : dim("USER")),
-    allow: (b) => (b ? ok("ALLOW") : bad("BLOCK")),
-    chat: (jid = "") => {
-      if (jid.endsWith("@g.us")) return chalk.magentaBright("GROUP")
-      if (jid.endsWith("@s.whatsapp.net")) return chalk.blueBright("PRIVATE")
-      if (jid.endsWith("@lid")) return chalk.blueBright("PRIVATE")
-      return chalk.gray("CHAT")
-    }
-  }
+  // segunda línea: lo importante
+  const from = chalk.white(`from:${data.senderNum}`)
+  const txt = chalk.gray(`txt:`) + chalk.white(`"${short(data.text, 40)}"`)
 
-  const lineKV = (key, val) => {
-    return "  " + k(key.padEnd(14)) + dim("• ") + v(val)
-  }
+  // tercera línea: resultado mínimo
+  let res = ""
+  if (data.action === "BLOCK") res = chalk.redBright(`× BLOCK`) + chalk.gray(` ${data.reason}`)
+  else if (data.action === "SKIP") res = chalk.yellowBright(`↷ SKIP`) + chalk.gray(` ${data.reason}`)
+  else if (data.action === "RUN") res = chalk.greenBright(`▶ RUN`) + chalk.cyanBright(` .${data.command}`)
+  else res = chalk.gray("…")
 
-  return {
-    OUT,
-    centerAnsi,
-    hr,
-    tag,
-    badge,
-    lineKV,
-    dim,
-    ok,
-    warn,
-    bad
-  }
-})()
-
-function shortText(s = "", max = 80) {
-  s = String(s || "")
-  if (s.length <= max) return s
-  return s.slice(0, max - 1) + "…"
+  // imprime compacto (3 líneas máximo)
+  console.log(head)
+  console.log(padRightAnsi("  " + from, OUT) + "  " + txt)
+  console.log("  " + res)
+  console.log(chalk.gray("─".repeat(OUT)))
 }
 
 export async function routeMessage(sock, msg) {
-  const t0 = Date.now()
-
   try {
     if (!msg?.message) return
     if (msg.key?.fromMe) return
 
     const chatId = msg?.key?.remoteJid || "unknown"
+    const isGroup = String(chatId).endsWith("@g.us")
 
     const rawSenderJid = getSenderJid(msg)
     const senderNum = jidToNumber(rawSenderJid)
 
     let decodedJid = rawSenderJid
-    try {
-      if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid)
-    } catch {}
+    try { if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid) } catch {}
     const senderNumDecoded = jidToNumber(decodedJid)
 
     const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
-    const allowed = isAllowedPrivate(msg)
 
-    const prefix = config.prefix || "."
     const text = getText(msg)
 
-    // ── HEADER
-    console.log(LOG.hr())
-    console.log(
-      LOG.centerAnsi(
-        LOG.tag("ROUTER") +
-          "  " +
-          LOG.badge.chat(chatId) +
-          "  " +
-          LOG.badge.owner(isOwner) +
-          "  " +
-          (chatId.endsWith("@g.us") ? LOG.dim("") : LOG.badge.allow(isOwner ? true : allowed))
-      )
-    )
-    console.log(LOG.hr())
-
-    console.log(LOG.lineKV("chatId", chatId))
-    console.log(LOG.lineKV("rawJid", rawSenderJid))
-    console.log(LOG.lineKV("decodedJid", decodedJid))
-    console.log(LOG.lineKV("num(raw)", String(senderNum)))
-    console.log(LOG.lineKV("num(dec)", String(senderNumDecoded)))
-    console.log(LOG.lineKV("prefix", JSON.stringify(prefix)))
-    console.log(LOG.lineKV("text", JSON.stringify(shortText(text, 110))))
-
-    // ✅ privado: allowlist SOLO para no-owners
-    if (!isOwner && !allowed && !chatId.endsWith("@g.us")) {
-      console.log(LOG.hr())
-      console.log(LOG.tag("ROUTER") + " " + LOG.bad("BLOCKED") + " " + LOG.dim("reason=allowlist(private)"))
-      console.log(LOG.lineKV("senderNum", String(senderNum)))
-      console.log(LOG.lineKV("senderNumDec", String(senderNumDecoded)))
-      console.log(LOG.hr())
+    // allowlist SOLO aplica en privado y solo para no-owners (como ya lo tenías)
+    const allowed = isAllowedPrivate(msg)
+    if (!isOwner && !allowed) {
+      logRouter(chalk, {
+        isGroup,
+        isOwner,
+        allowed: false,
+        senderNum: senderNumDecoded || senderNum,
+        text: text || "",
+        action: "BLOCK",
+        reason: "allowlist(private)"
+      })
       return
     }
 
     if (!text) {
-      console.log(LOG.hr())
-      console.log(LOG.tag("ROUTER") + " " + LOG.warn("SKIP") + " " + LOG.dim("reason=no text/caption"))
-      console.log(LOG.hr())
+      // si quieres, puedes comentar este log
+      logRouter(chalk, {
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: senderNumDecoded || senderNum,
+        text: "",
+        action: "SKIP",
+        reason: "no text/caption"
+      })
       return
     }
 
+    const prefix = config.prefix || "."
     if (!text.startsWith(prefix)) {
-      console.log(LOG.hr())
-      console.log(LOG.tag("ROUTER") + " " + LOG.warn("SKIP") + " " + LOG.dim("reason=no prefix match"))
-      console.log(LOG.lineKV("expect", JSON.stringify(prefix)))
-      console.log(LOG.lineKV("got", JSON.stringify(shortText(text, 40))))
-      console.log(LOG.hr())
+      logRouter(chalk, {
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: senderNumDecoded || senderNum,
+        text,
+        action: "SKIP",
+        reason: "no prefix"
+      })
       return
     }
 
-    // ⚠️ Estricto: NO permitimos ". comando" (solo ".comando")
+    // NO permitimos ". comando" (solo ".comando") -> tu lógica actual ya lo hace
     const parts = text.slice(prefix.length).trim().split(/\s+/)
     const command = (parts.shift() || "").toLowerCase()
     const args = parts
 
-    console.log(LOG.hr())
-    console.log(LOG.tag("ROUTER") + " " + LOG.ok("PARSED"))
-    console.log(LOG.lineKV("command", command))
-    console.log(LOG.lineKV("args", args.length ? JSON.stringify(args) : LOG.dim("(none)")))
-    console.log(LOG.hr())
-
     const handler = COMMANDS[command]
     if (!handler) {
-      console.log(LOG.tag("ROUTER") + " " + LOG.warn("NOT FOUND") + " " + LOG.dim(`cmd=${command}`))
-      console.log(LOG.hr())
+      logRouter(chalk, {
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: senderNumDecoded || senderNum,
+        text,
+        action: "SKIP",
+        reason: "command not found"
+      })
       return
     }
 
-    console.log(LOG.tag("ROUTER") + " " + LOG.ok("RUN") + " " + LOG.dim(`cmd=${command}`))
+    logRouter(chalk, {
+      isGroup,
+      isOwner,
+      allowed: true,
+      senderNum: senderNumDecoded || senderNum,
+      text,
+      action: "RUN",
+      command
+    })
 
     await handler(sock, msg, { args, command, isOwner, usedPrefix: prefix })
-
-    const ms = Date.now() - t0
-    console.log(LOG.tag("ROUTER") + " " + LOG.ok("DONE") + " " + LOG.dim(`cmd=${command} • ${ms}ms`))
-    console.log(LOG.hr())
   } catch (e) {
-    console.log(LOG.hr())
-    console.error(LOG.tag("ROUTER") + " " + LOG.bad("ERROR"), e)
-    console.log(LOG.hr())
+    console.error("[ROUTER] error:", e)
   }
 }
