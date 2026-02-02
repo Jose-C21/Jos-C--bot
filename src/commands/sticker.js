@@ -106,7 +106,7 @@ export default async function sticker(sock, msg, { usedPrefix = "." }) {
 
     const metadata = {
       packname: `╰► ${senderName} `,
-      author: `частная sistema - 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦\n${fechaCreacion}`
+      author: `частная система - 𝐽𝑜𝑠𝑒 𝐶•𝐾𝑎𝑡ℎ𝑦\n${fechaCreacion}`
     }
 
     const stickerPath =
