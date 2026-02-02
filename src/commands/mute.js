@@ -1,11 +1,12 @@
+// src/commands/mute.js
 import fs from "fs"
 import path from "path"
 import config from "../config.js"
-import { jidToNumber } from "../utils/jid.js"
+import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
 const MUTE_PATH = path.join(process.cwd(), "data", "mute.json")
 
-function readMuteDB() {
+function readDB() {
   try {
     if (!fs.existsSync(MUTE_PATH)) return {}
     return JSON.parse(fs.readFileSync(MUTE_PATH, "utf8") || "{}")
@@ -14,25 +15,23 @@ function readMuteDB() {
   }
 }
 
-function writeMuteDB(db) {
+function writeDB(db) {
   fs.mkdirSync(path.dirname(MUTE_PATH), { recursive: true })
   fs.writeFileSync(MUTE_PATH, JSON.stringify(db, null, 2))
 }
 
-function getTargetJid(msg) {
-  const ctx = msg?.message?.extendedTextMessage?.contextInfo
-  let target = ctx?.participant
-
-  if (!target && Array.isArray(ctx?.mentionedJid) && ctx.mentionedJid.length) {
-    target = ctx.mentionedJid[0]
-  }
-  return target || null
-}
-
-function isOwnerNumber(numStr = "") {
+function isOwnerNumber(num) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
-  return owners.includes(String(numStr)) || ownersLid.includes(String(numStr))
+  const s = String(num)
+  return owners.includes(s) || ownersLid.includes(s)
+}
+
+function getTargetFromMessage(msg) {
+  const ctx = msg.message?.extendedTextMessage?.contextInfo
+  let targetJid = ctx?.participant
+  if (!targetJid && ctx?.mentionedJid?.length) targetJid = ctx.mentionedJid[0]
+  return targetJid || null
 }
 
 export default async function mute(sock, msg, { isOwner }) {
@@ -45,62 +44,64 @@ export default async function mute(sock, msg, { isOwner }) {
     return
   }
 
-  const senderJid = msg.key.participant || msg.key.remoteJid
+  const senderJid = getSenderJid(msg)
   const senderNum = jidToNumber(senderJid)
 
-  // admins del grupo
-  const metadata = await sock.groupMetadata(chatId)
-  const p = metadata.participants?.find(x => (x.id === senderJid))
-  const isAdmin = p?.admin === "admin" || p?.admin === "superadmin"
-
-  // “bots permitidos” (opcional)
-  const botNum = jidToNumber(sock.user?.id || "")
-  const allowedBots = (config.allowedBots || []).map(String)
-  const isBotAllowed = allowedBots.includes(String(senderNum)) || allowedBots.includes(String(botNum))
-
-  if (!isOwner && !isAdmin && !isBotAllowed) {
-    await sock.sendMessage(chatId, { text: "❌ Solo *admins* o *owners* pueden usar este comando." }, { quoted: msg })
-    return
-  }
-
-  const targetJid = getTargetJid(msg)
+  const targetJid = getTargetFromMessage(msg)
   if (!targetJid) {
-    await sock.sendMessage(chatId, { text: "⚠️ Responde a un mensaje o menciona al usuario que quieres mutear." }, { quoted: msg })
+    await sock.sendMessage(chatId, { text: "⚠️ Responde al mensaje o menciona al usuario que quieres mutear." }, { quoted: msg })
     return
   }
 
-  const targetNum = jidToNumber(targetJid)
-  const targetIsOwner = isOwnerNumber(targetNum)
+  // normalizamos target -> número limpio (sirve lid y normal)
+  let decodedTarget = targetJid
+  try { if (sock?.decodeJid) decodedTarget = sock.decodeJid(targetJid) } catch {}
+  const targetNum = jidToNumber(decodedTarget) || jidToNumber(targetJid)
 
-  if (targetIsOwner) {
-    await sock.sendMessage(chatId, { text: "❌ No puedes mutear al *dueño del bot*." }, { quoted: msg })
+  // ✅ PROTECCIÓN: no mutear owners (nadie)
+  if (isOwnerNumber(targetNum)) {
+    await sock.sendMessage(chatId, { text: "⛔ No puedes mutear a un *owner*." }, { quoted: msg })
     return
   }
 
-  const tp = metadata.participants?.find(x => x.id === targetJid)
-  const targetIsAdmin = tp?.admin === "admin" || tp?.admin === "superadmin"
+  // metadata para admin checks
+  const md = await sock.groupMetadata(chatId)
+  const parts = md?.participants || []
 
-  if (targetIsAdmin && !isOwner && !isBotAllowed) {
-    await sock.sendMessage(chatId, { text: "❌ No puedes mutear a otro *admin*." }, { quoted: msg })
+  const senderP = parts.find(p => p.id === senderJid || p.id === msg.key.participant)
+  const senderIsAdmin = senderP?.admin === "admin" || senderP?.admin === "superadmin"
+
+  // Si no es owner, debe ser admin para usar mute
+  if (!isOwner && !senderIsAdmin) {
+    await sock.sendMessage(chatId, { text: "❌ Solo *admins* o *owner* pueden usar este comando." }, { quoted: msg })
     return
   }
 
-  const db = readMuteDB()
+  const targetP = parts.find(p => p.id === decodedTarget || p.id === targetJid)
+  const targetIsAdmin = targetP?.admin === "admin" || targetP?.admin === "superadmin"
+
+  // ✅ Admin NO puede mutear admins
+  if (targetIsAdmin && !isOwner) {
+    await sock.sendMessage(chatId, { text: "⛔ No puedes mutear a otro *admin*." }, { quoted: msg })
+    return
+  }
+
+  // ✅ Owner SI puede mutear admins y usuarios normales (ya pasó checks)
+
+  const db = readDB()
   if (!db[chatId]) db[chatId] = []
 
-  // guardamos por NÚMERO (más estable: real/lid da igual)
-  if (!db[chatId].includes(String(targetNum))) {
-    db[chatId].push(String(targetNum))
-    writeMuteDB(db)
+  const keyNum = String(targetNum)
+
+  if (!db[chatId].includes(keyNum)) {
+    db[chatId].push(keyNum)
+    writeDB(db)
 
     await sock.sendMessage(chatId, {
-      text: `> 🔇 Usuario @${String(targetNum)} ha sido *muteado*.`,
+      text: `> 🔇 Usuario @${keyNum} ha sido *muteado*.`,
       mentions: [targetJid]
     }, { quoted: msg })
   } else {
-    await sock.sendMessage(chatId, {
-      text: "⚠️ Este usuario ya está muteado.",
-      mentions: [targetJid]
-    }, { quoted: msg })
+    await sock.sendMessage(chatId, { text: "⚠️ Este usuario ya está muteado." }, { quoted: msg })
   }
 }
