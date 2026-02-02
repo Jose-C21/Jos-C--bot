@@ -17,6 +17,19 @@ function getText(msg) {
   ).trim()
 }
 
+function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
+  const owners = (config.owners || []).map(String)
+  const ownersLid = (config.ownersLid || []).map(String)
+
+  // acepta si coincide en cualquiera
+  return (
+    owners.includes(String(senderNum)) ||
+    owners.includes(String(senderNumDecoded)) ||
+    ownersLid.includes(String(senderNum)) ||
+    ownersLid.includes(String(senderNumDecoded))
+  )
+}
+
 export async function routeMessage(sock, msg) {
   try {
     if (!msg?.message) return
@@ -24,23 +37,26 @@ export async function routeMessage(sock, msg) {
 
     const chatId = msg?.key?.remoteJid || "unknown"
 
-    // ✅ LID-safe: si llega @lid, intentamos decodificar al JID real
     const rawSenderJid = getSenderJid(msg)
-    let senderJid = rawSenderJid
-    try {
-      if (sock?.decodeJid) senderJid = sock.decodeJid(rawSenderJid)
-    } catch {}
+    const senderNum = jidToNumber(rawSenderJid)
 
-    const senderNum = jidToNumber(senderJid)
-    const isOwner = (config.owners || []).includes(String(senderNum))
+    // intentamos decodificar (si sirve)
+    let decodedJid = rawSenderJid
+    try {
+      if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid)
+    } catch {}
+    const senderNumDecoded = jidToNumber(decodedJid)
+
+    const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
 
     const text = getText(msg)
 
     console.log("[ROUTER] msg:", {
       chatId,
       rawSenderJid,
-      senderJid,
+      decodedJid,
       senderNum,
+      senderNumDecoded,
       isOwner,
       prefix: config.prefix,
       text: text?.slice(0, 80)
@@ -49,7 +65,7 @@ export async function routeMessage(sock, msg) {
     // ✅ privado: allowlist SOLO para no-owners
     const allowed = isAllowedPrivate(msg)
     if (!isOwner && !allowed) {
-      console.log("[ROUTER] blocked by allowlist (private).", { senderNum })
+      console.log("[ROUTER] blocked by allowlist (private).", { senderNum, senderNumDecoded })
       return
     }
 
@@ -65,7 +81,6 @@ export async function routeMessage(sock, msg) {
     }
 
     // ⚠️ Estricto: NO permitimos ". comando" (solo ".comando")
-    // Por eso usamos trim() normal aquí
     const parts = text.slice(prefix.length).trim().split(/\s+/)
     const command = (parts.shift() || "").toLowerCase()
     const args = parts
