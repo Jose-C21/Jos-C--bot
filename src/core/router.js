@@ -23,8 +23,12 @@ export async function routeMessage(sock, msg) {
   if (!msg?.message) return
   if (msg.key?.fromMe) return
 
-  // ✅ filtro allowlist en privado
-  if (!isAllowedPrivate(msg)) return
+  // ✅ Primero detectamos sender/owner
+  const senderNum = jidToNumber(getSenderJid(msg))
+  const isOwner = (config.owners || []).includes(senderNum)
+
+  // ✅ filtro allowlist en privado (pero owner SIEMPRE pasa)
+  if (!isOwner && !isAllowedPrivate(msg)) return
 
   const text = getText(msg)
   if (!text) return
@@ -35,9 +39,6 @@ export async function routeMessage(sock, msg) {
   const parts = text.slice(prefix.length).trim().split(/\s+/)
   const command = (parts.shift() || "").toLowerCase()
   const args = parts
-
-  const senderNum = jidToNumber(getSenderJid(msg))
-  const isOwner = (config.owners || []).includes(senderNum)
 
   const handler = COMMANDS[command]
   if (!handler) return
