@@ -8,7 +8,7 @@ import path from "path"
 import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
-import mute from "../commands/mute.js" // 
+import mute from "../commands/mute.js"
 import unmute from "../commands/unmute.js"
 
 const COMMANDS = {
@@ -43,13 +43,19 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ MUTE DB (persistente)
+// ✅ MUTE DB (persistente) + AUTO-CREAR ARCHIVO
 // ─────────────────────────────────────────────
 const MUTE_PATH = path.join(process.cwd(), "data", "mute.json")
 
+function ensureMuteDB() {
+  const dir = path.dirname(MUTE_PATH)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  if (!fs.existsSync(MUTE_PATH)) fs.writeFileSync(MUTE_PATH, "{}")
+}
+
 function readMuteDBSafe() {
   try {
-    if (!fs.existsSync(MUTE_PATH)) return {}
+    ensureMuteDB()
     return JSON.parse(fs.readFileSync(MUTE_PATH, "utf8") || "{}")
   } catch {
     return {}
@@ -190,45 +196,46 @@ export async function routeMessage(sock, msg) {
     // ✅ MUTE BLOQUEO (SOLO GRUPOS, ANTES DEL PREFIX)
     // ─────────────────────────────────────────────
     // ✅ si es owner, el mute NO aplica jamás
-if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
+    if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
       global._muteCounter = global._muteCounter || {}
       const key = `${chatId}:${finalNum}`
       global._muteCounter[key] = (global._muteCounter[key] || 0) + 1
       const count = global._muteCounter[key]
 
-      const senderJidForGroup = msg.key.participant || msg.key.remoteJid
+      // ✅ participant correcto para borrar/mentions
+      const participantJid = msg.key.participant || decodedJid || rawSenderJid
 
       if (count === 8) {
         await sock.sendMessage(chatId, {
           text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
-          mentions: [senderJidForGroup]
+          mentions: [participantJid]
         }).catch(() => {})
       }
 
       if (count === 13) {
         await sock.sendMessage(chatId, {
           text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
-          mentions: [senderJidForGroup]
+          mentions: [participantJid]
         }).catch(() => {})
       }
 
       if (count >= 15) {
         try {
           const metadata = await sock.groupMetadata(chatId)
-          const user = metadata.participants?.find(p => p.id === senderJidForGroup)
+          const user = metadata.participants?.find(p => p.id === participantJid)
           const isAdmin = user?.admin === "admin" || user?.admin === "superadmin"
 
           if (!isAdmin) {
-            await sock.groupParticipantsUpdate(chatId, [senderJidForGroup], "remove").catch(() => {})
+            await sock.groupParticipantsUpdate(chatId, [participantJid], "remove").catch(() => {})
             await sock.sendMessage(chatId, {
               text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
-              mentions: [senderJidForGroup]
+              mentions: [participantJid]
             }).catch(() => {})
             delete global._muteCounter[key]
           } else {
             await sock.sendMessage(chatId, {
               text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
-              mentions: [senderJidForGroup]
+              mentions: [participantJid]
             }).catch(() => {})
           }
         } catch {}
@@ -241,12 +248,11 @@ if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
             remoteJid: chatId,
             fromMe: false,
             id: msg.key.id,
-            participant: senderJidForGroup
+            participant: participantJid
           }
         }).catch(() => {})
       } catch {}
 
-      // log mínimo (opcional)
       logRouter({
         isGroup,
         isOwner,
