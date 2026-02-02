@@ -23,14 +23,22 @@ export async function routeMessage(sock, msg) {
     if (msg.key?.fromMe) return
 
     const chatId = msg?.key?.remoteJid || "unknown"
-    const senderJid = getSenderJid(msg)
+
+    // ✅ LID-safe: si llega @lid, intentamos decodificar al JID real
+    const rawSenderJid = getSenderJid(msg)
+    let senderJid = rawSenderJid
+    try {
+      if (sock?.decodeJid) senderJid = sock.decodeJid(rawSenderJid)
+    } catch {}
+
     const senderNum = jidToNumber(senderJid)
-    const isOwner = (config.owners || []).includes(senderNum)
+    const isOwner = (config.owners || []).includes(String(senderNum))
 
     const text = getText(msg)
 
     console.log("[ROUTER] msg:", {
       chatId,
+      rawSenderJid,
       senderJid,
       senderNum,
       isOwner,
@@ -56,6 +64,8 @@ export async function routeMessage(sock, msg) {
       return
     }
 
+    // ⚠️ Estricto: NO permitimos ". comando" (solo ".comando")
+    // Por eso usamos trim() normal aquí
     const parts = text.slice(prefix.length).trim().split(/\s+/)
     const command = (parts.shift() || "").toLowerCase()
     const args = parts
