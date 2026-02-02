@@ -244,10 +244,10 @@ export async function startSock(onMessage) {
   })
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
-    for (const msg of messages || []) {
-      try { await onMessage(sock, msg) } catch {}
-    }
-  })
+  for (const msg of messages || []) {
+    try { await onMessage(sock, msg) } catch {}
+  }
+})
 
   return sock
 }
