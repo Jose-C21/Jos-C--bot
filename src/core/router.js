@@ -1,10 +1,11 @@
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
+import sticker from "../commands/sticker.js"
 
 import resetsession from "../commands/resetsession.js"
 
-const COMMANDS = { resetsession }
+const COMMANDS = { resetsession, s: sticker }
 
 function getText(msg) {
   const m = msg?.message || {}
