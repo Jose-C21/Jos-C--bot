@@ -82,6 +82,13 @@ function banner() {
   console.log("")
 }
 
+// ✅ Formato pro del pairing code: ABCD – EFGH (solo visual)
+function formatPairingCode(code = "") {
+  const raw = String(code).replace(/[^A-Za-z0-9]/g, "").toUpperCase()
+  if (raw.length >= 8) return raw.slice(0, 4) + " – " + raw.slice(4, 8)
+  return raw
+}
+
 // ─────────────────────────────────────────────
 // ✅ UI PRO (sin emojis) - combina con el banner
 // ─────────────────────────────────────────────
@@ -101,7 +108,7 @@ const UI = {
   info(txt) {
     console.log(chalk.gray("  • ") + chalk.white(txt))
   },
-  // ✅ CAMBIO: hints en rojo claro
+  // ✅ hints en rojo claro
   hint(txt) {
     console.log(chalk.gray("  • ") + chalk.redBright(txt))
   },
@@ -146,7 +153,6 @@ async function askPhone() {
   while (true) {
     UI.hrSoft(26)
     UI.title("Ingresa tu número")
-    // ✅ CAMBIO: estas dos líneas ahora salen rojo claro por UI.hint
     UI.hint("Formato: internacional (sin +)")
     UI.hint("Ejemplo: 504XXXXXXXX")
     UI.hrSoft(26)
@@ -193,7 +199,6 @@ export async function startSock(onMessage) {
 
     console.log("")
     UI.title("Generando código")
-    // ✅ CAMBIO: “Espera un momento...” en rojo claro
     UI.dim(chalk.redBright("  • Espera un momento..."))
     console.log("")
 
@@ -201,7 +206,7 @@ export async function startSock(onMessage) {
 
     UI.hrSoft(26)
     console.log(
-      chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(code)
+      chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code))
     )
     UI.info("WhatsApp > Dispositivos vinculados > Vincular con número")
     UI.info("Ingresa el código")
