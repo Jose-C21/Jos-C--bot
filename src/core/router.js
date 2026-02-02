@@ -2,14 +2,19 @@ import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
 import chalk from "chalk"
+import fs from "fs"
+import path from "path"
+
 import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
+import mute from "../commands/mute.js" // ✅ NUEVO
 
 const COMMANDS = {
   resetsession,
   s: sticker,
-  play
+  play,
+  mute // ✅ NUEVO
 }
 
 function getText(msg) {
@@ -33,6 +38,26 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
     ownersLid.includes(String(senderNum)) ||
     ownersLid.includes(String(senderNumDecoded))
   )
+}
+
+// ─────────────────────────────────────────────
+// ✅ MUTE DB (persistente)
+// ─────────────────────────────────────────────
+const MUTE_PATH = path.join(process.cwd(), "data", "mute.json")
+
+function readMuteDBSafe() {
+  try {
+    if (!fs.existsSync(MUTE_PATH)) return {}
+    return JSON.parse(fs.readFileSync(MUTE_PATH, "utf8") || "{}")
+  } catch {
+    return {}
+  }
+}
+
+function isMuted(chatId, senderNum) {
+  const db = readMuteDBSafe()
+  const list = db[chatId] || []
+  return list.includes(String(senderNum))
 }
 
 // ─────────────────────────────────────────────
@@ -70,7 +95,6 @@ function getDisplayName(sock, msg, jid) {
 
 // ✅ Cache de nombres de grupos (para NO trabar)
 const GROUP_CACHE = new Map()
-// TTL recomendado: 10 min (puedes subir a 30 si quieres aún menos requests)
 const GROUP_TTL_MS = 10 * 60 * 1000
 
 async function getGroupNameCached(sock, groupJid) {
@@ -86,7 +110,6 @@ async function getGroupNameCached(sock, groupJid) {
     GROUP_CACHE.set(groupJid, { name, t })
     return name
   } catch {
-    // si falla, guardamos algo corto para no insistir
     const name = "Grupo"
     GROUP_CACHE.set(groupJid, { name, t })
     return name
@@ -105,7 +128,6 @@ function logRouter(data) {
 
   const head = `${tag} ${where} ${role} ${gate} ${chalk.cyanBright(now())}`
 
-  // ✅ Línea 2: name (+ group si aplica)
   const nameLine =
     chalk.whiteBright("name: ") +
     chalk.yellowBright(short(data.senderName || "SinNombre", 22))
@@ -114,16 +136,13 @@ function logRouter(data) {
     ? chalk.whiteBright("group: ") + chalk.blueBright(short(data.groupName, 24))
     : ""
 
-  // ✅ Línea 3: senderNumber COMPLETO
   const numLine =
     chalk.whiteBright("senderNumber: ") +
     chalk.cyanBright(String(data.senderNum || ""))
 
-  // ✅ Línea 4: texto
   const txtLine =
-  chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
+    chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
 
-  // ✅ Resultado
   let res = ""
   if (data.action === "BLOCK") res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
   else if (data.action === "SKIP") res = chalk.yellowBright("↷ SKIP") + chalk.whiteBright(`  ${data.reason || ""}`)
@@ -134,7 +153,10 @@ function logRouter(data) {
   console.log("  " + nameLine)
   if (groupLine) console.log("  " + groupLine)
   console.log("  " + numLine)
-  console.log(padRightAnsi("  " + txtLine, OUT))
+
+  // ✅ texto COMPLETO (sin recortes)
+  console.log("  " + txtLine)
+
   console.log("  " + res)
   console.log(chalk.cyanBright("─".repeat(OUT)))
 }
@@ -160,10 +182,85 @@ export async function routeMessage(sock, msg) {
     const text = getText(msg)
 
     const senderName = getDisplayName(sock, msg, decodedJid)
-
-    // ✅ Nombre del grupo (solo si es grupo) con cache
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
+    // ─────────────────────────────────────────────
+    // ✅ MUTE BLOQUEO (SOLO GRUPOS, ANTES DEL PREFIX)
+    // ─────────────────────────────────────────────
+    // ✅ si es owner, el mute NO aplica jamás
+if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
+      global._muteCounter = global._muteCounter || {}
+      const key = `${chatId}:${finalNum}`
+      global._muteCounter[key] = (global._muteCounter[key] || 0) + 1
+      const count = global._muteCounter[key]
+
+      const senderJidForGroup = msg.key.participant || msg.key.remoteJid
+
+      if (count === 8) {
+        await sock.sendMessage(chatId, {
+          text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
+          mentions: [senderJidForGroup]
+        }).catch(() => {})
+      }
+
+      if (count === 13) {
+        await sock.sendMessage(chatId, {
+          text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
+          mentions: [senderJidForGroup]
+        }).catch(() => {})
+      }
+
+      if (count >= 15) {
+        try {
+          const metadata = await sock.groupMetadata(chatId)
+          const user = metadata.participants?.find(p => p.id === senderJidForGroup)
+          const isAdmin = user?.admin === "admin" || user?.admin === "superadmin"
+
+          if (!isAdmin) {
+            await sock.groupParticipantsUpdate(chatId, [senderJidForGroup], "remove").catch(() => {})
+            await sock.sendMessage(chatId, {
+              text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
+              mentions: [senderJidForGroup]
+            }).catch(() => {})
+            delete global._muteCounter[key]
+          } else {
+            await sock.sendMessage(chatId, {
+              text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
+              mentions: [senderJidForGroup]
+            }).catch(() => {})
+          }
+        } catch {}
+      }
+
+      // 🧹 borrar cualquier tipo de mensaje
+      try {
+        await sock.sendMessage(chatId, {
+          delete: {
+            remoteJid: chatId,
+            fromMe: false,
+            id: msg.key.id,
+            participant: senderJidForGroup
+          }
+        }).catch(() => {})
+      } catch {}
+
+      // log mínimo (opcional)
+      logRouter({
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: finalNum,
+        senderName,
+        groupName,
+        text: text || "",
+        action: "BLOCK",
+        reason: `muted(count=${count})`
+      })
+
+      return
+    }
+
+    // ✅ privado: allowlist SOLO para no-owners
     const allowed = isAllowedPrivate(msg)
     if (!isOwner && !allowed) {
       logRouter({
