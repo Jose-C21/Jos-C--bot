@@ -36,19 +36,28 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ LOG COMPACTO (móvil/panel friendly)
+// ✅ LOG COMPACTO + NOMBRE + COLORES VISIBLES
 // ─────────────────────────────────────────────
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
+
 const padRightAnsi = (txt, width) => {
   const raw = stripAnsi(txt)
   if (raw.length >= width) return txt
   return txt + " ".repeat(width - raw.length)
 }
+
 const short = (s = "", n = 46) => {
   s = String(s)
   if (s.length <= n) return s
   return s.slice(0, n - 1) + "…"
 }
+
+const shortNum = (n = "") => {
+  const s = String(n)
+  if (s.length <= 10) return s
+  return s.slice(0, 6) + "…" + s.slice(-4)
+}
+
 const now = () => {
   const d = new Date()
   const hh = String(d.getHours()).padStart(2, "0")
@@ -57,7 +66,20 @@ const now = () => {
   return `${hh}:${mm}:${ss}`
 }
 
-function logRouter(chalk, data) {
+function getDisplayName(sock, msg, jid) {
+  // 1) pushName (WhatsApp lo manda casi siempre)
+  const push = (msg?.pushName || "").trim()
+  if (push) return push
+
+  // 2) contactos cacheados por Baileys (si existen)
+  const c = sock?.contacts?.[jid]
+  const name = (c?.name || c?.notify || c?.verifiedName || "").trim()
+  if (name) return name
+
+  return "SinNombre"
+}
+
+function logRouter(data, sock, msg) {
   // Toggle: si quieres apagar logs, pon en config: debugRouter: false
   if (config.debugRouter === false) return
 
@@ -65,28 +87,42 @@ function logRouter(chalk, data) {
   const tag = padRightAnsi(chalk.cyanBright("[ROUTER]"), 10)
 
   const where = data.isGroup ? chalk.blueBright("GROUP") : chalk.magentaBright("PRIVATE")
-  const owner = data.isOwner ? chalk.greenBright("OWNER") : chalk.gray("USER")
-  const allow = data.allowed ? chalk.greenBright("ALLOW") : chalk.redBright("BLOCK")
+  const role = data.isOwner ? chalk.greenBright("OWNER") : chalk.yellowBright("USER")
+  const gate = data.allowed ? chalk.greenBright("ALLOW") : chalk.redBright("BLOCK")
 
-  // header compacto en una línea
-  const head = `${tag} ${where} ${owner} ${allow} ${chalk.gray(now())}`
+  // Header en 1 línea
+  const head = `${tag} ${where} ${role} ${gate} ${chalk.cyanBright(now())}`
 
-  // segunda línea: lo importante
-  const from = chalk.white(`from:${data.senderNum}`)
-  const txt = chalk.gray(`txt:`) + chalk.white(`"${short(data.text, 40)}"`)
+  const senderNumber = shortNum(data.senderNum || "")
+  const displayName = data.senderName || "SinNombre"
 
-  // tercera línea: resultado mínimo
+  // Línea 2: nombre + senderNumber + texto
+  const fromLine =
+    chalk.whiteBright("name: ") +
+    chalk.yellowBright(short(displayName, 18)) +
+    chalk.whiteBright("  |  senderNumber: ") +
+    chalk.cyanBright(senderNumber)
+
+  const txtLine =
+    chalk.whiteBright("text: ") + chalk.cyanBright(`"${short(data.text || "", 40)}"`)
+
+  // Línea 3: acción (RUN/SKIP/BLOCK)
   let res = ""
-  if (data.action === "BLOCK") res = chalk.redBright(`× BLOCK`) + chalk.gray(` ${data.reason}`)
-  else if (data.action === "SKIP") res = chalk.yellowBright(`↷ SKIP`) + chalk.gray(` ${data.reason}`)
-  else if (data.action === "RUN") res = chalk.greenBright(`▶ RUN`) + chalk.cyanBright(` .${data.command}`)
-  else res = chalk.gray("…")
+  if (data.action === "BLOCK") {
+    res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
+  } else if (data.action === "SKIP") {
+    res = chalk.yellowBright("↷ SKIP") + chalk.whiteBright(`  ${data.reason || ""}`)
+  } else if (data.action === "RUN") {
+    res = chalk.greenBright("▶ RUN") + chalk.cyanBright(`  .${data.command || ""}`)
+  } else {
+    res = chalk.whiteBright("…")
+  }
 
-  // imprime compacto (3 líneas máximo)
   console.log(head)
-  console.log(padRightAnsi("  " + from, OUT) + "  " + txt)
+  console.log(padRightAnsi("  " + fromLine, OUT))
+  console.log(padRightAnsi("  " + txtLine, OUT))
   console.log("  " + res)
-  console.log(chalk.gray("─".repeat(OUT)))
+  console.log(chalk.cyanBright("─".repeat(OUT)))
 }
 
 export async function routeMessage(sock, msg) {
@@ -101,53 +137,73 @@ export async function routeMessage(sock, msg) {
     const senderNum = jidToNumber(rawSenderJid)
 
     let decodedJid = rawSenderJid
-    try { if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid) } catch {}
+    try {
+      if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid)
+    } catch {}
+
     const senderNumDecoded = jidToNumber(decodedJid)
+    const finalNum = senderNumDecoded || senderNum
 
     const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
-
     const text = getText(msg)
 
-    // allowlist SOLO aplica en privado y solo para no-owners (como ya lo tenías)
+    // ✅ nombre (privado/grupo)
+    const senderName = getDisplayName(sock, msg, decodedJid)
+
+    // allowlist SOLO aplica en privado y solo para no-owners
     const allowed = isAllowedPrivate(msg)
     if (!isOwner && !allowed) {
-      logRouter(chalk, {
-        isGroup,
-        isOwner,
-        allowed: false,
-        senderNum: senderNumDecoded || senderNum,
-        text: text || "",
-        action: "BLOCK",
-        reason: "allowlist(private)"
-      })
+      logRouter(
+        {
+          isGroup,
+          isOwner,
+          allowed: false,
+          senderNum: finalNum,
+          senderName,
+          text: text || "",
+          action: "BLOCK",
+          reason: "allowlist(private)"
+        },
+        sock,
+        msg
+      )
       return
     }
 
     if (!text) {
-      // si quieres, puedes comentar este log
-      logRouter(chalk, {
-        isGroup,
-        isOwner,
-        allowed: true,
-        senderNum: senderNumDecoded || senderNum,
-        text: "",
-        action: "SKIP",
-        reason: "no text/caption"
-      })
+      logRouter(
+        {
+          isGroup,
+          isOwner,
+          allowed: true,
+          senderNum: finalNum,
+          senderName,
+          text: "",
+          action: "SKIP",
+          reason: "no text/caption"
+        },
+        sock,
+        msg
+      )
       return
     }
 
     const prefix = config.prefix || "."
     if (!text.startsWith(prefix)) {
-      logRouter(chalk, {
-        isGroup,
-        isOwner,
-        allowed: true,
-        senderNum: senderNumDecoded || senderNum,
-        text,
-        action: "SKIP",
-        reason: "no prefix"
-      })
+      logRouter(
+        {
+          isGroup,
+          isOwner,
+          allowed: true,
+          senderNum: finalNum,
+          senderName,
+          text,
+          action: "SKIP",
+          reason: `no prefix (expect "${prefix}")`
+        },
+        sock,
+        msg
+      )
       return
     }
 
@@ -158,30 +214,40 @@ export async function routeMessage(sock, msg) {
 
     const handler = COMMANDS[command]
     if (!handler) {
-      logRouter(chalk, {
-        isGroup,
-        isOwner,
-        allowed: true,
-        senderNum: senderNumDecoded || senderNum,
-        text,
-        action: "SKIP",
-        reason: "command not found"
-      })
+      logRouter(
+        {
+          isGroup,
+          isOwner,
+          allowed: true,
+          senderNum: finalNum,
+          senderName,
+          text,
+          action: "SKIP",
+          reason: "command not found"
+        },
+        sock,
+        msg
+      )
       return
     }
 
-    logRouter(chalk, {
-      isGroup,
-      isOwner,
-      allowed: true,
-      senderNum: senderNumDecoded || senderNum,
-      text,
-      action: "RUN",
-      command
-    })
+    logRouter(
+      {
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: finalNum,
+        senderName,
+        text,
+        action: "RUN",
+        command
+      },
+      sock,
+      msg
+    )
 
     await handler(sock, msg, { args, command, isOwner, usedPrefix: prefix })
   } catch (e) {
-    console.error("[ROUTER] error:", e)
+    console.error(chalk.redBright("[ROUTER] error:"), e)
   }
 }
