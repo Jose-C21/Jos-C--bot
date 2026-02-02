@@ -101,8 +101,9 @@ const UI = {
   info(txt) {
     console.log(chalk.gray("  • ") + chalk.white(txt))
   },
+  // ✅ CAMBIO: hints en rojo claro
   hint(txt) {
-    console.log(chalk.gray("  • ") + chalk.gray(txt))
+    console.log(chalk.gray("  • ") + chalk.redBright(txt))
   },
   item(num, txt, highlight = false) {
     const n = highlight ? chalk.cyanBright(String(num)) : chalk.white(String(num))
@@ -130,7 +131,7 @@ async function askMode() {
     UI.hrSoft(26)
     UI.title("Elige tu vinculación")
     UI.item(1, "QR")
-    UI.item(2, "Código (Pairing)", true)
+    UI.item(2, "Código", true)
     UI.hrSoft(26)
     UI.prompt("▸ Selecciona 1/2: ")
 
@@ -145,6 +146,7 @@ async function askPhone() {
   while (true) {
     UI.hrSoft(26)
     UI.title("Ingresa tu número")
+    // ✅ CAMBIO: estas dos líneas ahora salen rojo claro por UI.hint
     UI.hint("Formato: internacional (sin +)")
     UI.hint("Ejemplo: 504XXXXXXXX")
     UI.hrSoft(26)
@@ -191,7 +193,8 @@ export async function startSock(onMessage) {
 
     console.log("")
     UI.title("Generando código")
-    UI.dim(chalk.gray("  • Espera un momento..."))
+    // ✅ CAMBIO: “Espera un momento...” en rojo claro
+    UI.dim(chalk.redBright("  • Espera un momento..."))
     console.log("")
 
     const code = await sock.requestPairingCode(clean)
