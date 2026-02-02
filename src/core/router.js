@@ -121,7 +121,7 @@ function logRouter(data) {
 
   // ✅ Línea 4: texto
   const txtLine =
-    chalk.whiteBright("text: ") + chalk.cyanBright(`"${short(data.text || "", 40)}"`)
+  chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
 
   // ✅ Resultado
   let res = ""
