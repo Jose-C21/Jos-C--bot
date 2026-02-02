@@ -8,13 +8,15 @@ import path from "path"
 import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
-import mute from "../commands/mute.js" // ✅ NUEVO
+import mute from "../commands/mute.js" // 
+import unmute from "../commands/unmute.js"
 
 const COMMANDS = {
   resetsession,
   s: sticker,
   play,
-  mute // ✅ NUEVO
+  mute,
+  unmute
 }
 
 function getText(msg) {
