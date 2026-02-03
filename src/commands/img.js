@@ -6,29 +6,20 @@ import https from "https"
 const agent = new https.Agent({ rejectUnauthorized: false })
 
 const API_URL = "https://api.zonerai.com/zoner-ai/txt2img"
-const CATBOX_URL = "https://catbox.moe/user/api.php"
-
-// tamaños permitidos (ajusta si quieres)
 const ALLOWED_SIZES = new Set(["512x512", "768x768", "1024x1024"])
 
-async function uploadToCatbox(buffer) {
-  const form = new FormData()
-  form.append("reqtype", "fileupload")
-  form.append("fileToUpload", buffer, {
-    filename: "ai_image.jpg",
-    contentType: "image/jpeg"
-  })
+function parseArgs(args = []) {
+  const first = (args[0] || "").trim()
+  let size = "1024x1024"
+  let promptParts = args
 
-  const res = await axios.post(CATBOX_URL, form, {
-    headers: form.getHeaders(),
-    httpsAgent: agent,
-    timeout: 60_000
-  })
+  if (ALLOWED_SIZES.has(first)) {
+    size = first
+    promptParts = args.slice(1)
+  }
 
-  // catbox responde con texto plano (url)
-  const url = String(res.data || "").trim()
-  if (!url.startsWith("http")) throw new Error("Catbox no devolvió una URL válida")
-  return url
+  const prompt = promptParts.join(" ").trim()
+  return { size, prompt }
 }
 
 async function generateImageBuffer({ prompt, size }) {
@@ -48,27 +39,12 @@ async function generateImageBuffer({ prompt, size }) {
     },
     responseType: "arraybuffer",
     httpsAgent: agent,
-    timeout: 120_000
+    timeout: 120_000,
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity
   })
 
   return Buffer.from(res.data)
-}
-
-function parseArgs(args = []) {
-  // Soporta:
-  // .img prompt...
-  // .img 1024x1024 prompt...
-  const first = (args[0] || "").trim()
-  let size = "1024x1024"
-  let promptParts = args
-
-  if (ALLOWED_SIZES.has(first)) {
-    size = first
-    promptParts = args.slice(1)
-  }
-
-  const prompt = promptParts.join(" ").trim()
-  return { size, prompt }
 }
 
 export default async function img(sock, msg, { args = [], usedPrefix = "." }) {
@@ -92,20 +68,17 @@ export default async function img(sock, msg, { args = [], usedPrefix = "." }) {
     return
   }
 
-  // Reacción de "procesando" (opcional)
   try {
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
   } catch {}
 
   try {
     const buffer = await generateImageBuffer({ prompt, size })
-    const url = await uploadToCatbox(buffer)
 
-    // Enviar imagen (WhatsApp puede tomar URL directa)
     await sock.sendMessage(
       chatId,
       {
-        image: { url },
+        image: buffer,
         caption:
           `🖼️ Imagen generada\n` +
           `• Tamaño: ${size}\n` +
