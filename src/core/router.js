@@ -10,13 +10,15 @@ import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
 import mute from "../commands/mute.js"
 import unmute from "../commands/unmute.js"
+import img from "../commands/img.js"
 
 const COMMANDS = {
   resetsession,
   s: sticker,
   play,
   mute,
-  unmute
+  unmute,
+  img
 }
 
 function getText(msg) {
