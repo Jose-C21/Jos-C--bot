@@ -23,7 +23,7 @@ const COMMANDS = {
   unmute,
   img,
   addlista,
-  textsticker
+  ts: textsticker
 }
 
 function getText(msg) {
