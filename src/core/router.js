@@ -11,6 +11,7 @@ import resetsession from "../commands/resetsession.js"
 import mute from "../commands/mute.js"
 import unmute from "../commands/unmute.js"
 import img from "../commands/img.js"
+import addlista from "../commands/addlista.js"
 
 const COMMANDS = {
   resetsession,
@@ -18,7 +19,8 @@ const COMMANDS = {
   play,
   mute,
   unmute,
-  img
+  img,
+  addlista
 }
 
 function getText(msg) {
