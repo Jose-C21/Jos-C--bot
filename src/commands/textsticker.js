@@ -136,11 +136,11 @@ async function buildFrames(text) {
     const startY = (H - layout.blockHeight) / 2 + layout.lineHeight / 2
     let y = startY
 
-    // sombra suave (sin borde en letras)
-    ctx.shadowColor = "rgba(0,0,0,0.22)"
-    ctx.shadowBlur = 10
-    ctx.shadowOffsetX = 0
-    ctx.shadowOffsetY = 3
+    // ✅ sombra del MISMO color del parpadeo
+ctx.shadowColor = color
+ctx.shadowBlur = 14
+ctx.shadowOffsetX = 0
+ctx.shadowOffsetY = 3
 
     // ✅ solo fill (sin strokeText)
     ctx.fillStyle = color
