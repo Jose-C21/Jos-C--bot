@@ -20,19 +20,36 @@ function id() {
 }
 
 function wrapText(ctx, text, maxWidth) {
-  const words = String(text).split(/\s+/)
+  const words = String(text || "").trim().split(/\s+/)
   const lines = []
   let line = ""
 
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w
-    if (ctx.measureText(test).width <= maxWidth) {
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word
+    const w = ctx.measureText(test).width
+
+    if (w <= maxWidth) {
       line = test
-    } else {
-      if (line) lines.push(line)
-      line = w
+      continue
     }
+
+    // si la línea ya tiene algo, la guardamos
+    if (line) lines.push(line)
+
+    // si una sola palabra es demasiado larga, la partimos
+    let chunk = ""
+    for (const ch of word) {
+      const t = chunk + ch
+      if (ctx.measureText(t).width > maxWidth && chunk) {
+        lines.push(chunk)
+        chunk = ch
+      } else {
+        chunk = t
+      }
+    }
+    line = chunk
   }
+
   if (line) lines.push(line)
   return lines
 }
@@ -47,52 +64,53 @@ async function buildFrames(text) {
   const H = 512
 
   const COLORS = [
-    "#ff2d2d",
-    "#ff9f0a",
-    "#ffd60a",
-    "#34c759",
-    "#00c7ff",
-    "#0a84ff",
-    "#bf5af2",
-    "#ff375f"
+    "#ff2d2d", "#ff9f0a", "#ffd60a", "#34c759",
+    "#00c7ff", "#0a84ff", "#bf5af2", "#ff375f"
   ]
 
   const fps = 4
   const totalFrames = 16
   const fontFamily = "sans-serif"
 
-  // ✅ márgenes reales (para que el texto quede grande)
   const PAD_X = 44
   const PAD_Y = 44
   const maxWidth = W - PAD_X * 2
   const maxHeight = H - PAD_Y * 2
 
-  // ✅ configuración de tamaño (primero intenta grande, luego baja)
-  let fontSize = 78
-  const minFont = 34
-  const maxLines = 5
+  let fontSize = 82
+  const minFont = 26
+  const maxLines = 9 // ✅ más líneas para que NO falte texto
 
-  // función: calcular líneas y si caben
+  const tmpCanvas = createCanvas(W, H)
+  const tmpCtx = tmpCanvas.getContext("2d")
+
   const calcLayout = (ctx, t, size) => {
     ctx.font = `900 ${size}px ${fontFamily}`
-    const lines = wrapText(ctx, t, maxWidth).slice(0, maxLines)
+    let lines = wrapText(ctx, t, maxWidth)
+
+    // si se va a demasiadas líneas, bajamos tamaño (sin cortar el texto)
+    while (lines.length > maxLines && size > minFont) {
+      size -= 2
+      ctx.font = `900 ${size}px ${fontFamily}`
+      lines = wrapText(ctx, t, maxWidth)
+    }
 
     const lineHeight = Math.round(size * 1.18)
     const blockHeight = lines.length * lineHeight
     const widest = Math.max(...lines.map(l => ctx.measureText(l).width), 0)
 
     const fits = widest <= maxWidth && blockHeight <= maxHeight
-    return { lines, lineHeight, blockHeight, fits }
+    return { lines, lineHeight, blockHeight, fits, size }
   }
 
-  // ✅ elegir tamaño: intenta grande, si no cabe -> baja hasta que quepa
-  const tmpCanvas = createCanvas(W, H)
-  const tmpCtx = tmpCanvas.getContext("2d")
   let layout = calcLayout(tmpCtx, text, fontSize)
+  fontSize = layout.size
 
+  // si aún no cabe, bajamos más hasta que quepa (SIN recortar texto)
   while (!layout.fits && fontSize > minFont) {
     fontSize -= 2
     layout = calcLayout(tmpCtx, text, fontSize)
+    fontSize = layout.size
   }
 
   for (let i = 0; i < totalFrames; i++) {
@@ -103,30 +121,31 @@ async function buildFrames(text) {
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, W, H)
 
+    // ✅ borde del sticker (marco fino)
+    ctx.lineWidth = 3
+    ctx.strokeStyle = "rgba(0,0,0,0.22)"
+    ctx.strokeRect(8, 8, W - 16, H - 16)
+
     const color = COLORS[i % COLORS.length]
 
-    // aplicar fuente final
     ctx.font = `900 ${fontSize}px ${fontFamily}`
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
 
-    // ✅ centro PERFECTO del bloque
+    // ✅ centro del bloque
     const startY = (H - layout.blockHeight) / 2 + layout.lineHeight / 2
     let y = startY
 
-    // sombra suave
-    ctx.shadowColor = "rgba(0,0,0,0.18)"
-    ctx.shadowBlur = 8
+    // sombra suave (sin borde en letras)
+    ctx.shadowColor = "rgba(0,0,0,0.22)"
+    ctx.shadowBlur = 10
     ctx.shadowOffsetX = 0
     ctx.shadowOffsetY = 3
 
-    // ✅ borde + relleno (se ve más pro)
-    ctx.lineWidth = Math.max(6, Math.round(fontSize * 0.12))
-    ctx.strokeStyle = "rgba(0,0,0,0.20)"
+    // ✅ solo fill (sin strokeText)
     ctx.fillStyle = color
 
     for (const line of layout.lines) {
-      ctx.strokeText(line, W / 2, y)
       ctx.fillText(line, W / 2, y)
       y += layout.lineHeight
     }
