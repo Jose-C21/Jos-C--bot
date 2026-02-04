@@ -9,24 +9,29 @@ const ALLOW_PATH = path.join(process.cwd(), "data", "allowlist.json")
 function ensureDB() {
   const dir = path.dirname(ALLOW_PATH)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  if (!fs.existsSync(ALLOW_PATH)) fs.writeFileSync(ALLOW_PATH, JSON.stringify({ users: [] }, null, 2))
+  if (!fs.existsSync(ALLOW_PATH)) fs.writeFileSync(ALLOW_PATH, "[]") // ✅ formato simple
 }
 
-function readDB() {
+function readList() {
   try {
     ensureDB()
-    const raw = fs.readFileSync(ALLOW_PATH, "utf8") || ""
-    const db = raw ? JSON.parse(raw) : { users: [] }
-    if (!Array.isArray(db.users)) db.users = []
-    return db
+    const raw = fs.readFileSync(ALLOW_PATH, "utf8") || "[]"
+    const parsed = JSON.parse(raw)
+
+    // ✅ soporta: []  o  { users: [] }
+    if (Array.isArray(parsed)) return parsed.map(String)
+    if (parsed && Array.isArray(parsed.users)) return parsed.users.map(String)
+
+    return []
   } catch {
-    return { users: [] }
+    return []
   }
 }
 
-function writeDB(db) {
+function writeList(list) {
   ensureDB()
-  fs.writeFileSync(ALLOW_PATH, JSON.stringify(db, null, 2))
+  const clean = Array.from(new Set(list.map(String)))
+  fs.writeFileSync(ALLOW_PATH, JSON.stringify(clean, null, 2))
 }
 
 function isOwnerNumber(num) {
@@ -36,31 +41,27 @@ function isOwnerNumber(num) {
   return owners.includes(s) || ownersLid.includes(s)
 }
 
-function normalizeToNum(input = "") {
-  const s = String(input).trim()
-
-  // si viene jid tipo 504xxxx@s.whatsapp.net
-  if (s.includes("@")) return s.replace(/[^0-9]/g, "")
-
-  // si viene con +, espacios, etc
-  return s.replace(/[^0-9]/g, "")
+function normalizeToNum(x = "") {
+  return String(x).replace(/[^0-9]/g, "")
 }
 
 function getTargetNum(sock, msg, args) {
-  // 1) reply / mention
   const ctx = msg.message?.extendedTextMessage?.contextInfo
+
   let targetJid = ctx?.participant
   if (!targetJid && ctx?.mentionedJid?.length) targetJid = ctx.mentionedJid[0]
 
   if (targetJid) {
     let decoded = targetJid
     try { if (sock?.decodeJid) decoded = sock.decodeJid(targetJid) } catch {}
-    return jidToNumber(decoded) || jidToNumber(targetJid) || normalizeToNum(targetJid)
+    return (
+      jidToNumber(decoded) ||
+      jidToNumber(targetJid) ||
+      normalizeToNum(targetJid)
+    )
   }
 
-  // 2) args
   const raw = (args || []).join(" ").trim()
-  if (!raw) return ""
   return normalizeToNum(raw)
 }
 
@@ -68,23 +69,21 @@ export default async function addlista(sock, msg, { args = [], isOwner, usedPref
   const chatId = msg?.key?.remoteJid
   if (!chatId) return
 
-  // ✅ solo en privado (como tu bot viejo)
-  const isGroup = String(chatId).endsWith("@g.us")
-  if (isGroup) {
+  // ✅ SOLO PRIVADO (como dijimos desde el inicio)
+  if (String(chatId).endsWith("@g.us")) {
     await sock.sendMessage(chatId, { text: "❌ Este comando solo se usa en *privado*." }, { quoted: msg })
     return
   }
 
-  // ✅ permitir si: es owner O el mensaje es del bot (fromMe)
-  const fromMe = !!msg?.key?.fromMe
-  if (!isOwner && !fromMe) {
+  // ✅ solo owners (tu router ya calcula isOwner con lid/real)
+  if (!isOwner) {
     await sock.sendMessage(chatId, { text: "⛔ Solo *owners* pueden usar este comando." }, { quoted: msg })
     return
   }
 
   const targetNum = getTargetNum(sock, msg, args)
 
-  if (!targetNum) {
+  if (!targetNum || targetNum.length < 6) {
     await sock.sendMessage(chatId, {
       text:
         `⚠️ Usa:\n` +
@@ -94,19 +93,19 @@ export default async function addlista(sock, msg, { args = [], isOwner, usedPref
     return
   }
 
-  // ✅ no agregar owners a la lista (no tiene sentido, y evita errores)
   if (isOwnerNumber(targetNum)) {
     await sock.sendMessage(chatId, { text: "✅ Ese número es *owner*, no necesita allowlist." }, { quoted: msg })
     return
   }
 
-  const db = readDB()
-  if (!db.users.includes(String(targetNum))) {
-    db.users.push(String(targetNum))
-    writeDB(db)
+  const list = readList()
+
+  if (!list.includes(String(targetNum))) {
+    list.push(String(targetNum))
+    writeList(list)
 
     await sock.sendMessage(chatId, {
-      text: `✅ Agregado a allowlist:\n• ${targetNum}`
+      text: `✅ Agregado a allowlist:\n• ${targetNum}\n\n📁 Guardado en la lista.`
     }, { quoted: msg })
   } else {
     await sock.sendMessage(chatId, { text: `⚠️ Ya estaba en allowlist:\n• ${targetNum}` }, { quoted: msg })
