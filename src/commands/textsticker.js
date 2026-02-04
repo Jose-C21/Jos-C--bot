@@ -46,66 +46,89 @@ async function buildFrames(text) {
   const W = 512
   const H = 512
 
-  // Colores que “parpadean”
   const COLORS = [
-    "#ff2d2d", // rojo
-    "#ff9f0a", // naranja
-    "#ffd60a", // amarillo
-    "#34c759", // verde
-    "#00c7ff", // cyan
-    "#0a84ff", // azul
-    "#bf5af2", // morado
-    "#ff375f"  // rosa
+    "#ff2d2d",
+    "#ff9f0a",
+    "#ffd60a",
+    "#34c759",
+    "#00c7ff",
+    "#0a84ff",
+    "#bf5af2",
+    "#ff375f"
   ]
 
-  // Duración: 4s aprox (16 frames a 4 fps)
   const fps = 4
   const totalFrames = 16
-
-  // Fuente (si no registras, usa sans-serif)
   const fontFamily = "sans-serif"
+
+  // ✅ márgenes reales (para que el texto quede grande)
+  const PAD_X = 44
+  const PAD_Y = 44
+  const maxWidth = W - PAD_X * 2
+  const maxHeight = H - PAD_Y * 2
+
+  // ✅ configuración de tamaño (primero intenta grande, luego baja)
+  let fontSize = 78
+  const minFont = 34
+  const maxLines = 5
+
+  // función: calcular líneas y si caben
+  const calcLayout = (ctx, t, size) => {
+    ctx.font = `900 ${size}px ${fontFamily}`
+    const lines = wrapText(ctx, t, maxWidth).slice(0, maxLines)
+
+    const lineHeight = Math.round(size * 1.18)
+    const blockHeight = lines.length * lineHeight
+    const widest = Math.max(...lines.map(l => ctx.measureText(l).width), 0)
+
+    const fits = widest <= maxWidth && blockHeight <= maxHeight
+    return { lines, lineHeight, blockHeight, fits }
+  }
+
+  // ✅ elegir tamaño: intenta grande, si no cabe -> baja hasta que quepa
+  const tmpCanvas = createCanvas(W, H)
+  const tmpCtx = tmpCanvas.getContext("2d")
+  let layout = calcLayout(tmpCtx, text, fontSize)
+
+  while (!layout.fits && fontSize > minFont) {
+    fontSize -= 2
+    layout = calcLayout(tmpCtx, text, fontSize)
+  }
 
   for (let i = 0; i < totalFrames; i++) {
     const canvas = createCanvas(W, H)
     const ctx = canvas.getContext("2d")
 
-    // Fondo blanco
+    // fondo blanco
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, W, H)
 
-    // Texto centrado con sombra suave
     const color = COLORS[i % COLORS.length]
 
-    let fontSize = 64
-    ctx.font = `bold ${fontSize}px ${fontFamily}`
-
-    // Ajustar tamaño si el texto es largo
-    const maxWidth = 460
-    while (ctx.measureText(text).width > maxWidth && fontSize > 30) {
-      fontSize -= 2
-      ctx.font = `bold ${fontSize}px ${fontFamily}`
-    }
-
-    const lines = wrapText(ctx, text, maxWidth)
-
-    const lineHeight = Math.floor(fontSize * 1.15)
-    const blockHeight = lines.length * lineHeight
-    let y = Math.floor((H - blockHeight) / 2) + lineHeight - 10
-
+    // aplicar fuente final
+    ctx.font = `900 ${fontSize}px ${fontFamily}`
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
 
-    // Sombra
-    ctx.shadowColor = "rgba(0,0,0,0.20)"
+    // ✅ centro PERFECTO del bloque
+    const startY = (H - layout.blockHeight) / 2 + layout.lineHeight / 2
+    let y = startY
+
+    // sombra suave
+    ctx.shadowColor = "rgba(0,0,0,0.18)"
     ctx.shadowBlur = 8
     ctx.shadowOffsetX = 0
     ctx.shadowOffsetY = 3
 
-    // Texto
+    // ✅ borde + relleno (se ve más pro)
+    ctx.lineWidth = Math.max(6, Math.round(fontSize * 0.12))
+    ctx.strokeStyle = "rgba(0,0,0,0.20)"
     ctx.fillStyle = color
-    for (const line of lines) {
+
+    for (const line of layout.lines) {
+      ctx.strokeText(line, W / 2, y)
       ctx.fillText(line, W / 2, y)
-      y += lineHeight
+      y += layout.lineHeight
     }
 
     const out = path.join(dir, `frame_${String(i).padStart(3, "0")}.png`)
@@ -201,7 +224,7 @@ export default async function textsticker(sock, msg, { args = [], usedPrefix = "
 
     const stickerFinal = await addExif(webpTmp, {
       packname: `╰► ${msg.pushName || "Usuario"}`,
-      author: `частная система - 𝔍𝔬𝔰𝔢 ℭ`
+      author: `частная система - 𝐽𝑜𝑠𝑒 𝐶 ↔ 𝐾𝑎𝑡ℎ𝑦`
     })
 
     await sock.sendMessage(chatId, { sticker: fs.readFileSync(stickerFinal) }, { quoted: msg })
