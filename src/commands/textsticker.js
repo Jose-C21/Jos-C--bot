@@ -65,8 +65,8 @@ async function buildFrames(text) {
 
   const COLORS = [
   "#ff2d2d", // Rojo
-  "#bf5af2", // Morado
   "#34c759", // Verde
+  "#bf5af2", // Morado
   "#00c7ff"  // Cyan
 ]
 
