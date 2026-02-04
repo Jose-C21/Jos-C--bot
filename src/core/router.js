@@ -1,3 +1,4 @@
+// src/core/router.js
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
@@ -30,6 +31,32 @@ function getText(msg) {
     m.videoMessage?.caption ||
     ""
   ).trim()
+}
+
+function getButtonId(msg) {
+  const m = msg?.message || {}
+
+  // botones clásicos
+  const btn = m.buttonsResponseMessage
+  if (btn?.selectedButtonId) return btn.selectedButtonId
+
+  // listas
+  const list = m.listResponseMessage
+  if (list?.singleSelectReply?.selectedRowId) return list.singleSelectReply.selectedRowId
+
+  // interactive / native flow (según versión)
+  const ir = m.interactiveResponseMessage
+  const params =
+    ir?.nativeFlowResponseMessage?.paramsJson ||
+    ir?.nativeFlowResponseMessage?.paramsJSON
+  if (params) {
+    try {
+      const j = JSON.parse(params)
+      return j.id || j.button_id || j.selectedId || null
+    } catch {}
+  }
+
+  return null
 }
 
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
@@ -163,10 +190,7 @@ function logRouter(data) {
   console.log("  " + nameLine)
   if (groupLine) console.log("  " + groupLine)
   console.log("  " + numLine)
-
-  // ✅ texto COMPLETO (sin recortes)
-  console.log("  " + txtLine)
-
+  console.log("  " + txtLine) // ✅ texto completo
   console.log("  " + res)
   console.log(chalk.cyanBright("─".repeat(OUT)))
 }
@@ -193,6 +217,30 @@ export async function routeMessage(sock, msg) {
 
     const senderName = getDisplayName(sock, msg, decodedJid)
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
+
+    // ─────────────────────────────────────────────
+    // ✅ BOTONES (ANTES DE MUTE/PREFIX)
+    // ─────────────────────────────────────────────
+    const buttonId = getButtonId(msg)
+    if (buttonId) {
+      // Solo botones del play (audio/video)
+      if (buttonId === "play:audio" || buttonId === "play:video") {
+        logRouter({
+          isGroup,
+          isOwner,
+          allowed: true,
+          senderNum: finalNum,
+          senderName,
+          groupName,
+          text: `[button:${buttonId}]`,
+          action: "RUN",
+          command: "play(button)"
+        })
+
+        await play(sock, msg, { args: [], usedPrefix: config.prefix || ".", buttonId })
+      }
+      return
+    }
 
     // ─────────────────────────────────────────────
     // ✅ MUTE BLOQUEO (SOLO GRUPOS, ANTES DEL PREFIX)
