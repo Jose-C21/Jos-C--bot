@@ -1,7 +1,9 @@
+// src/commands/play.js
 import fs from "fs"
 import path from "path"
 import yts from "yt-search"
 import axios from "axios"
+import { generateWAMessageFromContent, proto } from "baileys"
 
 const APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
 const API_RESOLVE = "https://api-sky.ultraplus.click/youtube/resolve"
@@ -15,7 +17,7 @@ const VIDEO_RESOLVE = "https://gawrgura-api.onrender.com/download/ytdl?url="
 // ✅ 20 minutos
 const VIDEO_TTL_MS = 20 * 60 * 1000
 
-// Memoria temporal por mensaje (para saber qué video/audio corresponde al botón)
+// Memoria temporal por mensaje
 global.__PLAY_STATE = global.__PLAY_STATE || new Map()
 
 function trad(en = "") {
@@ -48,37 +50,75 @@ function signature() {
 }
 
 function getQuotedKeyIdFromButton(msg) {
-  // cuando se toca botón, WhatsApp manda respuesta con contextInfo del mensaje original (la tarjeta)
   const m = msg?.message || {}
   const ctx =
     m.buttonsResponseMessage?.contextInfo ||
     m.listResponseMessage?.contextInfo ||
     m.interactiveResponseMessage?.contextInfo
-
-  // stanzaId suele ser el id del mensaje citado (la tarjeta)
   return ctx?.stanzaId || null
 }
 
-async function prefetchVideoToCache({ ytUrl, title, cacheDir, keyId }) {
-  // Guardamos estado para poder esperar si el usuario toca antes de terminar
+// ✅ Enviar menú con botones compatibles iPhone/Android (nativeFlow quick_reply)
+async function sendPlayInteractive(sock, chatId, quoted, { caption, imageUrl, token }) {
+  const waMsg = generateWAMessageFromContent(
+    chatId,
+    {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: proto.Message.InteractiveMessage.create({
+            header: proto.Message.InteractiveMessage.Header.create({
+              hasMediaAttachment: true,
+              imageMessage: proto.Message.ImageMessage.create({ url: imageUrl })
+            }),
+            body: proto.Message.InteractiveMessage.Body.create({ text: caption }),
+            footer: proto.Message.InteractiveMessage.Footer.create({ text: "Selecciona:" }),
+            nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+              buttons: [
+                {
+                  name: "quick_reply",
+                  buttonParamsJson: JSON.stringify({
+                    display_text: "Audio",
+                    id: `play:audio:${token}`
+                  })
+                },
+                {
+                  name: "quick_reply",
+                  buttonParamsJson: JSON.stringify({
+                    display_text: "Video",
+                    id: `play:video:${token}`
+                  })
+                }
+              ]
+            })
+          })
+        }
+      }
+    },
+    { quoted }
+  )
+
+  await sock.relayMessage(chatId, waMsg.message, { messageId: waMsg.key.id })
+  return waMsg // 👈 aquí está el id del mensaje enviado
+}
+
+async function prefetchVideoToCache({ ytUrl, title, cacheDir, token }) {
   const clean = safeFileName(title)
   const videoPath = path.join(cacheDir, `${clean}.mp4`)
 
-  const state = global.__PLAY_STATE.get(keyId)
+  const state = global.__PLAY_STATE.get(token)
   if (!state) return
 
-  // si ya existe, igual ponemos timer para autodelete
+  // si ya existe, solo set timer
   if (fs.existsSync(videoPath)) {
     state.videoPath = videoPath
-    // auto-delete en 20 min
     state.videoTimer = setTimeout(() => {
       try { if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath) } catch {}
-      global.__PLAY_STATE.delete(keyId)
+      global.__PLAY_STATE.delete(token)
     }, VIDEO_TTL_MS)
     return
   }
 
-  // Promesa de descarga (para si el usuario toca mientras baja)
+  // descarga async
   state.videoPromise = (async () => {
     const apiUrl = VIDEO_RESOLVE + encodeURIComponent(ytUrl)
     const res = await axios.get(apiUrl, { timeout: 60_000 })
@@ -86,15 +126,14 @@ async function prefetchVideoToCache({ ytUrl, title, cacheDir, keyId }) {
     const videoUrl = res?.data?.result?.mp4
     if (!videoUrl) throw new Error("No se pudo obtener el mp4 (api video).")
 
-    const bin = await axios.get(videoUrl, { responseType: "arraybuffer", timeout: 120_000 })
+    const bin = await axios.get(videoUrl, { responseType: "arraybuffer", timeout: 180_000 })
     fs.writeFileSync(videoPath, Buffer.from(bin.data))
 
     state.videoPath = videoPath
 
-    // auto-delete en 20 min
     state.videoTimer = setTimeout(() => {
       try { if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath) } catch {}
-      global.__PLAY_STATE.delete(keyId)
+      global.__PLAY_STATE.delete(token)
     }, VIDEO_TTL_MS)
 
     return videoPath
@@ -106,17 +145,48 @@ async function prefetchVideoToCache({ ytUrl, title, cacheDir, keyId }) {
   return state.videoPromise
 }
 
+async function downloadAudioToCache({ ytUrl, audioPath }) {
+  // 🌐 API UltraPlus Sky
+  const apiRes = await axios.post(
+    API_RESOLVE,
+    { url: ytUrl, type: "audio", format: "mp3" },
+    { headers: { "Content-Type": "application/json", apikey: APIKEY } }
+  )
+
+  const result = apiRes.data?.result || apiRes.data?.data
+  let audioUrl = result?.media?.dl_download || result?.media?.direct
+  if (!audioUrl) throw new Error("No se pudo obtener el audio.")
+
+  if (audioUrl.startsWith("/")) audioUrl = "https://api-sky.ultraplus.click" + audioUrl
+
+  const bin = await axios.get(audioUrl, {
+    responseType: "arraybuffer",
+    headers: { apikey: APIKEY },
+    timeout: 180_000
+  })
+
+  fs.writeFileSync(audioPath, Buffer.from(bin.data))
+  return audioPath
+}
+
 async function handlePlayButton(sock, msg, { buttonId, usedPrefix }) {
   const chatId = msg?.key?.remoteJid
   if (!chatId) return
 
-  const keyId = getQuotedKeyIdFromButton(msg)
-  if (!keyId) {
+  // token viene en el id: play:audio:xxxx
+  const parts = String(buttonId).split(":")
+  const tokenFromId = parts.length >= 3 ? parts.slice(2).join(":") : null
+
+  // fallback (por si algún cliente no manda id completo)
+  const tokenFromQuote = getQuotedKeyIdFromButton(msg)
+
+  const token = tokenFromId || tokenFromQuote
+  if (!token) {
     await sock.sendMessage(chatId, { text: `⚠️ Botón inválido. Usa ${usedPrefix}play otra vez.` }, { quoted: msg })
     return
   }
 
-  const st = global.__PLAY_STATE.get(keyId)
+  const st = global.__PLAY_STATE.get(token)
   if (!st) {
     await sock.sendMessage(chatId, { text: `⚠️ Esta selección expiró. Usa ${usedPrefix}play otra vez.` }, { quoted: msg })
     return
@@ -125,67 +195,89 @@ async function handlePlayButton(sock, msg, { buttonId, usedPrefix }) {
   const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
   const userNum = (jidUsuario || "").split("@")[0]
 
-  if (buttonId === "play:audio") {
-    // ✅ AUDIO: si existe en caché -> envía, si no -> baja y guarda (tu lógica)
-    if (fs.existsSync(st.audioPath)) {
+  // ✅ AUDIO
+  if (String(buttonId).startsWith("play:audio")) {
+    try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
+
+    try {
+      if (!fs.existsSync(st.audioPath)) {
+        await downloadAudioToCache({ ytUrl: st.ytUrl, audioPath: st.audioPath })
+      }
+
+      const fkontakAudio = {
+        key: {
+          participants: "0@s.whatsapp.net",
+          remoteJid: "0@s.whatsapp.net",
+          fromMe: false,
+          id: "PlayAudio"
+        },
+        message: {
+          locationMessage: {
+            name: st.title,
+            jpegThumbnail: st.thumb2,
+            description: "🎵 Audio"
+          }
+        },
+        participant: "0@s.whatsapp.net"
+      }
+
       await sock.sendMessage(chatId, {
         audio: fs.readFileSync(st.audioPath),
         mimetype: "audio/mpeg",
         contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
-      }, { quoted: msg })
-      try { await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } }) } catch {}
+      }, { quoted: fkontakAudio })
+
+      try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
+    } catch (e) {
+      await sock.sendMessage(chatId, { text: `❌ Error audio: ${e?.message || e}` }, { quoted: msg })
+      try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }) } catch {}
+    }
+    return
+  }
+
+  // ✅ VIDEO (one-time + borra)
+  if (String(buttonId).startsWith("play:video")) {
+    try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
+
+    // si estaba descargándose
+    if (!st.videoPath && st.videoPromise) {
+      await st.videoPromise
+    }
+
+    if (st.videoError) {
+      await sock.sendMessage(chatId, { text: `❌ No pude preparar el video: ${st.videoError}` }, { quoted: msg })
+      try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }) } catch {}
       return
     }
 
-    // si no existe (por si algo falló antes)
-    await sock.sendMessage(chatId, { text: "⚠️ El audio no está en caché. Usa .play otra vez." }, { quoted: msg })
+    if (!st.videoPath || !fs.existsSync(st.videoPath)) {
+      await sock.sendMessage(chatId, { text: `⚠️ El video no está listo o expiró. Usa ${usedPrefix}play otra vez.` }, { quoted: msg })
+      return
+    }
+
+    await sock.sendMessage(chatId, {
+      video: fs.readFileSync(st.videoPath),
+      mimetype: "video/mp4",
+      fileName: `${safeFileName(st.title)}.mp4`,
+      caption: `*${st.title}*\n\n⊱┊ @${userNum} 𝗔𝗾𝘂𝗶 𝗲𝘀𝘁𝗮́ 𝘁𝘂 𝘃𝗶𝗱𝗲𝗼.\n\n${signature()}`,
+      mentions: jidUsuario ? [jidUsuario] : []
+    }, { quoted: msg })
+
+    // ✅ borrar video después de enviar
+    try { if (fs.existsSync(st.videoPath)) fs.unlinkSync(st.videoPath) } catch {}
+    try { if (st.videoTimer) clearTimeout(st.videoTimer) } catch {}
+    global.__PLAY_STATE.delete(token)
+
+    try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
     return
   }
-
-  // ✅ VIDEO: enviar 1 vez y borrar
-  try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
-
-  // si estaba descargándose, esperamos
-  if (!st.videoPath && st.videoPromise) {
-    await st.videoPromise
-  }
-
-  // error de precache
-  if (st.videoError) {
-    await sock.sendMessage(chatId, { text: `❌ No pude preparar el video: ${st.videoError}` }, { quoted: msg })
-    try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }) } catch {}
-    return
-  }
-
-  if (!st.videoPath || !fs.existsSync(st.videoPath)) {
-    await sock.sendMessage(chatId, { text: "⚠️ El video no está listo o expiró. Usa .play otra vez." }, { quoted: msg })
-    return
-  }
-
-  // enviar video
-  await sock.sendMessage(chatId, {
-    video: fs.readFileSync(st.videoPath),
-    mimetype: "video/mp4",
-    fileName: `${safeFileName(st.title)}.mp4`,
-    caption: `*${st.title}*\n\n⊱┊ @${userNum} 𝗔𝗾𝘂𝗶 𝗲𝘀𝘁𝗮́ 𝘁𝘂 𝘃𝗶𝗱𝗲𝗼.\n\n${signature()}`,
-    mentions: jidUsuario ? [jidUsuario] : []
-  }, { quoted: msg })
-
-  // ✅ borrar video después de enviar (one-time)
-  try { if (fs.existsSync(st.videoPath)) fs.unlinkSync(st.videoPath) } catch {}
-
-  // limpiar timer y estado
-  try { if (st.videoTimer) clearTimeout(st.videoTimer) } catch {}
-  global.__PLAY_STATE.delete(keyId)
-
-  try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
 }
 
 export default async function play(sock, msg, { args = [], usedPrefix = ".", buttonId = null }) {
   const chatId = msg?.key?.remoteJid
   if (!chatId) return
 
-  // ✅ Si viene de botón, lo manejamos aquí
+  // ✅ Si viene de botón
   if (buttonId) {
     await handlePlayButton(sock, msg, { buttonId, usedPrefix })
     return
@@ -206,9 +298,8 @@ export default async function play(sock, msg, { args = [], usedPrefix = ".", but
   try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
 
   try {
-    // 🔍 Buscar
     const res = await yts(text)
-    if (!res?.videos?.length) throw "Sin resultados."
+    if (!res?.videos?.length) throw new Error("Sin resultados.")
     const video = res.videos[0]
 
     const title = video.title
@@ -218,10 +309,9 @@ export default async function play(sock, msg, { args = [], usedPrefix = ".", but
     const subido = trad(video.uploadedAt || video.ago || "")
     const allArtists = video.author?.name || "Artista desconocido"
 
-    // rutas caché
     const clean = safeFileName(title)
     const audioPath = path.join(cacheDir, `${clean}.mp3`)
-    const videoPath = path.join(cacheDir, `${clean}.mp4`) // temporal, se borra
+    const videoPath = path.join(cacheDir, `${clean}.mp4`) // temporal
 
     const finalCaption =
       `🔘 *Título:* ${title}\n` +
@@ -232,118 +322,39 @@ export default async function play(sock, msg, { args = [], usedPrefix = ".", but
       `*Please Wait*\n\n` +
       signature()
 
-    // miniatura (fkontak)
     const thumb2 = await fetchBuffer(THUMB_URL)
 
-    // mention jid
-    const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
-
-    // ✅ botones
-    const buttons = [
-      { buttonId: "play:audio", buttonText: { displayText: "Audio" }, type: 1 },
-      { buttonId: "play:video", buttonText: { displayText: "Video" }, type: 1 }
-    ]
-
-    // enviar tarjeta con botones
-    const sent = await sock.sendMessage(chatId, {
-      image: { url: CARD_IMAGE_URL },
+    // ✅ enviamos menú (NO enviamos audio aquí)
+    const token = `${Date.now()}_${Math.random().toString(16).slice(2)}`
+    const sent = await sendPlayInteractive(sock, chatId, msg, {
       caption: finalCaption,
-      buttons,
-      headerType: 4
-    }, { quoted: msg })
-
-    const keyId = sent?.key?.id
-    if (keyId) {
-      // guardamos estado para botones
-      global.__PLAY_STATE.set(keyId, {
-        title,
-        ytUrl,
-        audioPath,
-        videoPath,
-        thumb2
-      })
-
-      // ✅ precache VIDEO (20 min)
-      // Nota: video es temporal. Se borra al enviar o por TTL.
-      prefetchVideoToCache({ ytUrl, title, cacheDir, keyId }).catch(() => {})
-    }
-
-    // ✅ AUDIO: si existe manda al instante y ya (como antes)
-    if (fs.existsSync(audioPath)) {
-      const fkontakAudio = {
-        key: {
-          participants: "0@s.whatsapp.net",
-          remoteJid: "0@s.whatsapp.net",
-          fromMe: false,
-          id: "PlayCache"
-        },
-        message: {
-          locationMessage: {
-            name: title,
-            jpegThumbnail: thumb2,
-            description: "🎵 Archivo desde caché"
-          }
-        },
-        participant: "0@s.whatsapp.net"
-      }
-
-      await sock.sendMessage(chatId, {
-        audio: fs.readFileSync(audioPath),
-        mimetype: "audio/mpeg",
-        contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
-      }, { quoted: fkontakAudio })
-
-      try { await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } }) } catch {}
-      return
-    }
-
-    // 🌐 bajar audio y guardar (persistente)
-    const apiRes = await axios.post(
-      API_RESOLVE,
-      { url: ytUrl, type: "audio", format: "mp3" },
-      { headers: { "Content-Type": "application/json", apikey: APIKEY } }
-    )
-
-    const result = apiRes.data?.result || apiRes.data?.data
-    let audioUrl = result?.media?.dl_download || result?.media?.direct
-    if (!audioUrl) throw "No se pudo obtener el audio."
-
-    if (audioUrl.startsWith("/")) audioUrl = "https://api-sky.ultraplus.click" + audioUrl
-
-    const bin = await axios.get(audioUrl, {
-      responseType: "arraybuffer",
-      headers: { apikey: APIKEY }
+      imageUrl: CARD_IMAGE_URL,
+      token
     })
 
-    fs.writeFileSync(audioPath, Buffer.from(bin.data))
+    // guardamos estado
+    global.__PLAY_STATE.set(token, {
+      title,
+      ytUrl,
+      audioPath,
+      videoPath,
+      thumb2,
+      videoPathReady: null,
+      videoPromise: null,
+      videoTimer: null,
+      videoError: null
+    })
 
-    const fkontakAudio = {
-      key: {
-        participants: "0@s.whatsapp.net",
-        remoteJid: "0@s.whatsapp.net",
-        fromMe: false,
-        id: "PlayNuevo"
-      },
-      message: {
-        locationMessage: {
-          name: title,
-          jpegThumbnail: thumb2,
-          description: "⚡ Descargado y guardado en caché"
-        }
-      },
-      participant: "0@s.whatsapp.net"
-    }
-
-    await sock.sendMessage(chatId, {
-      audio: fs.readFileSync(audioPath),
-      mimetype: "audio/mpeg",
-      contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
-    }, { quoted: fkontakAudio })
+    // ✅ precache VIDEO en background (20 min)
+    // (no bloquea, no traba)
+    setTimeout(() => {
+      prefetchVideoToCache({ ytUrl, title, cacheDir, token }).catch(() => {})
+    }, 50)
 
     try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
   } catch (e) {
     console.error("[play]", e)
-    await sock.sendMessage(chatId, { text: `❌ *Error:* ${e}` }, { quoted: msg })
+    await sock.sendMessage(chatId, { text: `❌ *Error:* ${e?.message || e}` }, { quoted: msg })
     try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }) } catch {}
   }
 }
