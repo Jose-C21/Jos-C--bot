@@ -33,28 +33,35 @@ function getText(msg) {
   ).trim()
 }
 
+// ✅ Botones: soporta interactive (iPhone), buttons clásicos, listas
 function getButtonId(msg) {
   const m = msg?.message || {}
 
-  // botones clásicos
-  const btn = m.buttonsResponseMessage
-  if (btn?.selectedButtonId) return btn.selectedButtonId
-
-  // listas
-  const list = m.listResponseMessage
-  if (list?.singleSelectReply?.selectedRowId) return list.singleSelectReply.selectedRowId
-
-  // interactive / native flow (según versión)
-  const ir = m.interactiveResponseMessage
+  // ✅ interactive / native flow (iPhone / Android modernos)
   const params =
-    ir?.nativeFlowResponseMessage?.paramsJson ||
-    ir?.nativeFlowResponseMessage?.paramsJSON
+    m.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+    m.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJSON
+
   if (params) {
     try {
       const j = JSON.parse(params)
       return j.id || j.button_id || j.selectedId || null
-    } catch {}
+    } catch {
+      return null
+    }
   }
+
+  // ✅ botones clásicos
+  const btn = m.buttonsResponseMessage
+  if (btn?.selectedButtonId) return btn.selectedButtonId
+
+  // ✅ listas
+  const list = m.listResponseMessage
+  if (list?.singleSelectReply?.selectedRowId) return list.singleSelectReply.selectedRowId
+
+  // ✅ template
+  const tpl = m.templateButtonReplyMessage
+  if (tpl?.selectedId) return tpl.selectedId
 
   return null
 }
@@ -130,7 +137,6 @@ function getDisplayName(sock, msg, jid) {
   return "SinNombre"
 }
 
-// ✅ Cache de nombres de grupos (para NO trabar)
 const GROUP_CACHE = new Map()
 const GROUP_TTL_MS = 10 * 60 * 1000
 
@@ -190,7 +196,7 @@ function logRouter(data) {
   console.log("  " + nameLine)
   if (groupLine) console.log("  " + groupLine)
   console.log("  " + numLine)
-  console.log("  " + txtLine) // ✅ texto completo
+  console.log("  " + txtLine)
   console.log("  " + res)
   console.log(chalk.cyanBright("─".repeat(OUT)))
 }
@@ -223,8 +229,8 @@ export async function routeMessage(sock, msg) {
     // ─────────────────────────────────────────────
     const buttonId = getButtonId(msg)
     if (buttonId) {
-      // Solo botones del play (audio/video)
-      if (buttonId === "play:audio" || buttonId === "play:video") {
+      // Solo botones del play
+      if (String(buttonId).startsWith("play:audio") || String(buttonId).startsWith("play:video")) {
         logRouter({
           isGroup,
           isOwner,
@@ -245,14 +251,12 @@ export async function routeMessage(sock, msg) {
     // ─────────────────────────────────────────────
     // ✅ MUTE BLOQUEO (SOLO GRUPOS, ANTES DEL PREFIX)
     // ─────────────────────────────────────────────
-    // ✅ si es owner, el mute NO aplica jamás
     if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
       global._muteCounter = global._muteCounter || {}
       const key = `${chatId}:${finalNum}`
       global._muteCounter[key] = (global._muteCounter[key] || 0) + 1
       const count = global._muteCounter[key]
 
-      // ✅ participant correcto para borrar/mentions
       const participantJid = msg.key.participant || decodedJid || rawSenderJid
 
       if (count === 8) {
@@ -291,7 +295,6 @@ export async function routeMessage(sock, msg) {
         } catch {}
       }
 
-      // 🧹 borrar cualquier tipo de mensaje
       try {
         await sock.sendMessage(chatId, {
           delete: {
