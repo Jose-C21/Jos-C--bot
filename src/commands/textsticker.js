@@ -68,7 +68,7 @@ async function buildFrames(text) {
     "#00c7ff", "#0a84ff", "#bf5af2", "#ff375f"
   ]
 
-  const fps = 2
+  const fps = 3
   const totalFrames = 16
   const fontFamily = "sans-serif"
 
