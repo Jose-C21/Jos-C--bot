@@ -64,9 +64,11 @@ async function buildFrames(text) {
   const H = 512
 
   const COLORS = [
-    "#ff2d2d", "#34c759",
-    "#00c7ff", "#bf5af2", "#ff375f"
-  ]
+  "#ff2d2d", // Rojo
+  "#bf5af2", // Morado
+  "#34c759", // Verde
+  "#00c7ff"  // Cyan
+]
 
   const fps = 4
   const totalFrames = 16
