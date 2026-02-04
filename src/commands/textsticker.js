@@ -70,7 +70,7 @@ async function buildFrames(text) {
   "#00c7ff"  // Cyan
 ]
 
-  const fps = 4
+  const fps = 3
   const totalFrames = 16
   const fontFamily = "sans-serif"
 
