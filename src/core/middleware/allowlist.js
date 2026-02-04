@@ -1,4 +1,3 @@
-// ✅ Ajusta tu middleware allowlist.js (si aún no lo tienes así)
 // src/core/middleware/allowlist.js
 import fs from "fs"
 import path from "path"
@@ -9,32 +8,29 @@ const ALLOW_PATH = path.join(process.cwd(), "data", "allowlist.json")
 function ensureDB() {
   const dir = path.dirname(ALLOW_PATH)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  if (!fs.existsSync(ALLOW_PATH)) fs.writeFileSync(ALLOW_PATH, JSON.stringify({ users: [] }, null, 2))
+  if (!fs.existsSync(ALLOW_PATH)) fs.writeFileSync(ALLOW_PATH, "[]")
 }
 
-function readDB() {
+function readList() {
   try {
     ensureDB()
-    const raw = fs.readFileSync(ALLOW_PATH, "utf8") || ""
-    const db = raw ? JSON.parse(raw) : { users: [] }
-    if (!Array.isArray(db.users)) db.users = []
-    return db
+    const raw = fs.readFileSync(ALLOW_PATH, "utf8") || "[]"
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed.map(String)
+    if (parsed && Array.isArray(parsed.users)) return parsed.users.map(String)
+    return []
   } catch {
-    return { users: [] }
+    return []
   }
 }
 
 export function isAllowedPrivate(msg) {
   const chatId = msg?.key?.remoteJid || ""
-  const isGroup = String(chatId).endsWith("@g.us")
-  if (isGroup) return true // allowlist solo aplica en privado
+  if (String(chatId).endsWith("@g.us")) return true // allowlist solo privado
 
   const senderJid = getSenderJid(msg)
-  let decoded = senderJid
-  // decodeJid aquí no existe, pero el router ya calcula finalNum para owners.
-  // Para allowlist, con jidToNumber del senderJid es suficiente.
-  const num = jidToNumber(decoded)
+  const num = jidToNumber(senderJid)
 
-  const db = readDB()
-  return db.users.includes(String(num))
+  const list = readList()
+  return list.includes(String(num))
 }
