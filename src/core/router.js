@@ -1,3 +1,4 @@
+// src/core/router.js
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
@@ -13,7 +14,6 @@ import unmute from "../commands/unmute.js"
 import img from "../commands/img.js"
 import addlista from "../commands/addlista.js"
 import textsticker from "../commands/textsticker.js"
-
 
 const COMMANDS = {
   resetsession,
@@ -168,10 +168,7 @@ function logRouter(data) {
   console.log("  " + nameLine)
   if (groupLine) console.log("  " + groupLine)
   console.log("  " + numLine)
-
-  // ✅ texto COMPLETO (sin recortes)
-  console.log("  " + txtLine)
-
+  console.log("  " + txtLine) // ✅ texto COMPLETO
   console.log("  " + res)
   console.log(chalk.cyanBright("─".repeat(OUT)))
 }
@@ -179,7 +176,6 @@ function logRouter(data) {
 export async function routeMessage(sock, msg) {
   try {
     if (!msg?.message) return
-    if (msg.key?.fromMe) return
 
     const chatId = msg?.key?.remoteJid || "unknown"
     const isGroup = String(chatId).endsWith("@g.us")
@@ -200,6 +196,15 @@ export async function routeMessage(sock, msg) {
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
     // ─────────────────────────────────────────────
+    // ✅ PERMITIR COMANDOS DESDE EL MISMO BOT (fromMe)
+    // - si es fromMe: SOLO procesar si es comando
+    // - evita loops con stickers/audios/etc
+    // ─────────────────────────────────────────────
+    const fromMe = !!msg.key?.fromMe
+    const prefix = config.prefix || "."
+    if (fromMe && (!text || !text.startsWith(prefix))) return
+
+    // ─────────────────────────────────────────────
     // ✅ MUTE BLOQUEO (SOLO GRUPOS, ANTES DEL PREFIX)
     // ─────────────────────────────────────────────
     // ✅ si es owner, el mute NO aplica jamás
@@ -209,7 +214,6 @@ export async function routeMessage(sock, msg) {
       global._muteCounter[key] = (global._muteCounter[key] || 0) + 1
       const count = global._muteCounter[key]
 
-      // ✅ participant correcto para borrar/mentions
       const participantJid = msg.key.participant || decodedJid || rawSenderJid
 
       if (count === 8) {
@@ -307,7 +311,6 @@ export async function routeMessage(sock, msg) {
       return
     }
 
-    const prefix = config.prefix || "."
     if (!text.startsWith(prefix)) {
       logRouter({
         isGroup,
