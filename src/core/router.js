@@ -15,6 +15,8 @@ import img from "../commands/img.js"
 import addlista from "../commands/addlista.js"
 import textsticker from "../commands/textsticker.js"
 import playvideo from "../commands/playvideo.js"
+import golpear from "../commands/golpear.js"
+
 
 const COMMANDS = {
   resetsession,
@@ -25,7 +27,8 @@ const COMMANDS = {
   img,
   addlista,
   ts: textsticker,
-  playvideo
+  playvideo,
+  golpear
 }
 
 function getText(msg) {
