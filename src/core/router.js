@@ -17,8 +17,7 @@ import textsticker from "../commands/textsticker.js"
 import playvideo from "../commands/playvideo.js"
 import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
-
-
+import totalmensajes from "../commands/totalmensajes.js"
 
 const COMMANDS = {
   resetsession,
@@ -31,7 +30,8 @@ const COMMANDS = {
   ts: textsticker,
   playvideo,
   golpear,
-  kiss
+  kiss,
+  totalmensajes
 }
 
 function getText(msg) {
@@ -45,6 +45,11 @@ function getText(msg) {
   ).trim()
 }
 
+function isTextMessage(msg) {
+  const m = msg?.message || {}
+  return !!(m.conversation || m.extendedTextMessage?.text)
+}
+
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
@@ -55,6 +60,33 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
     ownersLid.includes(String(senderNum)) ||
     ownersLid.includes(String(senderNumDecoded))
   )
+}
+
+// ─────────────────────────────────────────────
+// ✅ CONTEO DE MENSAJES (persistente)
+// ─────────────────────────────────────────────
+const DATA_DIR = path.join(process.cwd(), "data")
+const CONTEO_PATH = path.join(DATA_DIR, "conteo.json")
+
+function ensureConteoDB() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+  if (!fs.existsSync(CONTEO_PATH)) fs.writeFileSync(CONTEO_PATH, "{}")
+}
+
+function readConteoSafe() {
+  try {
+    ensureConteoDB()
+    return JSON.parse(fs.readFileSync(CONTEO_PATH, "utf8") || "{}")
+  } catch {
+    return {}
+  }
+}
+
+function writeConteoSafe(db) {
+  try {
+    ensureConteoDB()
+    fs.writeFileSync(CONTEO_PATH, JSON.stringify(db, null, 2))
+  } catch {}
 }
 
 // ─────────────────────────────────────────────
@@ -125,7 +157,7 @@ async function getGroupNameCached(sock, groupJid) {
 
   const cached = GROUP_CACHE.get(groupJid)
   const t = Date.now()
-  if (cached && (t - cached.t) < GROUP_TTL_MS) return cached.name
+  if (cached && t - cached.t < GROUP_TTL_MS) return cached.name
 
   try {
     const md = await sock.groupMetadata(groupJid)
@@ -160,11 +192,9 @@ function logRouter(data) {
     : ""
 
   const numLine =
-    chalk.whiteBright("senderNumber: ") +
-    chalk.cyanBright(String(data.senderNum || ""))
+    chalk.whiteBright("senderNumber: ") + chalk.cyanBright(String(data.senderNum || ""))
 
-  const txtLine =
-    chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
+  const txtLine = chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
 
   let res = ""
   if (data.action === "BLOCK") res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
@@ -176,7 +206,7 @@ function logRouter(data) {
   console.log("  " + nameLine)
   if (groupLine) console.log("  " + groupLine)
   console.log("  " + numLine)
-  console.log("  " + txtLine) // ✅ texto COMPLETO
+  console.log("  " + txtLine)
   console.log("  " + res)
   console.log(chalk.cyanBright("─".repeat(OUT)))
 }
@@ -192,7 +222,9 @@ export async function routeMessage(sock, msg) {
     const senderNum = jidToNumber(rawSenderJid)
 
     let decodedJid = rawSenderJid
-    try { if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid) } catch {}
+    try {
+      if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid)
+    } catch {}
 
     const senderNumDecoded = jidToNumber(decodedJid)
     const finalNum = senderNumDecoded || senderNum
@@ -213,9 +245,45 @@ export async function routeMessage(sock, msg) {
     if (fromMe && (!text || !text.startsWith(prefix))) return
 
     // ─────────────────────────────────────────────
+    // ✅ CONTADOR DE MENSAJES (solo texto, solo grupos) + antiflood (solo para conteo)
+    // ─────────────────────────────────────────────
+    try {
+      if (isGroup && isTextMessage(msg)) {
+        const senderId = msg.key.participant || msg.key.remoteJid
+
+        const nowTs = Date.now()
+        global.msgFlood = global.msgFlood || {}
+        const u = global.msgFlood[senderId] || { last: 0, count: 0, blockedUntil: 0 }
+
+        if (nowTs - u.last < 7000) u.count++
+        else u.count = 1
+
+        u.last = nowTs
+
+        if (!fromMe && u.count >= 3) {
+          u.blockedUntil = nowTs + 12000
+          console.log(`⚡ [ANTIFLOOD] Usuario ${senderId} activó bloqueo de conteo. (${u.count} mensajes rápidos)`)
+        }
+
+        global.msgFlood[senderId] = u
+
+        const blocked = !fromMe && u.blockedUntil && nowTs < u.blockedUntil
+
+        if (!blocked) {
+          const conteoData = readConteoSafe()
+          if (!conteoData[chatId]) conteoData[chatId] = {}
+          if (!conteoData[chatId][senderId]) conteoData[chatId][senderId] = 0
+          conteoData[chatId][senderId] += 1
+          writeConteoSafe(conteoData)
+        }
+      }
+    } catch (e) {
+      console.error("❌ Error en contador de mensajes:", e)
+    }
+
+    // ─────────────────────────────────────────────
     // ✅ MUTE BLOQUEO (SOLO GRUPOS, ANTES DEL PREFIX)
     // ─────────────────────────────────────────────
-    // ✅ si es owner, el mute NO aplica jamás
     if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
       global._muteCounter = global._muteCounter || {}
       const key = `${chatId}:${finalNum}`
@@ -225,51 +293,60 @@ export async function routeMessage(sock, msg) {
       const participantJid = msg.key.participant || decodedJid || rawSenderJid
 
       if (count === 8) {
-        await sock.sendMessage(chatId, {
-          text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
-          mentions: [participantJid]
-        }).catch(() => {})
+        await sock
+          .sendMessage(chatId, {
+            text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
+            mentions: [participantJid]
+          })
+          .catch(() => {})
       }
 
       if (count === 13) {
-        await sock.sendMessage(chatId, {
-          text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
-          mentions: [participantJid]
-        }).catch(() => {})
+        await sock
+          .sendMessage(chatId, {
+            text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
+            mentions: [participantJid]
+          })
+          .catch(() => {})
       }
 
       if (count >= 15) {
         try {
           const metadata = await sock.groupMetadata(chatId)
-          const user = metadata.participants?.find(p => p.id === participantJid)
+          const user = metadata.participants?.find((p) => p.id === participantJid)
           const isAdmin = user?.admin === "admin" || user?.admin === "superadmin"
 
           if (!isAdmin) {
             await sock.groupParticipantsUpdate(chatId, [participantJid], "remove").catch(() => {})
-            await sock.sendMessage(chatId, {
-              text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
-              mentions: [participantJid]
-            }).catch(() => {})
+            await sock
+              .sendMessage(chatId, {
+                text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
+                mentions: [participantJid]
+              })
+              .catch(() => {})
             delete global._muteCounter[key]
           } else {
-            await sock.sendMessage(chatId, {
-              text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
-              mentions: [participantJid]
-            }).catch(() => {})
+            await sock
+              .sendMessage(chatId, {
+                text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
+                mentions: [participantJid]
+              })
+              .catch(() => {})
           }
         } catch {}
       }
 
-      // 🧹 borrar cualquier tipo de mensaje
       try {
-        await sock.sendMessage(chatId, {
-          delete: {
-            remoteJid: chatId,
-            fromMe: false,
-            id: msg.key.id,
-            participant: participantJid
-          }
-        }).catch(() => {})
+        await sock
+          .sendMessage(chatId, {
+            delete: {
+              remoteJid: chatId,
+              fromMe: false,
+              id: msg.key.id,
+              participant: participantJid
+            }
+          })
+          .catch(() => {})
       } catch {}
 
       logRouter({
