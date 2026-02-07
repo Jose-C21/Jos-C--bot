@@ -16,6 +16,8 @@ import addlista from "../commands/addlista.js"
 import textsticker from "../commands/textsticker.js"
 import playvideo from "../commands/playvideo.js"
 import golpear from "../commands/golpear.js"
+import kiss from "../commands/kiss.js"
+
 
 
 const COMMANDS = {
@@ -28,7 +30,8 @@ const COMMANDS = {
   addlista,
   ts: textsticker,
   playvideo,
-  golpear
+  golpear,
+  kiss
 }
 
 function getText(msg) {
