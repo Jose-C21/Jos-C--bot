@@ -61,7 +61,7 @@ export default async function golpear(sock, msg, { usedPrefix = "." }) {
     await sock.sendMessage(chatId, {
       text:
         "❌ *Ocurrió un error al ejecutar el comando golpear.*" +
-        "\n\n> ⊱┊*частная система - 𝔍𝔬𝔰𝔢 ℭ*"
+        "\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗢𝘄𝗻𝗲𝗿: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦"
     }, { quoted: msg })
   }
 }
