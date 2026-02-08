@@ -18,6 +18,8 @@ import playvideo from "../commands/playvideo.js"
 import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
 import totalmensajes from "../commands/totalmensajes.js"
+import tiktok from "../commands/tiktok.js"
+
 
 const COMMANDS = {
   resetsession,
@@ -31,7 +33,8 @@ const COMMANDS = {
   playvideo,
   golpear,
   kiss,
-  totalmensajes
+  totalmensajes,
+  tiktok
 }
 
 function getText(msg) {
