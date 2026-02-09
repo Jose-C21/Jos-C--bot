@@ -19,7 +19,7 @@ import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
 import totalmensajes from "../commands/totalmensajes.js"
 import tiktok from "../commands/tiktok.js"
-
+import decir from "../commands/decir.js"
 
 const COMMANDS = {
   resetsession,
@@ -34,7 +34,8 @@ const COMMANDS = {
   golpear,
   kiss,
   totalmensajes,
-  tiktok
+  tiktok,
+  decir
 }
 
 function getText(msg) {
