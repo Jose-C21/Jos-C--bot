@@ -38,12 +38,11 @@ function readActivosSafe() {
 // ✅ URL fallback si no hay foto
 const FALLBACK_AVATAR = "https://i.ibb.co/5x1q8H8/avatar.png"
 
-console.log("[groupWelcome] id:", groupId, "action:", action, "participants:", participants)
-console.log("[groupWelcome] welcomeOn:", welcomeOn, "byeOn:", byeOn)
-console.log("[groupWelcome] activosPath:", ACTIVOS_PATH)
-
 export async function onGroupParticipantsUpdate(sock, update) {
   try {
+    // 🔎 LOG DEL UPDATE COMPLETO
+    console.log("[groupWelcome] UPDATE RAW:", JSON.stringify(update))
+
     const { id: groupId, participants = [], action } = update || {}
     if (!groupId || !String(groupId).endsWith("@g.us")) return
     if (!participants.length) return
@@ -53,6 +52,11 @@ export async function onGroupParticipantsUpdate(sock, update) {
     // Solo responder si está activado
     const welcomeOn = !!activos?.bienvenida?.[groupId]
     const byeOn = !!activos?.despedidas?.[groupId]
+
+    // 🔎 LOG DE ESTADO
+    console.log("[groupWelcome] groupId:", groupId, "action:", action, "participants:", participants)
+    console.log("[groupWelcome] welcomeOn:", welcomeOn, "byeOn:", byeOn)
+    console.log("[groupWelcome] activosPath:", ACTIVOS_PATH)
 
     if (action === "add" && !welcomeOn) return
     if (action === "remove" && !byeOn) return
@@ -66,7 +70,9 @@ export async function onGroupParticipantsUpdate(sock, update) {
       if (action === "add") {
         desc = md?.desc ? `\n\n${md.desc}` : ""
       }
-    } catch {}
+    } catch (e) {
+      console.error("[groupWelcome] groupMetadata error:", e)
+    }
 
     for (const participant of participants) {
       const mention = `@${String(participant).split("@")[0]}`
@@ -92,21 +98,27 @@ export async function onGroupParticipantsUpdate(sock, update) {
           `⟢ 🏠 *${groupName}*${desc || ""}\n\n` +
           `🌼 Esperamos que disfrutes y compartas buena vibra 🌼`
 
+        // ❗sin catch para ver errores reales
         await sock.sendMessage(groupId, {
           image: { url: profilePicUrl },
           caption,
           mentions: [participant],
-        }).catch(() => {})
+        })
+
+        console.log("[groupWelcome] WELCOME SENT ->", participant)
       }
 
       // ✅ Despedida
       if (action === "remove" && byeOn) {
         const caption = `👋 ${mention} ha salido de *${groupName}* 👋`
+
         await sock.sendMessage(groupId, {
           image: { url: profilePicUrl },
           caption,
           mentions: [participant],
-        }).catch(() => {})
+        })
+
+        console.log("[groupWelcome] BYE SENT ->", participant)
       }
     }
   } catch (e) {
