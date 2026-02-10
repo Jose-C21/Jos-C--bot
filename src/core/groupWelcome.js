@@ -2,10 +2,14 @@
 import fs from "fs"
 import path from "path"
 
-// Ruta donde se guarda el on/off
-const ACTIVOS_PATH = path.join(process.cwd(), "activos.json")
+// ✅ MISMA RUTA QUE EL COMANDO
+const DATA_DIR = path.join(process.cwd(), "data")
+const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
 
 function ensureActivos() {
+  const dir = path.dirname(ACTIVOS_PATH)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+
   if (!fs.existsSync(ACTIVOS_PATH)) {
     fs.writeFileSync(ACTIVOS_PATH, JSON.stringify({ bienvenida: {}, despedidas: {} }, null, 2))
     return
