@@ -117,7 +117,7 @@ export async function onGroupParticipantsUpdate(sock, update) {
       if (action === "add" && welcomeOn) {
         const caption =
           `╭─༻❀\n` +
-          `➣ *¡Bienvenido/a ${mentionTag}!* ✨\n` +
+          `➣ *¡Bienvenido/a ${mentionTag} !* ✨\n` +
           `╰─༻❀\n\n` +
           `⟢ 🏠 *${groupName}*${desc || ""}\n\n` +
           `🌼 Esperamos que disfrutes y compartas buena vibra 🌼`
