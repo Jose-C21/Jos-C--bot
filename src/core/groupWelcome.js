@@ -15,7 +15,6 @@ function ensureActivos() {
     return
   }
 
-  // si existe pero está mal, lo arreglamos
   try {
     const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
     if (!j.bienvenida) j.bienvenida = {}
@@ -38,9 +37,30 @@ function readActivosSafe() {
 // ✅ URL fallback si no hay foto
 const FALLBACK_AVATAR = "https://i.ibb.co/5x1q8H8/avatar.png"
 
+// ✅ Normalizar participant (string o object)
+function normalizeParticipant(p) {
+  if (!p) return { jid: "", phoneJid: "" }
+
+  // si ya viene como string
+  if (typeof p === "string") {
+    return { jid: p, phoneJid: "" }
+  }
+
+  // si viene como objeto (como en tu log)
+  const jid = String(p.id || "")
+  const phoneJid = String(p.phoneNumber || "")
+  return { jid, phoneJid }
+}
+
+// ✅ sacar @tag bonito para caption
+function makeMentionTag(jid, phoneJid = "") {
+  // si es lid, mejor usar phoneNumber para mostrar el número real
+  const base = (phoneJid && phoneJid.includes("@")) ? phoneJid : jid
+  return `@${String(base).split("@")[0]}`
+}
+
 export async function onGroupParticipantsUpdate(sock, update) {
   try {
-    // 🔎 LOG DEL UPDATE COMPLETO
     console.log("[groupWelcome] UPDATE RAW:", JSON.stringify(update))
 
     const { id: groupId, participants = [], action } = update || {}
@@ -48,12 +68,9 @@ export async function onGroupParticipantsUpdate(sock, update) {
     if (!participants.length) return
 
     const activos = readActivosSafe()
-
-    // Solo responder si está activado
     const welcomeOn = !!activos?.bienvenida?.[groupId]
     const byeOn = !!activos?.despedidas?.[groupId]
 
-    // 🔎 LOG DE ESTADO
     console.log("[groupWelcome] groupId:", groupId, "action:", action, "participants:", participants)
     console.log("[groupWelcome] welcomeOn:", welcomeOn, "byeOn:", byeOn)
     console.log("[groupWelcome] activosPath:", ACTIVOS_PATH)
@@ -67,58 +84,64 @@ export async function onGroupParticipantsUpdate(sock, update) {
     try {
       const md = await sock.groupMetadata(groupId)
       groupName = (md?.subject || "este grupo").trim()
-      if (action === "add") {
-        desc = md?.desc ? `\n\n${md.desc}` : ""
-      }
+      if (action === "add") desc = md?.desc ? `\n\n${md.desc}` : ""
     } catch (e) {
       console.error("[groupWelcome] groupMetadata error:", e)
     }
 
-    for (const participant of participants) {
-      const mention = `@${String(participant).split("@")[0]}`
+    for (const p of participants) {
+      const { jid: participantJid, phoneJid } = normalizeParticipant(p)
+      if (!participantJid && !phoneJid) continue
 
-      // foto perfil
+      // ✅ para mencionar SIEMPRE manda jid válido (preferimos phoneNumber si existe)
+      const mentionJid = phoneJid || participantJid
+      const mentionTag = makeMentionTag(participantJid, phoneJid)
+
+      // foto perfil (primero intenta jid lid, luego phoneNumber, luego fallback)
       let profilePicUrl = FALLBACK_AVATAR
       try {
-        profilePicUrl = await sock.profilePictureUrl(participant, "image")
-      } catch {
+        const pic1 = await sock.profilePictureUrl(participantJid, "image")
+        if (typeof pic1 === "string" && pic1) profilePicUrl = pic1
+      } catch {}
+
+      if (profilePicUrl === FALLBACK_AVATAR && phoneJid) {
         try {
-          profilePicUrl = await sock.profilePictureUrl(sock.user.id, "image")
-        } catch {
-          profilePicUrl = FALLBACK_AVATAR
-        }
+          const pic2 = await sock.profilePictureUrl(phoneJid, "image")
+          if (typeof pic2 === "string" && pic2) profilePicUrl = pic2
+        } catch {}
       }
+
+      if (!profilePicUrl || typeof profilePicUrl !== "string") profilePicUrl = FALLBACK_AVATAR
 
       // ✅ Bienvenida
       if (action === "add" && welcomeOn) {
         const caption =
           `╭─༻❀\n` +
-          `➣ *¡Bienvenido/a ${mention}!* ✨\n` +
+          `➣ *¡Bienvenido/a ${mentionTag}!* ✨\n` +
           `╰─༻❀\n\n` +
           `⟢ 🏠 *${groupName}*${desc || ""}\n\n` +
           `🌼 Esperamos que disfrutes y compartas buena vibra 🌼`
 
-        // ❗sin catch para ver errores reales
         await sock.sendMessage(groupId, {
           image: { url: profilePicUrl },
           caption,
-          mentions: [participant],
+          mentions: [mentionJid],
         })
 
-        console.log("[groupWelcome] WELCOME SENT ->", participant)
+        console.log("[groupWelcome] WELCOME SENT ->", mentionJid)
       }
 
       // ✅ Despedida
       if (action === "remove" && byeOn) {
-        const caption = `👋 ${mention} ha salido de *${groupName}* 👋`
+        const caption = `👋 ${mentionTag} ha salido de *${groupName}* 👋`
 
         await sock.sendMessage(groupId, {
           image: { url: profilePicUrl },
           caption,
-          mentions: [participant],
+          mentions: [mentionJid],
         })
 
-        console.log("[groupWelcome] BYE SENT ->", participant)
+        console.log("[groupWelcome] BYE SENT ->", mentionJid)
       }
     }
   } catch (e) {
