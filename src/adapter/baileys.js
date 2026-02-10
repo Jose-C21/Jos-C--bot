@@ -198,12 +198,13 @@ export async function startSock(onMessage) {
 
   // ✅ NUEVO: bienvenida/despedida por evento
   sock.ev.on("group-participants.update", async (update) => {
-    try {
-      await onGroupParticipantsUpdate(sock, update)
-    } catch (e) {
-      console.error("[group-participants.update]", e)
-    }
-  })
+  try {
+    console.log("[group-participants.update] RAW:", JSON.stringify(update))
+    await onGroupParticipantsUpdate(sock, update)
+  } catch (e) {
+    console.error("[group-participants.update] ERROR:", e)
+  }
+})
 
   // ── Pairing code flow
   if (!alreadyLinked && mode === "code") {
