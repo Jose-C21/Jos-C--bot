@@ -38,6 +38,10 @@ function readActivosSafe() {
 // ✅ URL fallback si no hay foto
 const FALLBACK_AVATAR = "https://i.ibb.co/5x1q8H8/avatar.png"
 
+console.log("[groupWelcome] id:", groupId, "action:", action, "participants:", participants)
+console.log("[groupWelcome] welcomeOn:", welcomeOn, "byeOn:", byeOn)
+console.log("[groupWelcome] activosPath:", ACTIVOS_PATH)
+
 export async function onGroupParticipantsUpdate(sock, update) {
   try {
     const { id: groupId, participants = [], action } = update || {}
