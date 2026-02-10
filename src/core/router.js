@@ -20,6 +20,8 @@ import kiss from "../commands/kiss.js"
 import totalmensajes from "../commands/totalmensajes.js"
 import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
+import audiodoc from "../commands/audiodoc.js"
+
 
 const COMMANDS = {
   resetsession,
@@ -35,7 +37,8 @@ const COMMANDS = {
   kiss,
   totalmensajes,
   tiktok,
-  decir
+  decir,
+  audiodoc
 }
 
 function getText(msg) {
