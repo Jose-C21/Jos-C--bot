@@ -1,5 +1,3 @@
-*Core/groupwelcome.js*
-
 // src/core/groupWelcome.js
 import fs from "fs"
 import path from "path"
