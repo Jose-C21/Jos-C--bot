@@ -21,6 +21,7 @@ import totalmensajes from "../commands/totalmensajes.js"
 import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
+import bienvenida from "../commands/bienvenida.js"
 
 
 const COMMANDS = {
@@ -38,7 +39,8 @@ const COMMANDS = {
   totalmensajes,
   tiktok,
   decir,
-  audiodoc
+  audiodoc,
+  bienvenida
 }
 
 function getText(msg) {
