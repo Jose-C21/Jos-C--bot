@@ -8,6 +8,9 @@ import { logger } from "../utils/logger.js"
 import chalk from "chalk"
 import figlet from "figlet" // lo dejo por si luego lo quieres usar
 
+// ✅ NUEVO: bienvenida/despedida (evento)
+import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
+
 // ─────────────────────────────────────────────
 // ✅ INPUT SIMPLE (sin readline) para panel web
 // ─────────────────────────────────────────────
@@ -193,6 +196,15 @@ export async function startSock(onMessage) {
 
   sock.ev.on("creds.update", saveCreds)
 
+  // ✅ NUEVO: bienvenida/despedida por evento
+  sock.ev.on("group-participants.update", async (update) => {
+    try {
+      await onGroupParticipantsUpdate(sock, update)
+    } catch (e) {
+      console.error("[group-participants.update]", e)
+    }
+  })
+
   // ── Pairing code flow
   if (!alreadyLinked && mode === "code") {
     const clean = await askPhone()
@@ -244,10 +256,10 @@ export async function startSock(onMessage) {
   })
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
-  for (const msg of messages || []) {
-    try { await onMessage(sock, msg) } catch {}
-  }
-})
+    for (const msg of messages || []) {
+      try { await onMessage(sock, msg) } catch {}
+    }
+  })
 
   return sock
 }
