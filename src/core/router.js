@@ -2,6 +2,7 @@
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
+import { antiLinkGuard } from "./antilinkGuard.js" // ✅ NUEVO
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -22,7 +23,7 @@ import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
 import bienvenida from "../commands/bienvenida.js"
-
+import antilink from "../commands/antilink.js" // ✅ NUEVO (te faltaba en tu router)
 
 const COMMANDS = {
   resetsession,
@@ -40,7 +41,8 @@ const COMMANDS = {
   tiktok,
   decir,
   audiodoc,
-  bienvenida
+  bienvenida,
+  antilink // ✅ NUEVO
 }
 
 function getText(msg) {
@@ -246,12 +248,22 @@ export async function routeMessage(sock, msg) {
 
     // ─────────────────────────────────────────────
     // ✅ PERMITIR COMANDOS DESDE EL MISMO BOT (fromMe)
-    // - si es fromMe: SOLO procesar si es comando
-    // - evita loops con stickers/audios/etc
     // ─────────────────────────────────────────────
     const fromMe = !!msg.key?.fromMe
     const prefix = config.prefix || "."
     if (fromMe && (!text || !text.startsWith(prefix))) return
+
+    // ─────────────────────────────────────────────
+    // ✅ ANTILINK GUARD (ANTES DE TODO)
+    // - respeta admins/owner/bot
+    // - orden: expulsa -> borra msg -> aviso
+    // ─────────────────────────────────────────────
+    try {
+      const blocked = await antiLinkGuard(sock, msg)
+      if (blocked) return
+    } catch (e) {
+      console.error("[antilinkGuard] error:", e)
+    }
 
     // ─────────────────────────────────────────────
     // ✅ CONTADOR DE MENSAJES (solo texto, solo grupos) + antiflood (solo para conteo)
@@ -302,21 +314,17 @@ export async function routeMessage(sock, msg) {
       const participantJid = msg.key.participant || decodedJid || rawSenderJid
 
       if (count === 8) {
-        await sock
-          .sendMessage(chatId, {
-            text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
-            mentions: [participantJid]
-          })
-          .catch(() => {})
+        await sock.sendMessage(chatId, {
+          text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
+          mentions: [participantJid]
+        }).catch(() => {})
       }
 
       if (count === 13) {
-        await sock
-          .sendMessage(chatId, {
-            text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
-            mentions: [participantJid]
-          })
-          .catch(() => {})
+        await sock.sendMessage(chatId, {
+          text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
+          mentions: [participantJid]
+        }).catch(() => {})
       }
 
       if (count >= 15) {
@@ -327,35 +335,29 @@ export async function routeMessage(sock, msg) {
 
           if (!isAdmin) {
             await sock.groupParticipantsUpdate(chatId, [participantJid], "remove").catch(() => {})
-            await sock
-              .sendMessage(chatId, {
-                text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
-                mentions: [participantJid]
-              })
-              .catch(() => {})
+            await sock.sendMessage(chatId, {
+              text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
+              mentions: [participantJid]
+            }).catch(() => {})
             delete global._muteCounter[key]
           } else {
-            await sock
-              .sendMessage(chatId, {
-                text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
-                mentions: [participantJid]
-              })
-              .catch(() => {})
+            await sock.sendMessage(chatId, {
+              text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
+              mentions: [participantJid]
+            }).catch(() => {})
           }
         } catch {}
       }
 
       try {
-        await sock
-          .sendMessage(chatId, {
-            delete: {
-              remoteJid: chatId,
-              fromMe: false,
-              id: msg.key.id,
-              participant: participantJid
-            }
-          })
-          .catch(() => {})
+        await sock.sendMessage(chatId, {
+          delete: {
+            remoteJid: chatId,
+            fromMe: false,
+            id: msg.key.id,
+            participant: participantJid
+          }
+        }).catch(() => {})
       } catch {}
 
       logRouter({
