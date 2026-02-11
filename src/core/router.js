@@ -24,6 +24,8 @@ import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
 import bienvenida from "../commands/bienvenida.js"
 import antilink from "../commands/antilink.js" // ✅ NUEVO (te faltaba en tu router)
+import spotdl from "../commands/spotdl.js"
+
 
 const COMMANDS = {
   resetsession,
@@ -42,7 +44,8 @@ const COMMANDS = {
   decir,
   audiodoc,
   bienvenida,
-  antilink // ✅ NUEVO
+  antilink,
+  spotify: spotdl
 }
 
 function getText(msg) {
