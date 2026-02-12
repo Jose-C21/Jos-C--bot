@@ -304,125 +304,165 @@ export async function routeMessage(sock, msg) {
     }
 
     // ─────────────────────────────────────────────
-    // ✅ ANTISTICKERS GUARD (ANTES DE TODO)
-    // - borra desde 5 stickers dentro de 15s
-    // - warning en 5
-    // - 3 strikes => remove
-    // ─────────────────────────────────────────────
-    try {
-      const activos = readActivosSafe()
+// ✅ ANTISTICKERS GUARD (ANTES DE TODO)
+// - detecta sticker normal + ephemeral + viewOnce + doc webp
+// - borra desde 5 stickers dentro de 15s
+// - warning en 5
+// - 3 strikes => remove
+// ─────────────────────────────────────────────
+try {
+  const activos = readActivosSafe()
 
-      const stickerMsg =
-        msg.message?.stickerMessage ||
-        msg.message?.ephemeralMessage?.message?.stickerMessage
-
-      if (isGroup && activos?.antis?.[chatId] && !fromMe && stickerMsg) {
-        const rawUser = msg.key.participant || msg.key.remoteJid
-        const normalize = (id) => String(id || "").replace(/\D/g, "")
-
-        const whitelist = [
-          "19580839829625",
-          "129004208173107",
-          "229639687504053",
-          "4321307529361",
-          "208272208490541",
-          "+1(805)7074359",
-          "+573043427408",
-          "+1(865)3128591",
-          "+573186904935",
-          "+50432213256"
-        ]
-
-        const normalizedUser = normalize(rawUser)
-        const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
-        if (isWhitelisted) return
-
-        global.antisSpam = global.antisSpam || {}
-        global.antisSpam[chatId] = global.antisSpam[chatId] || {}
-        global.antisBlackList = global.antisBlackList || {}
-        global.antisBlackList[chatId] = global.antisBlackList[chatId] || []
-
-        const nowTs = Date.now()
-        const userKey = String(rawUser)
-
-        const u = global.antisSpam[chatId][userKey] || {
-          count: 0,
-          last: nowTs,
-          warned: false,
-          strikes: 0
-        }
-
-        const timePassed = nowTs - u.last
-
-        if (timePassed > 15000) {
-          u.count = 1
-          u.last = nowTs
-          u.warned = false
-          u.strikes = 0
-          global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(x => x !== userKey)
-        } else {
-          u.count++
-          u.last = nowTs
-        }
-
-        global.antisSpam[chatId][userKey] = u
-
-        if (u.count === 5 && !u.warned) {
-          await sock.sendMessage(chatId, {
-            text:
-              `⚠️ @${normalize(userKey)} has enviado 5 stickers.\n` +
-              `Debes esperar *15 segundos* o se seguirán borrando y podrías ser eliminado.`,
-            mentions: [userKey]
-          }).catch(() => {})
-          u.warned = true
-          global.antisSpam[chatId][userKey] = u
-        }
-
-        // borrar desde 5 en ventana de 15s
-        if (u.count >= 5 && timePassed < 15000) {
-          if (!global.antisBlackList[chatId].includes(userKey)) {
-            global.antisBlackList[chatId].push(userKey)
-          }
-
-          await sock.sendMessage(chatId, {
-            delete: {
-              remoteJid: chatId,
-              fromMe: false,
-              id: msg.key.id,
-              participant: userKey
-            }
-          }).catch(() => {})
-
-          u.strikes++
-          global.antisSpam[chatId][userKey] = u
-
-          if (u.strikes >= 3) {
-            await sock.sendMessage(chatId, {
-              text: `❌ @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
-              mentions: [userKey]
-            }).catch(() => {})
-            await sock.groupParticipantsUpdate(chatId, [userKey], "remove").catch(() => {})
-            delete global.antisSpam[chatId][userKey]
-          }
-
-          logRouter({
-            isGroup,
-            isOwner,
-            allowed: true,
-            senderNum: finalNum,
-            senderName,
-            groupName,
-            text: "[sticker]",
-            action: "BLOCK",
-            reason: `antis(count=${u.count}, strikes=${u.strikes})`
-          })
-
-          return
-        }
+  // 🔓 Unwrap: ephemeral / viewOnce (muchos stickers vienen así)
+  function unwrapMessage(m) {
+    let msgObj = m?.message || {}
+    while (true) {
+      if (msgObj?.ephemeralMessage?.message) {
+        msgObj = msgObj.ephemeralMessage.message
+        continue
       }
-    } catch (e) {
-      console.error("[antisGuard] error:", e)
+      if (msgObj?.viewOnceMessageV2?.message) {
+        msgObj = msgObj.viewOnceMessageV2.message
+        continue
+      }
+      if (msgObj?.viewOnceMessageV2Extension?.message) {
+        msgObj = msgObj.viewOnceMessageV2Extension.message
+        continue
+      }
+      break
     }
+    return msgObj
+  }
+
+  const mUnwrapped = unwrapMessage(msg)
+
+  // ✅ sticker real
+  const stickerMsg = mUnwrapped?.stickerMessage
+
+  // ✅ sticker como documento (webp)
+  const docMsg = mUnwrapped?.documentMessage
+  const isWebpDoc =
+    !!docMsg &&
+    (
+      String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
+      String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
+    )
+
+  const isStickerLike = !!stickerMsg || isWebpDoc
+
+  if (isGroup && activos?.antis?.[chatId] && !fromMe && isStickerLike) {
+    const rawUser = msg.key.participant || msg.key.remoteJid
+    const normalize = (id) => String(id || "").replace(/\D/g, "")
+
+    // 📋 whitelist (igual a tu idea)
+    const whitelist = [
+      "19580839829625",
+      "129004208173107",
+      "229639687504053",
+      "4321307529361",
+      "208272208490541",
+      "+1(805)7074359",
+      "+573043427408",
+      "+1(865)3128591",
+      "+573186904935",
+      "+50432213256"
+    ]
+
+    const normalizedUser = normalize(rawUser)
+    const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
+    if (isWhitelisted) return
+
+    global.antisSpam = global.antisSpam || {}
+    global.antisSpam[chatId] = global.antisSpam[chatId] || {}
+    global.antisBlackList = global.antisBlackList || {}
+    global.antisBlackList[chatId] = global.antisBlackList[chatId] || []
+
+    const nowTs = Date.now()
+    const userKey = String(rawUser)
+
+    const u = global.antisSpam[chatId][userKey] || {
+      count: 0,
+      last: nowTs,
+      warned: false,
+      strikes: 0
+    }
+
+    const timePassed = nowTs - u.last
+
+    // Reset ventana
+    if (timePassed > 15000) {
+      u.count = 1
+      u.last = nowTs
+      u.warned = false
+      u.strikes = 0
+      global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(x => x !== userKey)
+    } else {
+      u.count++
+      u.last = nowTs
+    }
+
+    global.antisSpam[chatId][userKey] = u
+
+    // ⚠️ aviso EXACTO al 5
+    if (u.count === 5 && !u.warned) {
+      await sock.sendMessage(chatId, {
+        text:
+          `⚠️ @${normalize(userKey)} has enviado 5 stickers.\n` +
+          `Espera *15 segundos* o se borrarán y podrías ser eliminado.`,
+        mentions: [userKey]
+      }).catch(() => {})
+      u.warned = true
+      global.antisSpam[chatId][userKey] = u
+    }
+
+    // 🧽 borrar desde 5 en la ventana
+    if (u.count >= 5 && timePassed < 15000) {
+      if (!global.antisBlackList[chatId].includes(userKey)) {
+        global.antisBlackList[chatId].push(userKey)
+      }
+
+      // borrar el sticker actual
+      await sock.sendMessage(chatId, {
+        delete: {
+          remoteJid: chatId,
+          fromMe: false,
+          id: msg.key.id,
+          participant: userKey
+        }
+      }).catch(() => {})
+
+      // strike
+      u.strikes++
+      global.antisSpam[chatId][userKey] = u
+
+      // 3 strikes => remove
+      if (u.strikes >= 3) {
+        await sock.sendMessage(chatId, {
+          text: `❌ @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
+          mentions: [userKey]
+        }).catch(() => {})
+        await sock.groupParticipantsUpdate(chatId, [userKey], "remove").catch(() => {})
+        delete global.antisSpam[chatId][userKey]
+      }
+
+      logRouter({
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: finalNum,
+        senderName,
+        groupName,
+        text: "[sticker]",
+        action: "BLOCK",
+        reason: `antis(count=${u.count}, strikes=${u.strikes})`
+      })
+
+      return
+    }
+  }
+} catch (e) {
+  console.error("[antisGuard] error:", e)
+}
 
     // ─────────────────────────────────────────────
     // ✅ CONTADOR DE MENSAJES (solo texto, solo grupos) + antiflood (solo conteo)
