@@ -2,7 +2,7 @@
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
-import { antiLinkGuard } from "./antilinkGuard.js" // ✅ NUEVO
+import { antiLinkGuard } from "./antilinkGuard.js"
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -24,7 +24,7 @@ import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
 import bienvenida from "../commands/bienvenida.js"
 import antilink from "../commands/antilink.js"
-import antis from "../commands/antis.js" // ✅ NUEVO
+import antis from "../commands/antis.js"
 
 const COMMANDS = {
   resetsession,
@@ -54,6 +54,7 @@ function getText(msg) {
     m.extendedTextMessage?.text ||
     m.imageMessage?.caption ||
     m.videoMessage?.caption ||
+    m.documentMessage?.caption ||
     ""
   ).trim()
 }
@@ -66,7 +67,6 @@ function isTextMessage(msg) {
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
-
   return (
     owners.includes(String(senderNum)) ||
     owners.includes(String(senderNumDecoded)) ||
@@ -76,9 +76,13 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ ACTIVOS (persistente)
+// ✅ DATA DIR
 // ─────────────────────────────────────────────
 const DATA_DIR = path.join(process.cwd(), "data")
+
+// ─────────────────────────────────────────────
+// ✅ ACTIVOS (persistente) -> data/activos.json
+// ─────────────────────────────────────────────
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
 
 function ensureActivosDB() {
@@ -108,7 +112,12 @@ function ensureActivosDB() {
 function readActivosSafe() {
   try {
     ensureActivosDB()
-    return JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+    const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+    if (!j.bienvenida) j.bienvenida = {}
+    if (!j.despedidas) j.despedidas = {}
+    if (!j.antilink) j.antilink = {}
+    if (!j.antis) j.antis = {}
+    return j
   } catch {
     return { bienvenida: {}, despedidas: {}, antilink: {}, antis: {} }
   }
@@ -141,9 +150,9 @@ function writeConteoSafe(db) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ MUTE DB (persistente) + AUTO-CREAR ARCHIVO
+// ✅ MUTE DB (persistente)
 // ─────────────────────────────────────────────
-const MUTE_PATH = path.join(process.cwd(), "data", "mute.json")
+const MUTE_PATH = path.join(DATA_DIR, "mute.json")
 
 function ensureMuteDB() {
   const dir = path.dirname(MUTE_PATH)
@@ -167,7 +176,7 @@ function isMuted(chatId, senderNum) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ LOG COMPACTO + NOMBRE + NUM COMPLETO + GRUPO (cache)
+// ✅ LOG COMPACTO
 // ─────────────────────────────────────────────
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 const padRightAnsi = (txt, width) => {
@@ -199,13 +208,11 @@ function getDisplayName(sock, msg, jid) {
   return "SinNombre"
 }
 
-// ✅ Cache de nombres de grupos (para NO trabar)
 const GROUP_CACHE = new Map()
 const GROUP_TTL_MS = 10 * 60 * 1000
 
 async function getGroupNameCached(sock, groupJid) {
   if (!groupJid || !String(groupJid).endsWith("@g.us")) return ""
-
   const cached = GROUP_CACHE.get(groupJid)
   const t = Date.now()
   if (cached && t - cached.t < GROUP_TTL_MS) return cached.name
@@ -223,8 +230,7 @@ async function getGroupNameCached(sock, groupJid) {
 }
 
 function logRouter(data) {
-  if (config.debugRouter === false) return
-
+  // ✅ LOG ACTIVADO SIEMPRE
   const OUT = 44
   const tag = padRightAnsi(chalk.cyanBright("[ROUTER]"), 10)
 
@@ -273,9 +279,7 @@ export async function routeMessage(sock, msg) {
     const senderNum = jidToNumber(rawSenderJid)
 
     let decodedJid = rawSenderJid
-    try {
-      if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid)
-    } catch {}
+    try { if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid) } catch {}
 
     const senderNumDecoded = jidToNumber(decodedJid)
     const finalNum = senderNumDecoded || senderNum
@@ -286,15 +290,12 @@ export async function routeMessage(sock, msg) {
     const senderName = getDisplayName(sock, msg, decodedJid)
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
-    // ─────────────────────────────────────────────
-    // ✅ PERMITIR COMANDOS DESDE EL MISMO BOT (fromMe)
-    // ─────────────────────────────────────────────
     const fromMe = !!msg.key?.fromMe
     const prefix = config.prefix || "."
     if (fromMe && (!text || !text.startsWith(prefix))) return
 
     // ─────────────────────────────────────────────
-    // ✅ ANTILINK GUARD (ANTES DE TODO)
+    // ✅ ANTILINK GUARD
     // ─────────────────────────────────────────────
     try {
       const blocked = await antiLinkGuard(sock, msg)
@@ -304,168 +305,149 @@ export async function routeMessage(sock, msg) {
     }
 
     // ─────────────────────────────────────────────
-// ✅ ANTISTICKERS GUARD (ANTES DE TODO)
-// - detecta sticker normal + ephemeral + viewOnce + doc webp
-// - borra desde 5 stickers dentro de 15s
-// - warning en 5
-// - 3 strikes => remove
-// ─────────────────────────────────────────────
-try {
-  const activos = readActivosSafe()
+    // ✅ ANTISTICKERS GUARD (LOG SIEMPRE)
+    // - borra desde 5 stickers en 15s
+    // - warn en 5
+    // - 3 strikes => remove
+    // ─────────────────────────────────────────────
+    try {
+      const activos = readActivosSafe()
+      const antisOn = !!activos?.antis?.[chatId]
 
-  // 🔓 Unwrap: ephemeral / viewOnce (muchos stickers vienen así)
-  function unwrapMessage(m) {
-    let msgObj = m?.message || {}
-    while (true) {
-      if (msgObj?.ephemeralMessage?.message) {
-        msgObj = msgObj.ephemeralMessage.message
-        continue
-      }
-      if (msgObj?.viewOnceMessageV2?.message) {
-        msgObj = msgObj.viewOnceMessageV2.message
-        continue
-      }
-      if (msgObj?.viewOnceMessageV2Extension?.message) {
-        msgObj = msgObj.viewOnceMessageV2Extension.message
-        continue
-      }
-      break
-    }
-    return msgObj
-  }
-
-  const mUnwrapped = unwrapMessage(msg)
-
-  // ✅ sticker real
-  const stickerMsg = mUnwrapped?.stickerMessage
-
-  // ✅ sticker como documento (webp)
-  const docMsg = mUnwrapped?.documentMessage
-  const isWebpDoc =
-    !!docMsg &&
-    (
-      String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
-      String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
-    )
-
-  const isStickerLike = !!stickerMsg || isWebpDoc
-
-  if (isGroup && activos?.antis?.[chatId] && !fromMe && isStickerLike) {
-    const rawUser = msg.key.participant || msg.key.remoteJid
-    const normalize = (id) => String(id || "").replace(/\D/g, "")
-
-    // 📋 whitelist (igual a tu idea)
-    const whitelist = [
-      "19580839829625",
-      "129004208173107",
-      "229639687504053",
-      "4321307529361",
-      "208272208490541",
-      "+1(805)7074359",
-      "+573043427408",
-      "+1(865)3128591",
-      "+573186904935",
-      "+50432213256"
-    ]
-
-    const normalizedUser = normalize(rawUser)
-    const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
-    if (isWhitelisted) return
-
-    global.antisSpam = global.antisSpam || {}
-    global.antisSpam[chatId] = global.antisSpam[chatId] || {}
-    global.antisBlackList = global.antisBlackList || {}
-    global.antisBlackList[chatId] = global.antisBlackList[chatId] || []
-
-    const nowTs = Date.now()
-    const userKey = String(rawUser)
-
-    const u = global.antisSpam[chatId][userKey] || {
-      count: 0,
-      last: nowTs,
-      warned: false,
-      strikes: 0
-    }
-
-    const timePassed = nowTs - u.last
-
-    // Reset ventana
-    if (timePassed > 15000) {
-      u.count = 1
-      u.last = nowTs
-      u.warned = false
-      u.strikes = 0
-      global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(x => x !== userKey)
-    } else {
-      u.count++
-      u.last = nowTs
-    }
-
-    global.antisSpam[chatId][userKey] = u
-
-    // ⚠️ aviso EXACTO al 5
-    if (u.count === 5 && !u.warned) {
-      await sock.sendMessage(chatId, {
-        text:
-          `⚠️ @${normalize(userKey)} has enviado 5 stickers.\n` +
-          `Espera *15 segundos* o se borrarán y podrías ser eliminado.`,
-        mentions: [userKey]
-      }).catch(() => {})
-      u.warned = true
-      global.antisSpam[chatId][userKey] = u
-    }
-
-    // 🧽 borrar desde 5 en la ventana
-    if (u.count >= 5 && timePassed < 15000) {
-      if (!global.antisBlackList[chatId].includes(userKey)) {
-        global.antisBlackList[chatId].push(userKey)
-      }
-
-      // borrar el sticker actual
-      await sock.sendMessage(chatId, {
-        delete: {
-          remoteJid: chatId,
-          fromMe: false,
-          id: msg.key.id,
-          participant: userKey
+      function unwrapMessage(m) {
+        let msgObj = m?.message || {}
+        while (true) {
+          if (msgObj?.ephemeralMessage?.message) { msgObj = msgObj.ephemeralMessage.message; continue }
+          if (msgObj?.viewOnceMessageV2?.message) { msgObj = msgObj.viewOnceMessageV2.message; continue }
+          if (msgObj?.viewOnceMessageV2Extension?.message) { msgObj = msgObj.viewOnceMessageV2Extension.message; continue }
+          break
         }
-      }).catch(() => {})
-
-      // strike
-      u.strikes++
-      global.antisSpam[chatId][userKey] = u
-
-      // 3 strikes => remove
-      if (u.strikes >= 3) {
-        await sock.sendMessage(chatId, {
-          text: `❌ @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
-          mentions: [userKey]
-        }).catch(() => {})
-        await sock.groupParticipantsUpdate(chatId, [userKey], "remove").catch(() => {})
-        delete global.antisSpam[chatId][userKey]
+        return msgObj
       }
 
-      logRouter({
-        isGroup,
-        isOwner,
-        allowed: true,
-        senderNum: finalNum,
-        senderName,
-        groupName,
-        text: "[sticker]",
-        action: "BLOCK",
-        reason: `antis(count=${u.count}, strikes=${u.strikes})`
-      })
+      const mUnwrapped = unwrapMessage(msg)
 
-      return
+      const stickerMsg = mUnwrapped?.stickerMessage
+      const docMsg = mUnwrapped?.documentMessage
+      const isWebpDoc =
+        !!docMsg &&
+        (
+          String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
+          String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
+        )
+
+      const isStickerLike = !!stickerMsg || isWebpDoc
+
+      // ✅ LOG FORZADO (para ver por qué no entra)
+      console.log("[antisGuard] chat:", chatId, "antisOn:", antisOn, "isStickerLike:", isStickerLike, "fromMe:", fromMe)
+      if (!isStickerLike) console.log("[antisGuard] keys:", Object.keys(mUnwrapped || {}))
+
+      if (isGroup && antisOn && !fromMe && isStickerLike) {
+        const rawUser = msg.key.participant || msg.key.remoteJid
+        const normalize = (id) => String(id || "").replace(/\D/g, "")
+
+        console.log("[antisGuard] user:", rawUser, "norm:", normalize(rawUser))
+
+        const whitelist = [
+          "19580839829625",
+          "129004208173107",
+          "229639687504053",
+          "4321307529361",
+          "208272208490541",
+          "+1(805)7074359",
+          "+573043427408",
+          "+1(865)3128591",
+          "+573186904935",
+          "+50432213256"
+        ]
+
+        const normalizedUser = normalize(rawUser)
+        const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
+        console.log("[antisGuard] whitelisted:", isWhitelisted)
+        if (isWhitelisted) return
+
+        global.antisSpam = global.antisSpam || {}
+        global.antisSpam[chatId] = global.antisSpam[chatId] || {}
+
+        const nowTs = Date.now()
+        const userKey = String(rawUser)
+
+        const u = global.antisSpam[chatId][userKey] || {
+          count: 0,
+          last: nowTs,
+          warned: false,
+          strikes: 0
+        }
+
+        const timePassed = nowTs - u.last
+
+        if (timePassed > 15000) {
+          u.count = 1
+          u.last = nowTs
+          u.warned = false
+          u.strikes = 0
+        } else {
+          u.count++
+          u.last = nowTs
+        }
+
+        global.antisSpam[chatId][userKey] = u
+        console.log("[antisGuard] count:", u.count, "strikes:", u.strikes, "timePassed:", timePassed)
+
+        if (u.count === 5 && !u.warned) {
+          await sock.sendMessage(chatId, {
+            text:
+              `⚠️ @${normalize(userKey)} has enviado 5 stickers.\n` +
+              `Espera *15 segundos* o se borrarán y podrías ser eliminado.`,
+            mentions: [userKey]
+          }).catch(() => {})
+          u.warned = true
+          global.antisSpam[chatId][userKey] = u
+        }
+
+        // borrar desde 5 dentro de ventana
+        if (u.count >= 5 && timePassed < 15000) {
+          await sock.sendMessage(chatId, {
+            delete: {
+              remoteJid: chatId,
+              fromMe: false,
+              id: msg.key.id,
+              participant: userKey
+            }
+          }).catch(() => {})
+
+          u.strikes++
+          global.antisSpam[chatId][userKey] = u
+
+          if (u.strikes >= 3) {
+            await sock.sendMessage(chatId, {
+              text: `❌ @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
+              mentions: [userKey]
+            }).catch(() => {})
+            await sock.groupParticipantsUpdate(chatId, [userKey], "remove").catch(() => {})
+            delete global.antisSpam[chatId][userKey]
+          }
+
+          logRouter({
+            isGroup,
+            isOwner,
+            allowed: true,
+            senderNum: finalNum,
+            senderName,
+            groupName,
+            text: "[sticker]",
+            action: "BLOCK",
+            reason: `antis(count=${u.count}, strikes=${u.strikes})`
+          })
+          return
+        }
+      }
+    } catch (e) {
+      console.error("[antisGuard] error:", e)
     }
-  }
-} catch (e) {
-  console.error("[antisGuard] error:", e)
-}
 
     // ─────────────────────────────────────────────
-    // ✅ CONTADOR DE MENSAJES (solo texto, solo grupos) + antiflood (solo conteo)
+    // ✅ CONTADOR DE MENSAJES
     // ─────────────────────────────────────────────
     try {
       if (isGroup && isTextMessage(msg)) {
@@ -502,7 +484,7 @@ try {
     }
 
     // ─────────────────────────────────────────────
-    // ✅ MUTE BLOQUEO (SOLO GRUPOS, ANTES DEL PREFIX)
+    // ✅ MUTE BLOQUEO
     // ─────────────────────────────────────────────
     if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
       global._muteCounter = global._muteCounter || {}
@@ -570,11 +552,10 @@ try {
         action: "BLOCK",
         reason: `muted(count=${count})`
       })
-
       return
     }
 
-    // ✅ privado: allowlist SOLO para no-owners
+    // ✅ privado allowlist
     const allowed = isAllowedPrivate(msg)
     if (!isOwner && !allowed) {
       logRouter({
