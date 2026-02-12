@@ -305,44 +305,55 @@ export async function routeMessage(sock, msg) {
     }
 
     // ─────────────────────────────────────────────
-    // ✅ ANTISTICKERS GUARD (LOG SIEMPRE)
-    // - borra desde 5 stickers en 15s
-    // - warn en 5
-    // - 3 strikes => remove
-    // ─────────────────────────────────────────────
-    try {
-      const activos = readActivosSafe()
-      const antisOn = !!activos?.antis?.[chatId]
+// ✅ ANTISTICKERS GUARD (LOG SIEMPRE)
+// - borra desde 5 stickers en 15s
+// - warn en 5
+// - 3 strikes => remove
+// - detecta: stickerMessage, lottieStickerMessage, animatedStickerMessage, doc webp
+// ─────────────────────────────────────────────
+try {
+  const activos = readActivosSafe()
+  const antisOn = !!activos?.antis?.[chatId]
 
-      function unwrapMessage(m) {
-        let msgObj = m?.message || {}
-        while (true) {
-          if (msgObj?.ephemeralMessage?.message) { msgObj = msgObj.ephemeralMessage.message; continue }
-          if (msgObj?.viewOnceMessageV2?.message) { msgObj = msgObj.viewOnceMessageV2.message; continue }
-          if (msgObj?.viewOnceMessageV2Extension?.message) { msgObj = msgObj.viewOnceMessageV2Extension.message; continue }
-          break
-        }
-        return msgObj
-      }
+  function unwrapMessage(m) {
+    let msgObj = m?.message || {}
+    while (true) {
+      if (msgObj?.ephemeralMessage?.message) { msgObj = msgObj.ephemeralMessage.message; continue }
+      if (msgObj?.viewOnceMessageV2?.message) { msgObj = msgObj.viewOnceMessageV2.message; continue }
+      if (msgObj?.viewOnceMessageV2Extension?.message) { msgObj = msgObj.viewOnceMessageV2Extension.message; continue }
+      break
+    }
+    return msgObj
+  }
 
-      const mUnwrapped = unwrapMessage(msg)
+  const mUnwrapped = unwrapMessage(msg)
 
-      const stickerMsg = mUnwrapped?.stickerMessage
-      const docMsg = mUnwrapped?.documentMessage
-      const isWebpDoc =
-        !!docMsg &&
-        (
-          String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
-          String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
-        )
+  // ✅ tipos de sticker en Baileys (según tu log: lottieStickerMessage)
+  const stickerMsg = mUnwrapped?.stickerMessage
+  const lottieMsg = mUnwrapped?.lottieStickerMessage
+  const animatedMsg = mUnwrapped?.animatedStickerMessage
 
-      const isStickerLike = !!stickerMsg || isWebpDoc
+  // ✅ sticker como documento (webp)
+  const docMsg = mUnwrapped?.documentMessage
+  const isWebpDoc =
+    !!docMsg &&
+    (
+      String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
+      String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
+    )
 
-      // ✅ LOG FORZADO (para ver por qué no entra)
-      console.log("[antisGuard] chat:", chatId, "antisOn:", antisOn, "isStickerLike:", isStickerLike, "fromMe:", fromMe)
-      if (!isStickerLike) console.log("[antisGuard] keys:", Object.keys(mUnwrapped || {}))
+  const isStickerLike = !!stickerMsg || !!lottieMsg || !!animatedMsg || isWebpDoc
 
-      if (isGroup && antisOn && !fromMe && isStickerLike) {
+  // ✅ LOG FORZADO (para ver por qué no entra)
+  console.log("[antisGuard] chat:", chatId, "antisOn:", antisOn, "fromMe:", fromMe, "types:", {
+    sticker: !!stickerMsg,
+    lottie: !!lottieMsg,
+    animated: !!animatedMsg,
+    webpDoc: !!isWebpDoc
+  })
+  if (!isStickerLike) console.log("[antisGuard] keys:", Object.keys(mUnwrapped || {}))
+
+  if (isGroup && antisOn && !fromMe && isStickerLike) {
         const rawUser = msg.key.participant || msg.key.remoteJid
         const normalize = (id) => String(id || "").replace(/\D/g, "")
 
