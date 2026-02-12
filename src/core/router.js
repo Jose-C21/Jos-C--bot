@@ -23,9 +23,8 @@ import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
 import bienvenida from "../commands/bienvenida.js"
-import antilink from "../commands/antilink.js" // ✅ NUEVO (te faltaba en tu router)
-
-
+import antilink from "../commands/antilink.js"
+import antis from "../commands/antis.js" // ✅ NUEVO
 
 const COMMANDS = {
   resetsession,
@@ -44,7 +43,8 @@ const COMMANDS = {
   decir,
   audiodoc,
   bienvenida,
-  antilink
+  antilink,
+  antis
 }
 
 function getText(msg) {
@@ -76,9 +76,47 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ CONTEO DE MENSAJES (persistente)
+// ✅ ACTIVOS (persistente)
 // ─────────────────────────────────────────────
 const DATA_DIR = path.join(process.cwd(), "data")
+const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
+
+function ensureActivosDB() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+  if (!fs.existsSync(ACTIVOS_PATH)) {
+    fs.writeFileSync(
+      ACTIVOS_PATH,
+      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {} }, null, 2)
+    )
+    return
+  }
+  try {
+    const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+    if (!j.bienvenida) j.bienvenida = {}
+    if (!j.despedidas) j.despedidas = {}
+    if (!j.antilink) j.antilink = {}
+    if (!j.antis) j.antis = {}
+    fs.writeFileSync(ACTIVOS_PATH, JSON.stringify(j, null, 2))
+  } catch {
+    fs.writeFileSync(
+      ACTIVOS_PATH,
+      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {} }, null, 2)
+    )
+  }
+}
+
+function readActivosSafe() {
+  try {
+    ensureActivosDB()
+    return JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+  } catch {
+    return { bienvenida: {}, despedidas: {}, antilink: {}, antis: {} }
+  }
+}
+
+// ─────────────────────────────────────────────
+// ✅ CONTEO DE MENSAJES (persistente)
+// ─────────────────────────────────────────────
 const CONTEO_PATH = path.join(DATA_DIR, "conteo.json")
 
 function ensureConteoDB() {
@@ -257,8 +295,6 @@ export async function routeMessage(sock, msg) {
 
     // ─────────────────────────────────────────────
     // ✅ ANTILINK GUARD (ANTES DE TODO)
-    // - respeta admins/owner/bot
-    // - orden: expulsa -> borra msg -> aviso
     // ─────────────────────────────────────────────
     try {
       const blocked = await antiLinkGuard(sock, msg)
@@ -268,7 +304,128 @@ export async function routeMessage(sock, msg) {
     }
 
     // ─────────────────────────────────────────────
-    // ✅ CONTADOR DE MENSAJES (solo texto, solo grupos) + antiflood (solo para conteo)
+    // ✅ ANTISTICKERS GUARD (ANTES DE TODO)
+    // - borra desde 5 stickers dentro de 15s
+    // - warning en 5
+    // - 3 strikes => remove
+    // ─────────────────────────────────────────────
+    try {
+      const activos = readActivosSafe()
+
+      const stickerMsg =
+        msg.message?.stickerMessage ||
+        msg.message?.ephemeralMessage?.message?.stickerMessage
+
+      if (isGroup && activos?.antis?.[chatId] && !fromMe && stickerMsg) {
+        const rawUser = msg.key.participant || msg.key.remoteJid
+        const normalize = (id) => String(id || "").replace(/\D/g, "")
+
+        const whitelist = [
+          "19580839829625",
+          "129004208173107",
+          "229639687504053",
+          "4321307529361",
+          "208272208490541",
+          "+1(805)7074359",
+          "+573043427408",
+          "+1(865)3128591",
+          "+573186904935",
+          "+50432213256"
+        ]
+
+        const normalizedUser = normalize(rawUser)
+        const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
+        if (isWhitelisted) return
+
+        global.antisSpam = global.antisSpam || {}
+        global.antisSpam[chatId] = global.antisSpam[chatId] || {}
+        global.antisBlackList = global.antisBlackList || {}
+        global.antisBlackList[chatId] = global.antisBlackList[chatId] || []
+
+        const nowTs = Date.now()
+        const userKey = String(rawUser)
+
+        const u = global.antisSpam[chatId][userKey] || {
+          count: 0,
+          last: nowTs,
+          warned: false,
+          strikes: 0
+        }
+
+        const timePassed = nowTs - u.last
+
+        if (timePassed > 15000) {
+          u.count = 1
+          u.last = nowTs
+          u.warned = false
+          u.strikes = 0
+          global.antisBlackList[chatId] = global.antisBlackList[chatId].filter(x => x !== userKey)
+        } else {
+          u.count++
+          u.last = nowTs
+        }
+
+        global.antisSpam[chatId][userKey] = u
+
+        if (u.count === 5 && !u.warned) {
+          await sock.sendMessage(chatId, {
+            text:
+              `⚠️ @${normalize(userKey)} has enviado 5 stickers.\n` +
+              `Debes esperar *15 segundos* o se seguirán borrando y podrías ser eliminado.`,
+            mentions: [userKey]
+          }).catch(() => {})
+          u.warned = true
+          global.antisSpam[chatId][userKey] = u
+        }
+
+        // borrar desde 5 en ventana de 15s
+        if (u.count >= 5 && timePassed < 15000) {
+          if (!global.antisBlackList[chatId].includes(userKey)) {
+            global.antisBlackList[chatId].push(userKey)
+          }
+
+          await sock.sendMessage(chatId, {
+            delete: {
+              remoteJid: chatId,
+              fromMe: false,
+              id: msg.key.id,
+              participant: userKey
+            }
+          }).catch(() => {})
+
+          u.strikes++
+          global.antisSpam[chatId][userKey] = u
+
+          if (u.strikes >= 3) {
+            await sock.sendMessage(chatId, {
+              text: `❌ @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
+              mentions: [userKey]
+            }).catch(() => {})
+            await sock.groupParticipantsUpdate(chatId, [userKey], "remove").catch(() => {})
+            delete global.antisSpam[chatId][userKey]
+          }
+
+          logRouter({
+            isGroup,
+            isOwner,
+            allowed: true,
+            senderNum: finalNum,
+            senderName,
+            groupName,
+            text: "[sticker]",
+            action: "BLOCK",
+            reason: `antis(count=${u.count}, strikes=${u.strikes})`
+          })
+
+          return
+        }
+      }
+    } catch (e) {
+      console.error("[antisGuard] error:", e)
+    }
+
+    // ─────────────────────────────────────────────
+    // ✅ CONTADOR DE MENSAJES (solo texto, solo grupos) + antiflood (solo conteo)
     // ─────────────────────────────────────────────
     try {
       if (isGroup && isTextMessage(msg)) {
