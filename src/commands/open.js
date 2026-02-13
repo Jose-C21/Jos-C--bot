@@ -53,10 +53,16 @@ export default async function open(sock, msg) {
     await sock.groupSettingUpdate(chatId, "not_announcement")
 
     return sock.sendMessage(
-      chatId,
-      { text: "> 🔓 *El grupo ha sido abierto.*\n📢 *Todos los miembros pueden enviar mensajes ahora.*" },
-      { quoted: msg }
-    )
+  chatId,
+  {
+    text:
+      `> •	╭─────────✧
+> ➵ 🔒 𝙶𝚛𝚞𝚙𝚘 𝙰𝚋𝚒𝚎𝚛𝚝𝚘
+> •	╰─────────✧\n` +
+      `❑ ᴛᴏᴅᴏꜱ ʟᴏꜱ ᴍɪᴇᴍʙʀᴏꜱ ᴘᴜᴇᴅᴇɴ ᴇɴᴠɪᴀʀ ᴍᴇɴꜱᴀᴊᴇꜱ ᴀʜᴏʀᴀ..`
+  },
+  { quoted: msg }
+)
   } catch (error) {
     console.error("❌ Error en el comando open:", error)
     return sock.sendMessage(
