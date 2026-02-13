@@ -56,7 +56,9 @@ export default async function close(sock, msg) {
   chatId,
   {
     text:
-      `🔒 Grupo cerrado\n` +
+      `•	╭────────────╮
+🔒 Grupo cerrado
+•	╰────────────╯\n` +
       `${"─".repeat(12)}\n` +
       `📢 Solo administradores pueden enviar mensajes`
   },
