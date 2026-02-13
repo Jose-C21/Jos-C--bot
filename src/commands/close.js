@@ -53,10 +53,15 @@ export default async function close(sock, msg) {
     await sock.groupSettingUpdate(chatId, "announcement")
 
     return sock.sendMessage(
-      chatId,
-      { text: "> 🔒 *El grupo ha sido cerrado.*\n📢 *Solo los administradores pueden enviar mensajes ahora.*" },
-      { quoted: msg }
-    )
+  chatId,
+  {
+    text:
+      `🔒 Grupo cerrado\n` +
+      `${"─".repeat(12)}\n` +
+      `📢 Solo administradores pueden enviar mensajes`
+  },
+  { quoted: msg }
+)
   } catch (error) {
     console.error("❌ Error en el comando close:", error)
     return sock.sendMessage(
