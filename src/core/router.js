@@ -25,6 +25,10 @@ import audiodoc from "../commands/audiodoc.js"
 import bienvenida from "../commands/bienvenida.js"
 import antilink from "../commands/antilink.js"
 import antis from "../commands/antis.js"
+import open from "../commands/open.js"
+import close from "../commands/close.js"
+
+
 
 const COMMANDS = {
   resetsession,
@@ -44,7 +48,9 @@ const COMMANDS = {
   audiodoc,
   bienvenida,
   antilink,
-  antis
+  antis,
+  open,
+  close
 }
 
 function getText(msg) {
