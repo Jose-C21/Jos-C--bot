@@ -134,7 +134,7 @@ export default async function menu(sock, msg) {
     await sock.sendMessage(
       chatId,
       {
-        image: { url: "https://i.postimg.cc/90j2Nghj/D93798D6-9DCC-4CC6-919A-8211A8434705.png" },
+        image: { url: "https://i.postimg.cc/nVGqZ0Fd/17C6275D-76AF-410C-86D5-0E89A361B252.png" },
         caption: captionText,
         mentions: [senderJid]
       },
