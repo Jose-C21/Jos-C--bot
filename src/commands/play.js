@@ -8,7 +8,7 @@ const APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
 const API_RESOLVE = "https://api-sky.ultraplus.click/youtube/resolve"
 
 // miniaturas (las mismas que usabas)
-const CARD_IMAGE_URL = "https://i.postimg.cc/zf9B9n1H/27327237-4E86-4321-AD03-EB5B71422C26.png"
+const CARD_IMAGE_URL = "https://i.postimg.cc/TwGh4vDP/IMG-1651.png"
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
 function trad(en = "") {
