@@ -27,7 +27,7 @@ import antilink from "../commands/antilink.js"
 import antis from "../commands/antis.js"
 import open from "../commands/open.js"
 import close from "../commands/close.js"
-
+import menu from "../commands/menu.js"
 
 
 const COMMANDS = {
@@ -50,7 +50,8 @@ const COMMANDS = {
   antilink,
   antis,
   open,
-  close
+  close,
+  menu
 }
 
 function getText(msg) {
