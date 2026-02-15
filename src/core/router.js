@@ -29,7 +29,7 @@ import open from "../commands/open.js"
 import close from "../commands/close.js"
 import menu from "../commands/menu.js"
 import ver from "../commands/ver.js"
-
+import perfil from "../commands/perfil.js"
 
 
 const COMMANDS = {
@@ -54,7 +54,8 @@ const COMMANDS = {
   open,
   close,
   menu,
-  ver
+  ver,
+  perfil
 }
 
 function getText(msg) {
