@@ -2,7 +2,7 @@
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
-const FALLBACK_PP = "https://i.imgur.com/3J8M0wG.png"
+const FALLBACK_PP = "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
 
 // 🧠 limpiar JID (número real o LID)
 const limpiarId = (jid) => String(jid || "").replace(/[^0-9]/g, "")
