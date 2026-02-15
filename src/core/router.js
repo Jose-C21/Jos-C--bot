@@ -28,6 +28,8 @@ import antis from "../commands/antis.js"
 import open from "../commands/open.js"
 import close from "../commands/close.js"
 import menu from "../commands/menu.js"
+import ver from "../commands/ver.js"
+
 
 
 const COMMANDS = {
@@ -51,7 +53,8 @@ const COMMANDS = {
   antis,
   open,
   close,
-  menu
+  menu,
+  ver
 }
 
 function getText(msg) {
