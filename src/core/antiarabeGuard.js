@@ -81,7 +81,7 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
 
       // aviso -> remove
       await sock.sendMessage(groupId, {
-        text: `⚠️ @${phone} tiene un número prohibido y será expulsado.`,
+        text: `⚠️ @${phone} ᴛɪᴇɴᴇ ᴜɴ ɴᴜᴍᴇʀᴏ ᴘʀᴏʜɪʙɪᴅᴏ ʏ ꜱᴇʀᴀ ᴇxᴘᴜʟꜱᴀᴅᴏ.`,
         mentions: [jid]
       }).catch(() => {})
 
