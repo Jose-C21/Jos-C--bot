@@ -32,7 +32,7 @@ import ver from "../commands/ver.js"
 import perfil from "../commands/perfil.js"
 import kick from "../commands/kick.js"
 import tag from "../commands/tag.js"
-
+import antiarabe from "../commands/antiarabe.js"
 
 
 
@@ -62,7 +62,8 @@ const COMMANDS = {
   perfil,
   kick,
   ban: kick,
-  tag
+  tag,
+  antiarabe
 }
 
 function getText(msg) {
