@@ -6,10 +6,17 @@ import makeWASocket, {
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
-import figlet from "figlet" // lo dejo por si luego lo quieres usar
+import figlet from "figlet"
 
-// ✅ NUEVO: bienvenida/despedida (evento)
+// ✅ bienvenida/despedida (evento)
 import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
+
+// ✅ NUEVO: antiarabe guard (evento)
+import { antiarabeGuard } from "../core/antiarabeGuard.js"
+
+// ✅ NUEVO: helper owner (mismo que usas en router, para bypass)
+import config from "../config.js"
+import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
 // ─────────────────────────────────────────────
 // ✅ INPUT SIMPLE (sin readline) para panel web
@@ -65,13 +72,13 @@ const centerAnsi = (txt, width) => {
 }
 
 function banner() {
-  const OUT = 44       // ancho fijo para panel (evita wrap)
-  const DASH = 10      // largo de líneas a los lados (corto = no se rompe)
+  const OUT = 44
+  const DASH = 10
 
   const top =
     chalk.whiteBright("─".repeat(DASH)) +
     chalk.whiteBright("(") +
-    chalk.gray(" POWERED BY ") +          // solo el texto en oscuro
+    chalk.gray(" POWERED BY ") +
     chalk.whiteBright(")") +
     chalk.whiteBright("─".repeat(DASH))
 
@@ -98,11 +105,9 @@ function formatPairingCode(code = "") {
 const UI = {
   OUT: 44,
   hrSoft(len = 34) {
-    // separador gris suave
     console.log(centerAnsi(chalk.gray("─".repeat(len)), UI.OUT))
   },
   hrCyan(len = 30) {
-    // separador cyan (como tu banner)
     console.log(centerAnsi(chalk.cyanBright("─".repeat(len)), UI.OUT))
   },
   title(txt) {
@@ -111,7 +116,6 @@ const UI = {
   info(txt) {
     console.log(chalk.gray("  • ") + chalk.white(txt))
   },
-  // ✅ hints en rojo claro
   hint(txt) {
     console.log(chalk.gray("  • ") + chalk.redBright(txt))
   },
@@ -169,6 +173,18 @@ async function askPhone() {
   }
 }
 
+// ✅ helper owner (para antiarabeGuard bypass)
+function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
+  const owners = (config.owners || []).map(String)
+  const ownersLid = (config.ownersLid || []).map(String)
+  return (
+    owners.includes(String(senderNum)) ||
+    owners.includes(String(senderNumDecoded)) ||
+    ownersLid.includes(String(senderNum)) ||
+    ownersLid.includes(String(senderNumDecoded))
+  )
+}
+
 // ─────────────────────────────────────────────
 // ✅ Socket
 // ─────────────────────────────────────────────
@@ -196,15 +212,20 @@ export async function startSock(onMessage) {
 
   sock.ev.on("creds.update", saveCreds)
 
-  // ✅ NUEVO: bienvenida/despedida por evento
+  // ✅ EVENTO: entradas/salidas del grupo
   sock.ev.on("group-participants.update", async (update) => {
-  try {
-    console.log("[group-participants.update] RAW:", JSON.stringify(update))
-    await onGroupParticipantsUpdate(sock, update)
-  } catch (e) {
-    console.error("[group-participants.update] ERROR:", e)
-  }
-})
+    try {
+      console.log("[group-participants.update] RAW:", JSON.stringify(update))
+
+      // ✅ 1) ANTIARABE primero (si entra número prohibido, lo saca y ya)
+      await antiarabeGuard(sock, update, { isOwnerByNumbers })
+
+      // ✅ 2) BIENVENIDA / DESPEDIDA
+      await onGroupParticipantsUpdate(sock, update)
+    } catch (e) {
+      console.error("[group-participants.update] ERROR:", e)
+    }
+  })
 
   // ── Pairing code flow
   if (!alreadyLinked && mode === "code") {
