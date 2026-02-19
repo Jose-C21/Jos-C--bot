@@ -27,7 +27,7 @@ function buildUsage(prefix = ".") {
     `Responde a una imagen/video con "${prefix}s" para convertirlo en sticker\n\n` +
     `ᴇᴊᴇᴍᴘʟᴏ: ʀᴇꜱᴘᴏɴᴅᴇ ᴀ ᴜɴᴀ ꜰᴏᴛᴏ ᴄᴏɴ ${prefix}s\n\n` +
     `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n` +
-    `> ⟣ 𝗢𝘄𝗻𝗲𝗿: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
+    `> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
   )
 }
 
