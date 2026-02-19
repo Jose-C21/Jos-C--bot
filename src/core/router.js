@@ -30,6 +30,7 @@ import close from "../commands/close.js"
 import menu from "../commands/menu.js"
 import ver from "../commands/ver.js"
 import perfil from "../commands/perfil.js"
+import kick from "../commands/kick.js"
 
 
 const COMMANDS = {
@@ -55,7 +56,9 @@ const COMMANDS = {
   close,
   menu,
   ver,
-  perfil
+  perfil,
+  kick,
+  ban: kick
 }
 
 function getText(msg) {
