@@ -35,7 +35,7 @@ function readActivosSafe() {
 }
 
 // ✅ URL fallback si no hay foto
-const FALLBACK_AVATAR = "https://i.ibb.co/5x1q8H8/avatar.png"
+const FALLBACK_AVATAR = "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
 
 // ✅ Normalizar participant (string o object)
 function normalizeParticipant(p) {
