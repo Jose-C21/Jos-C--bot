@@ -55,10 +55,38 @@ function formatoTiempo(totalSeg) {
 
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
 
-// ✅ números en "negrita" sin usar *
-const toBoldDigits = (x) => {
-  const map = { "0":"𝟬","1":"𝟭","2":"𝟮","3":"𝟯","4":"𝟰","5":"𝟱","6":"𝟲","7":"𝟳","8":"𝟴","9":"𝟵" }
-  return String(x ?? "").replace(/[0-9]/g, (d) => map[d] || d)
+// ✅ dígitos en bold Unicode
+function toBoldDigits(input) {
+  const s = String(input ?? "")
+  const map = {
+    "0": "𝟬", "1": "𝟭", "2": "𝟮", "3": "𝟯", "4": "𝟰",
+    "5": "𝟱", "6": "𝟲", "7": "𝟳", "8": "𝟴", "9": "𝟵"
+  }
+  return s.replace(/[0-9]/g, (d) => map[d] || d)
+}
+
+// ✅ texto (A-Z a-z 0-9) a bold Unicode (sin usar *)
+function toBoldText(input) {
+  const s = String(input ?? "")
+
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  const a = "abcdefghijklmnopqrstuvwxyz"
+  const bA = "𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙"
+  const ba = "𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳"
+
+  const out = []
+  for (const ch of s) {
+    const iU = A.indexOf(ch)
+    if (iU !== -1) { out.push(bA[iU]); continue }
+
+    const iL = a.indexOf(ch)
+    if (iL !== -1) { out.push(ba[iL]); continue }
+
+    if (ch >= "0" && ch <= "9") { out.push(toBoldDigits(ch)); continue }
+
+    out.push(ch) // espacios, emojis, símbolos, acentos: se quedan igual
+  }
+  return out.join("")
 }
 
 async function buildRanking(sock, chatId) {
@@ -139,9 +167,9 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
       await sock.sendMessage(chatId, {
         text:
           "📌 Para ver listas extra, primero genera la lista principal:\n" +
-          "• Usa: .totalmensajes\n\n" +
+          "• Usa: 𝗧𝗢𝗧𝗔𝗟𝗠𝗘𝗡𝗦𝗔𝗝𝗘𝗦  ( .totalmensajes )\n\n" +
           "Luego, si hay más páginas, podrás usar:\n" +
-          "• .totalmensajes2  .totalmensajes3 ..."
+          "• .totalmensajes2  .totalmensajes3  ..."
       }, { quoted: msg })
       return
     }
@@ -149,8 +177,8 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
     if (wantPage > cache.totalPages) {
       await sock.sendMessage(chatId, {
         text:
-          `📭 No existe la lista ${wantPage}.\n` +
-          `En este grupo solo hay ${cache.totalPages} lista(s).\n\n` +
+          `📭 No existe la lista ${toBoldDigits(wantPage)}.\n` +
+          `En este grupo solo hay ${toBoldDigits(cache.totalPages)} lista(s).\n\n` +
           `Usa .totalmensajes para ver la principal.`
       }, { quoted: msg })
       return
@@ -175,7 +203,7 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
     if (!esConfiable && restanteSeg > 0) {
       const tiempoTexto = formatoTiempo(restanteSeg)
       await sock.sendMessage(chatId, {
-        text: `⏳ @${senderNum}\nDebes esperar ${tiempoTexto} para volver a usar este comando.`,
+        text: `⏳ @${senderNum}\nDebes esperar ${toBoldText(tiempoTexto)} para volver a usar este comando.`,
         mentions: [senderJid]
       }, { quoted: msg })
       return
@@ -218,14 +246,14 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
 
   let text = ""
   text += `╭─ 𝗧𝗢𝗣 𝗔𝗖𝗧𝗜𝗩𝗢𝗦\n`
-  text += `│ 🏆 Grupo: ${subject}\n`
+  text += `│ 🏆 Grupo: ${toBoldText(subject)}\n`
   text += `│ 📄 Lista: ${toBoldDigits(safePage)}/${toBoldDigits(totalPages)}\n`
   text += `│ 👥 Usuarios: ${toBoldDigits(list.length)}\n`
   text += `╰────────────\n\n`
 
   slice.forEach((u, i) => {
     const rank = start + i + 1
-    const badge = medals[rank - 1] || `#${rank}`
+    const badge = medals[rank - 1] || `#${toBoldDigits(rank)}`
     text += `${badge} @${u.num}  •  ${toBoldDigits(u.total)}\n`
     if (u.jid) mentions.push(u.jid)
   })
@@ -234,7 +262,7 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
   const nextPage = safePage + 1
   if (nextPage <= totalPages) {
     text += `\n╭─ 𝗠𝗔́𝗦\n`
-    text += `│ Usa .totalmensajes${nextPage} para ver la siguiente lista\n`
+    text += `│ Usa .totalmensajes${toBoldDigits(nextPage)} para ver la siguiente lista\n`
     text += `╰────────────`
   }
 
