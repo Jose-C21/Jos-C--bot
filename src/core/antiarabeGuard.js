@@ -40,6 +40,22 @@ function readActivosSafe() {
   }
 }
 
+const normDigits = (x) => String(x || "").replace(/\D/g, "")
+
+// ✅ saca el mejor JID para detectar número (phone real si viene)
+function pickDetectJid(p) {
+  if (!p) return ""
+  if (typeof p === "string") return p
+  return p.phoneNumber || p.id || ""
+}
+
+// ✅ saca el mejor JID para expulsar (id lid si viene)
+function pickKickJid(p) {
+  if (!p) return ""
+  if (typeof p === "string") return p
+  return p.id || p.phoneNumber || ""
+}
+
 export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
   try {
     const activos = readActivosSafe()
@@ -50,9 +66,11 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
     if (!isOn) return false
 
     if (update?.action !== "add") return false
+
     const parts = update?.participants || []
     if (!parts.length) return false
 
+    // ✅ prefijos prohibidos (incluye 57)
     const disallowedPrefixes = [
       "20","63","212","213","216","218","222","249","252","253","962","963","964","965","966",
       "967","968","970","971","973","974","211","220","223","224","225","226","227","228",
@@ -67,36 +85,45 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
 
     let expelledSomeone = false
 
-    for (const participantJid of parts) {
-      const num = jidToNumber(participantJid)
+    for (const p of parts) {
+      const detectJid = pickDetectJid(p)
+      const kickJid = pickKickJid(p)
+
+      if (!detectJid || !kickJid) continue
+
+      // ✅ número desde el jid (sirve lid/s.whatsapp)
+      const num = jidToNumber(detectJid)
       const isDisallowed = disallowedPrefixes.some(prefix => String(num).startsWith(prefix))
       if (!isDisallowed) continue
 
-      // bypass admin
+      // ✅ bypass admin: comparar por dígitos (lid vs s.whatsapp)
       let bypass = false
       try {
-        const p = md?.participants?.find(x => x.id === participantJid)
-        if (p?.admin === "admin" || p?.admin === "superadmin") bypass = true
+        const target = normDigits(kickJid) || normDigits(detectJid)
+        const found = md?.participants?.find(x => normDigits(x.id) === target)
+        if (found?.admin === "admin" || found?.admin === "superadmin") bypass = true
       } catch {}
 
-      // bypass owner (si nos pasaron helper)
+      // ✅ bypass owner (si helper viene desde baileys.js)
       if (!bypass && typeof isOwnerByNumbers === "function") {
         if (isOwnerByNumbers({ senderNum: num, senderNumDecoded: num })) bypass = true
       }
 
       if (bypass) continue
 
+      // ✅ aviso
       await sock.sendMessage(groupId, {
         text: `> ⚠️ @${num} ᴛɪᴇɴᴇ ᴜɴ ɴᴜᴍᴇʀᴏ ᴘʀᴏʜɪʙɪᴅᴏ ʏ ꜱᴇʀᴀ ᴇxᴘᴜʟꜱᴀᴅᴏ.`,
-        mentions: [participantJid]
+        mentions: [kickJid]
       }).catch(() => {})
 
-      await sock.groupParticipantsUpdate(groupId, [participantJid], "remove").catch(() => {})
+      // ✅ expulsión (usar LID si está)
+      await sock.groupParticipantsUpdate(groupId, [kickJid], "remove").catch(() => {})
 
       expelledSomeone = true
     }
 
-    // ✅ si expulsó a alguien => bloquea bienvenida
+    // ✅ si expulsó a alguien => el caller debe NO dar bienvenida
     return expelledSomeone
   } catch (e) {
     console.error("[antiarabeGuard] error:", e)
