@@ -33,7 +33,8 @@ import perfil from "../commands/perfil.js"
 import kick from "../commands/kick.js"
 import tag from "../commands/tag.js"
 import antiarabe from "../commands/antiarabe.js"
-
+import fantasma, { fantasmaPage } from "../commands/fantasma.js"
+import fankick from "../commands/fankick.js"
 
 
 const COMMANDS = {
@@ -63,7 +64,21 @@ const COMMANDS = {
   kick,
   ban: kick,
   tag,
-  antiarabe
+  antiarabe,
+  fantasma,
+  fantasmas: fantasma,
+  fankick,
+
+  // 📄 Páginas (hasta 10)
+  fantasma2: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 2 }),
+  fantasma3: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 3 }),
+  fantasma4: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 4 }),
+  fantasma5: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 5 }),
+  fantasma6: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 6 }),
+  fantasma7: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 7 }),
+  fantasma8: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 8 }),
+  fantasma9: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 9 }),
+  fantasma10: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 10 }),
 }
 
 function getText(msg) {
