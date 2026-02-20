@@ -61,6 +61,17 @@ const toBoldDigits = (x) => {
   return String(x ?? "").replace(/[0-9]/g, (d) => map[d] || d)
 }
 
+// ✅ recorta nombres largos (para que no rompa alineación)
+const ellipsis = (s, max = 18) => {
+  s = String(s ?? "")
+  if (s.length <= max) return s
+  return s.slice(0, Math.max(1, max - 1)) + "…"
+}
+
+// ✅ pad (monoespaciado dentro de ``` ``` alinea bien)
+const padRight = (s, n) => String(s ?? "").padEnd(n, " ")
+const padLeft = (s, n) => String(s ?? "").padStart(n, " ")
+
 async function buildRanking(sock, chatId) {
   const conteo = readJsonSafe(CONTEO_PATH, {})
   const groupData = conteo[chatId]
@@ -216,27 +227,33 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
   const mentions = []
   const medals = ["🥇", "🥈", "🥉"]
 
+  // ✅ ancho para alinear (dentro de ``` ``` se alinea perfecto)
+  const COL_LEFT = 20  // badge + @num
+  const COL_RIGHT = 6  // conteo
+
   let text = ""
-  text += `╭─ 𝗧𝗢𝗣 𝗔𝗖𝗧𝗜𝗩𝗢𝗦\n`
-  text += `│ 🏆 Grupo: *${subject}*\n`
-  text += `│ 📄 Lista: ${toBoldDigits(safePage)}/${toBoldDigits(totalPages)}\n`
-  text += `│ 👥 Usuarios: ${toBoldDigits(list.length)}\n`
-  text += `╰────────────\n\n`
+  text += "```TOP ACTIVOS\n"
+  text += `Grupo: ${subject}\n`
+  text += `Lista: ${toBoldDigits(safePage)}/${toBoldDigits(totalPages)} | Usuarios: ${toBoldDigits(list.length)}\n`
+  text += "────────────────────────\n"
 
   slice.forEach((u, i) => {
     const rank = start + i + 1
     const badge = medals[rank - 1] || `#${rank}`
-    text += `${badge} @${u.num}  •  ${toBoldDigits(u.total)}\n`
+    const user = `@${u.num}`
+    const left = padRight(`${badge} ${ellipsis(user, 16)}`, COL_LEFT)
+    const right = padLeft(toBoldDigits(u.total), COL_RIGHT)
+    text += `${left} ${right}\n`
     if (u.jid) mentions.push(u.jid)
   })
 
-  // ✅ hint de páginas (solo si existe)
   const nextPage = safePage + 1
   if (nextPage <= totalPages) {
-    text += `\n╭─ 𝗠𝗔́𝗦\n`
-    text += `│ Usa .totalmensajes${nextPage} para ver la siguiente lista\n`
-    text += `╰────────────`
+    text += "────────────────────────\n"
+    text += `Siguiente: .totalmensajes${nextPage}\n`
   }
+
+  text += "```"
 
   await sock.sendMessage(chatId, { text: text.trim(), mentions }, { quoted: msg })
 }
