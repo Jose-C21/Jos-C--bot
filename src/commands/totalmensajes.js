@@ -61,17 +61,6 @@ const toBoldDigits = (x) => {
   return String(x ?? "").replace(/[0-9]/g, (d) => map[d] || d)
 }
 
-// ✅ recorta nombres largos (para que no rompa alineación)
-const ellipsis = (s, max = 18) => {
-  s = String(s ?? "")
-  if (s.length <= max) return s
-  return s.slice(0, Math.max(1, max - 1)) + "…"
-}
-
-// ✅ pad (monoespaciado dentro de ``` ``` alinea bien)
-const padRight = (s, n) => String(s ?? "").padEnd(n, " ")
-const padLeft = (s, n) => String(s ?? "").padStart(n, " ")
-
 async function buildRanking(sock, chatId) {
   const conteo = readJsonSafe(CONTEO_PATH, {})
   const groupData = conteo[chatId]
@@ -218,7 +207,6 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
   // ✅ guardar cache SOLO cuando usan la lista principal
   if (wantPage === 1) setGroupPagesCache(chatId, totalPages)
 
-  // ✅ clamp
   const safePage = Math.min(Math.max(1, wantPage), totalPages)
 
   const start = (safePage - 1) * PAGE_SIZE
@@ -227,23 +215,17 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
   const mentions = []
   const medals = ["🥇", "🥈", "🥉"]
 
-  // ✅ ancho para alinear (dentro de ``` ``` se alinea perfecto)
-  const COL_LEFT = 20  // badge + @num
-  const COL_RIGHT = 6  // conteo
-
   let text = ""
   text += "```TOP ACTIVOS\n"
   text += `Grupo: ${subject}\n`
   text += `Lista: ${toBoldDigits(safePage)}/${toBoldDigits(totalPages)} | Usuarios: ${toBoldDigits(list.length)}\n`
   text += "────────────────────────\n"
 
+  // ✅ NUEVO: @Nombre: conteo (pegados, sin columnas raras)
   slice.forEach((u, i) => {
     const rank = start + i + 1
     const badge = medals[rank - 1] || `#${rank}`
-    const user = `@${u.num}`
-    const left = padRight(`${badge} ${ellipsis(user, 16)}`, COL_LEFT)
-    const right = padLeft(toBoldDigits(u.total), COL_RIGHT)
-    text += `${left} ${right}\n`
+    text += `${badge} @${u.num}: ${toBoldDigits(u.total)}\n`
     if (u.jid) mentions.push(u.jid)
   })
 
