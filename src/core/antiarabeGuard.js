@@ -111,9 +111,17 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
 
       if (bypass) continue
 
-      // ✅ aviso
+      // ✅ ARREGLO: que el aviso muestre la mención (@) del usuario, no el "num" detectado
+      // - Si viene phoneNumber (s.whatsapp.net) usamos eso para que el @ salga con número real
+      // - Si no, usamos kickJid / detectJid como fallback
+      const mentionBase =
+        (typeof p === "object" && p?.phoneNumber) ? p.phoneNumber : (kickJid || detectJid)
+
+      const mentionNum = jidToNumber(mentionBase) || jidToNumber(kickJid) || jidToNumber(detectJid) || num
+
+      // ✅ aviso (menciona al user real)
       await sock.sendMessage(groupId, {
-        text: `> ⚠️ @${num} ᴛɪᴇɴᴇ ᴜɴ ɴᴜᴍᴇʀᴏ ᴘʀᴏʜɪʙɪᴅᴏ ʏ ꜱᴇʀᴀ ᴇxᴘᴜʟꜱᴀᴅᴏ.`,
+        text: `> ⚠️ @${mentionNum} ᴛɪᴇɴᴇ ᴜɴ ɴᴜ́ᴍᴇʀᴏ ᴘʀᴏʜɪʙɪᴅᴏ ʏ ꜱᴇʀᴀ́ ᴇxᴘᴜʟꜱᴀᴅᴏ.`,
         mentions: [kickJid]
       }).catch(() => {})
 
