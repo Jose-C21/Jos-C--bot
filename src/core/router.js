@@ -49,7 +49,18 @@ const COMMANDS = {
   playvideo,
   golpear,
   kiss,
+
   totalmensajes,
+  totalmensajes2: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 2 }),
+  totalmensajes3: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 3 }),
+  totalmensajes4: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 4 }),
+  totalmensajes5: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 5 }),
+  totalmensajes6: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 6 }),
+  totalmensajes7: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 7 }),
+  totalmensajes8: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 8 }),
+  totalmensajes9: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 9 }),
+  totalmensajes10: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 10 }),
+
   tiktok,
   decir,
   audiodoc,
@@ -65,11 +76,11 @@ const COMMANDS = {
   ban: kick,
   tag,
   antiarabe,
+
   fantasma,
   fantasmas: fantasma,
   fankick,
 
-  // 📄 Páginas (hasta 10)
   fantasma2: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 2 }),
   fantasma3: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 3 }),
   fantasma4: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 4 }),
@@ -80,7 +91,6 @@ const COMMANDS = {
   fantasma9: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 9 }),
   fantasma10: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 10 }),
 }
-
 function getText(msg) {
   const m = msg?.message || {}
   return (
