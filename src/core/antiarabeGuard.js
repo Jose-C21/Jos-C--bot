@@ -1,7 +1,6 @@
 // src/core/antiarabeGuard.js
 import fs from "fs"
 import path from "path"
-import config from "../config.js"
 import { jidToNumber } from "../utils/jid.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
@@ -41,18 +40,7 @@ function readActivosSafe() {
   }
 }
 
-function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
-  const owners = (config.owners || []).map(String)
-  const ownersLid = (config.ownersLid || []).map(String)
-  return (
-    owners.includes(String(senderNum)) ||
-    owners.includes(String(senderNumDecoded)) ||
-    ownersLid.includes(String(senderNum)) ||
-    ownersLid.includes(String(senderNumDecoded))
-  )
-}
-
-export async function antiarabeGuard(sock, update) {
+export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
   try {
     const activos = readActivosSafe()
     const groupId = update?.id
@@ -65,7 +53,6 @@ export async function antiarabeGuard(sock, update) {
     const parts = update?.participants || []
     if (!parts.length) return false
 
-    // ✅ prefijos prohibidos (igual a tu lista)
     const disallowedPrefixes = [
       "20","63","212","213","216","218","222","249","252","253","962","963","964","965","966",
       "967","968","970","971","973","974","211","220","223","224","225","226","227","228",
@@ -75,34 +62,30 @@ export async function antiarabeGuard(sock, update) {
       "90","62","66","44","297","972","269","57"
     ]
 
-    // metadata (para bypass admins)
     let md = null
-    try {
-      md = await sock.groupMetadata(groupId)
-    } catch {}
+    try { md = await sock.groupMetadata(groupId) } catch {}
 
     let expelledSomeone = false
 
     for (const participantJid of parts) {
-      const num = jidToNumber(participantJid) // sirve para lid y s.whatsapp
+      const num = jidToNumber(participantJid)
       const isDisallowed = disallowedPrefixes.some(prefix => String(num).startsWith(prefix))
       if (!isDisallowed) continue
 
-      // bypass: admin
+      // bypass admin
       let bypass = false
       try {
         const p = md?.participants?.find(x => x.id === participantJid)
         if (p?.admin === "admin" || p?.admin === "superadmin") bypass = true
       } catch {}
 
-      // bypass: owner (por números)
-      const senderNum = num
-      const senderNumDecoded = num
-      if (isOwnerByNumbers({ senderNum, senderNumDecoded })) bypass = true
+      // bypass owner (si nos pasaron helper)
+      if (!bypass && typeof isOwnerByNumbers === "function") {
+        if (isOwnerByNumbers({ senderNum: num, senderNumDecoded: num })) bypass = true
+      }
 
       if (bypass) continue
 
-      // ✅ aviso y expulsión
       await sock.sendMessage(groupId, {
         text: `> ⚠️ @${num} ᴛɪᴇɴᴇ ᴜɴ ɴᴜᴍᴇʀᴏ ᴘʀᴏʜɪʙɪᴅᴏ ʏ ꜱᴇʀᴀ ᴇxᴘᴜʟꜱᴀᴅᴏ.`,
         mentions: [participantJid]
@@ -113,7 +96,7 @@ export async function antiarabeGuard(sock, update) {
       expelledSomeone = true
     }
 
-    // ✅ OPCIÓN A: si expulsó a alguien, NO bienvenida
+    // ✅ si expulsó a alguien => bloquea bienvenida
     return expelledSomeone
   } catch (e) {
     console.error("[antiarabeGuard] error:", e)
