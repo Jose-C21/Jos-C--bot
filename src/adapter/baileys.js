@@ -11,12 +11,11 @@ import figlet from "figlet"
 // ✅ bienvenida/despedida (evento)
 import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
 
-// ✅ NUEVO: antiarabe guard (evento)
+// ✅ antiarabe guard (evento)
 import { antiarabeGuard } from "../core/antiarabeGuard.js"
 
-// ✅ NUEVO: helper owner (mismo que usas en router, para bypass)
+// ✅ config para owners
 import config from "../config.js"
-import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
 // ─────────────────────────────────────────────
 // ✅ INPUT SIMPLE (sin readline) para panel web
@@ -173,7 +172,7 @@ async function askPhone() {
   }
 }
 
-// ✅ helper owner (para antiarabeGuard bypass)
+// ✅ helper owner (para bypass)
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
@@ -217,8 +216,13 @@ export async function startSock(onMessage) {
     try {
       console.log("[group-participants.update] RAW:", JSON.stringify(update))
 
-      // ✅ 1) ANTIARABE primero (si entra número prohibido, lo saca y ya)
-      await antiarabeGuard(sock, update, { isOwnerByNumbers })
+      // ✅ 1) ANTIARABE primero
+      // ✅ si expulsó a alguien => bloquea bienvenida
+      const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
+      if (blocked) {
+        console.log("[antiarabeGuard] blocked -> NO welcome")
+        return
+      }
 
       // ✅ 2) BIENVENIDA / DESPEDIDA
       await onGroupParticipantsUpdate(sock, update)
@@ -239,9 +243,7 @@ export async function startSock(onMessage) {
     const code = await sock.requestPairingCode(clean)
 
     UI.hrSoft(26)
-    console.log(
-      chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code))
-    )
+    console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code)))
     UI.info("WhatsApp > Dispositivos vinculados > Vincular con número")
     UI.info("Ingresa el código")
     UI.hrCyan(30)
