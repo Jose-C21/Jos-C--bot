@@ -55,6 +55,12 @@ function formatoTiempo(totalSeg) {
 
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
 
+// ✅ números en "negrita" sin usar *
+const toBoldDigits = (x) => {
+  const map = { "0":"𝟬","1":"𝟭","2":"𝟮","3":"𝟯","4":"𝟰","5":"𝟱","6":"𝟲","7":"𝟳","8":"𝟴","9":"𝟵" }
+  return String(x ?? "").replace(/[0-9]/g, (d) => map[d] || d)
+}
+
 async function buildRanking(sock, chatId) {
   const conteo = readJsonSafe(CONTEO_PATH, {})
   const groupData = conteo[chatId]
@@ -133,18 +139,19 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
       await sock.sendMessage(chatId, {
         text:
           "📌 Para ver listas extra, primero genera la lista principal:\n" +
-          "• Usa: * .totalmensajes *\n\n" +
+          "• Usa: .totalmensajes\n\n" +
           "Luego, si hay más páginas, podrás usar:\n" +
-          "• * .totalmensajes2 *  * .totalmensajes3 * ..."
+          "• .totalmensajes2  .totalmensajes3 ..."
       }, { quoted: msg })
       return
     }
 
     if (wantPage > cache.totalPages) {
       await sock.sendMessage(chatId, {
-        text: `📭 No existe la *lista ${wantPage}*.\n` +
-              `En este grupo solo hay *${cache.totalPages}* lista(s).\n\n` +
-              `Usa * .totalmensajes * para ver la principal.`
+        text:
+          `📭 No existe la lista ${wantPage}.\n` +
+          `En este grupo solo hay ${cache.totalPages} lista(s).\n\n` +
+          `Usa .totalmensajes para ver la principal.`
       }, { quoted: msg })
       return
     }
@@ -168,7 +175,7 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
     if (!esConfiable && restanteSeg > 0) {
       const tiempoTexto = formatoTiempo(restanteSeg)
       await sock.sendMessage(chatId, {
-        text: `⏳ *@${senderNum}*\nDebes esperar *${tiempoTexto}* para volver a usar este comando.`,
+        text: `⏳ @${senderNum}\nDebes esperar ${tiempoTexto} para volver a usar este comando.`,
         mentions: [senderJid]
       }, { quoted: msg })
       return
@@ -211,15 +218,15 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
 
   let text = ""
   text += `╭─ 𝗧𝗢𝗣 𝗔𝗖𝗧𝗜𝗩𝗢𝗦\n`
-  text += `│ 🏆 Grupo: *${subject}*\n`
-  text += `│ 📄 Lista: *${safePage}/${totalPages}*\n`
-  text += `│ 👥 Usuarios: *${list.length}*\n`
+  text += `│ 🏆 Grupo: ${subject}\n`
+  text += `│ 📄 Lista: ${toBoldDigits(safePage)}/${toBoldDigits(totalPages)}\n`
+  text += `│ 👥 Usuarios: ${toBoldDigits(list.length)}\n`
   text += `╰────────────\n\n`
 
   slice.forEach((u, i) => {
     const rank = start + i + 1
     const badge = medals[rank - 1] || `#${rank}`
-    text += `${badge} @${u.num}  •  *${u.total}*\n`
+    text += `${badge} @${u.num}  •  ${toBoldDigits(u.total)}\n`
     if (u.jid) mentions.push(u.jid)
   })
 
@@ -227,7 +234,7 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
   const nextPage = safePage + 1
   if (nextPage <= totalPages) {
     text += `\n╭─ 𝗠𝗔́𝗦\n`
-    text += `│ Usa * .totalmensajes${nextPage} * para ver la siguiente lista\n`
+    text += `│ Usa .totalmensajes${nextPage} para ver la siguiente lista\n`
     text += `╰────────────`
   }
 
