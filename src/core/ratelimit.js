@@ -79,7 +79,7 @@ export function buildUserMentionTag(sock, msg) {
 function getRule(command = "") {
   const c = String(command || "").toLowerCase()
 
-  if (c === "play") return { limit: 1, windowSec: 20 }
+  if (c === "play") return { limit: 1, windowSec: 80 }
   if (c === "sticker" || c === "s") return { limit: 2, windowSec: 20 }
 
   return null // sin ratelimit para otros comandos
