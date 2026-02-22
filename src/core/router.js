@@ -7,6 +7,9 @@ import chalk from "chalk"
 import fs from "fs"
 import path from "path"
 
+// ✅ RATE LIMIT
+import { checkRateLimit, buildUserMentionJid, buildUserMentionTag } from "./ratelimit.js"
+
 import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
@@ -18,7 +21,10 @@ import textsticker from "../commands/textsticker.js"
 import playvideo from "../commands/playvideo.js"
 import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
-import totalmensajes from "../commands/totalmensajes.js"
+
+// ✅ IMPORTA PAGE TAMBIÉN
+import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
+
 import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
@@ -35,7 +41,6 @@ import tag from "../commands/tag.js"
 import antiarabe from "../commands/antiarabe.js"
 import fantasma, { fantasmaPage } from "../commands/fantasma.js"
 import fankick from "../commands/fankick.js"
-
 
 const COMMANDS = {
   resetsession,
@@ -91,6 +96,7 @@ const COMMANDS = {
   fantasma9: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 9 }),
   fantasma10: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 10 }),
 }
+
 function getText(msg) {
   const m = msg?.message || {}
   return (
@@ -274,7 +280,6 @@ async function getGroupNameCached(sock, groupJid) {
 }
 
 function logRouter(data) {
-  // ✅ LOG ACTIVADO SIEMPRE
   const OUT = 44
   const tag = padRightAnsi(chalk.cyanBright("[ROUTER]"), 10)
 
@@ -349,55 +354,48 @@ export async function routeMessage(sock, msg) {
     }
 
     // ─────────────────────────────────────────────
-// ✅ ANTISTICKERS GUARD (LOG SIEMPRE)
-// - borra desde 5 stickers en 15s
-// - warn en 5
-// - 3 strikes => remove
-// - detecta: stickerMessage, lottieStickerMessage, animatedStickerMessage, doc webp
-// ─────────────────────────────────────────────
-try {
-  const activos = readActivosSafe()
-  const antisOn = !!activos?.antis?.[chatId]
+    // ✅ ANTISTICKERS GUARD (LOG SIEMPRE)
+    // ─────────────────────────────────────────────
+    try {
+      const activos = readActivosSafe()
+      const antisOn = !!activos?.antis?.[chatId]
 
-  function unwrapMessage(m) {
-    let msgObj = m?.message || {}
-    while (true) {
-      if (msgObj?.ephemeralMessage?.message) { msgObj = msgObj.ephemeralMessage.message; continue }
-      if (msgObj?.viewOnceMessageV2?.message) { msgObj = msgObj.viewOnceMessageV2.message; continue }
-      if (msgObj?.viewOnceMessageV2Extension?.message) { msgObj = msgObj.viewOnceMessageV2Extension.message; continue }
-      break
-    }
-    return msgObj
-  }
+      function unwrapMessage(m) {
+        let msgObj = m?.message || {}
+        while (true) {
+          if (msgObj?.ephemeralMessage?.message) { msgObj = msgObj.ephemeralMessage.message; continue }
+          if (msgObj?.viewOnceMessageV2?.message) { msgObj = msgObj.viewOnceMessageV2.message; continue }
+          if (msgObj?.viewOnceMessageV2Extension?.message) { msgObj = msgObj.viewOnceMessageV2Extension.message; continue }
+          break
+        }
+        return msgObj
+      }
 
-  const mUnwrapped = unwrapMessage(msg)
+      const mUnwrapped = unwrapMessage(msg)
 
-  // ✅ tipos de sticker en Baileys (según tu log: lottieStickerMessage)
-  const stickerMsg = mUnwrapped?.stickerMessage
-  const lottieMsg = mUnwrapped?.lottieStickerMessage
-  const animatedMsg = mUnwrapped?.animatedStickerMessage
+      const stickerMsg = mUnwrapped?.stickerMessage
+      const lottieMsg = mUnwrapped?.lottieStickerMessage
+      const animatedMsg = mUnwrapped?.animatedStickerMessage
 
-  // ✅ sticker como documento (webp)
-  const docMsg = mUnwrapped?.documentMessage
-  const isWebpDoc =
-    !!docMsg &&
-    (
-      String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
-      String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
-    )
+      const docMsg = mUnwrapped?.documentMessage
+      const isWebpDoc =
+        !!docMsg &&
+        (
+          String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
+          String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
+        )
 
-  const isStickerLike = !!stickerMsg || !!lottieMsg || !!animatedMsg || isWebpDoc
+      const isStickerLike = !!stickerMsg || !!lottieMsg || !!animatedMsg || isWebpDoc
 
-  // ✅ LOG FORZADO (para ver por qué no entra)
-  console.log("[antisGuard] chat:", chatId, "antisOn:", antisOn, "fromMe:", fromMe, "types:", {
-    sticker: !!stickerMsg,
-    lottie: !!lottieMsg,
-    animated: !!animatedMsg,
-    webpDoc: !!isWebpDoc
-  })
-  if (!isStickerLike) console.log("[antisGuard] keys:", Object.keys(mUnwrapped || {}))
+      console.log("[antisGuard] chat:", chatId, "antisOn:", antisOn, "fromMe:", fromMe, "types:", {
+        sticker: !!stickerMsg,
+        lottie: !!lottieMsg,
+        animated: !!animatedMsg,
+        webpDoc: !!isWebpDoc
+      })
+      if (!isStickerLike) console.log("[antisGuard] keys:", Object.keys(mUnwrapped || {}))
 
-  if (isGroup && antisOn && !fromMe && isStickerLike) {
+      if (isGroup && antisOn && !fromMe && isStickerLike) {
         const rawUser = msg.key.participant || msg.key.remoteJid
         const normalize = (id) => String(id || "").replace(/\D/g, "")
 
@@ -460,7 +458,6 @@ try {
           global.antisSpam[chatId][userKey] = u
         }
 
-        // borrar desde 5 dentro de ventana
         if (u.count >= 5 && timePassed < 15000) {
           await sock.sendMessage(chatId, {
             delete: {
@@ -660,6 +657,37 @@ try {
     const parts = text.slice(prefix.length).trim().split(/\s+/)
     const command = (parts.shift() || "").toLowerCase()
     const args = parts
+
+    // ─────────────────────────────────────────────
+    // ✅ RATE LIMIT (solo play y sticker/s) — por usuario, owners bypass
+    // ─────────────────────────────────────────────
+    try {
+      const rl = checkRateLimit(sock, msg, { command, isOwner })
+      if (rl?.blocked) {
+        const mentionJid = buildUserMentionJid(sock, msg)
+        const tag = buildUserMentionTag(sock, msg)
+
+        await sock.sendMessage(chatId, {
+          text: `⏳ ${tag}\nEspera ${rl.waitSec}s para volver a usar .${command}`,
+          mentions: [mentionJid]
+        }, { quoted: msg }).catch(() => {})
+
+        logRouter({
+          isGroup,
+          isOwner,
+          allowed: true,
+          senderNum: finalNum,
+          senderName,
+          groupName,
+          text,
+          action: "BLOCK",
+          reason: `ratelimit(.${command}, wait=${rl.waitSec}s)`
+        })
+        return
+      }
+    } catch (e) {
+      console.error("[ratelimit] error:", e)
+    }
 
     const handler = COMMANDS[command]
     if (!handler) {
