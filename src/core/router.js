@@ -41,6 +41,8 @@ import tag from "../commands/tag.js"
 import antiarabe from "../commands/antiarabe.js"
 import fantasma, { fantasmaPage } from "../commands/fantasma.js"
 import fankick from "../commands/fankick.js"
+import add from "../commands/add.js"
+
 
 const COMMANDS = {
   resetsession,
@@ -76,6 +78,7 @@ const COMMANDS = {
   close,
   menu,
   ver,
+  add,
   perfil,
   kick,
   ban: kick,
