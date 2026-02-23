@@ -3,6 +3,23 @@ import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { proto, generateWAMessageFromContent } from "baileys"
 
+const normalizeDigits = (x) => String(x || "").replace(/\D/g, "")
+
+// Quita :device si viene (ej: 12345:2@s.whatsapp.net -> 12345@s.whatsapp.net)
+const stripDevice = (jid = "") => String(jid || "").replace(/:\d+(?=@)/g, "")
+
+function getText(msg) {
+  const m = msg?.message || {}
+  return (
+    m.conversation ||
+    m.extendedTextMessage?.text ||
+    m.imageMessage?.caption ||
+    m.videoMessage?.caption ||
+    m.documentMessage?.caption ||
+    ""
+  ).trim()
+}
+
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
@@ -14,44 +31,21 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   )
 }
 
-const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
-const cleanNumberInput = (txt = "") => onlyDigits(txt)
-
-// ✅ JID para mostrar/mention (usa el número)
-const mentionTag = (num) => `@${onlyDigits(num)}`
-
-// ✅ BOT admin detect: por dígitos (sirve para lid / :device / s.whatsapp)
-function botIsAdminInGroup(sock, md) {
-  try {
-    const parts = md?.participants || []
-    if (!parts.length) return false
-
-    const raw = sock?.user?.id || ""
-    let decoded = raw
-    try { if (sock?.decodeJid) decoded = sock.decodeJid(raw) } catch {}
-
-    const botNum1 = onlyDigits(raw)
-    const botNum2 = onlyDigits(decoded)
-    const botNum = botNum2 || botNum1
-    if (!botNum) return false
-
-    const found = parts.find((p) => onlyDigits(p.id) === botNum)
-    const a = found?.admin
-    return a === "admin" || a === "superadmin"
-  } catch {
-    return false
-  }
+async function getGroupInviteLink(sock, chatId) {
+  const code = await sock.groupInviteCode(chatId)
+  return `https://chat.whatsapp.com/${code}`
 }
 
-// ✅ Invitación con botón (Baileys 7 rc.9)
+// ✅ Botones compatibles (Baileys 7 rc.9) + fallback
 async function sendInviteWithButtons(sock, targetJid, groupName, link, reasonText = "") {
   const caption =
     `👋 Hola!\n` +
-    `Te invitaron al grupo:\n` +
+    `Te invitaron a unirte al grupo:\n` +
     `• ${groupName}\n\n` +
     (reasonText ? `${reasonText}\n\n` : "") +
-    `Pulsa el botón para unirte:`
+    `Pulsa el botón para entrar:`
 
+  // interactiveMessage (nativo)
   try {
     const msg = generateWAMessageFromContent(
       targetJid,
@@ -78,32 +72,109 @@ async function sendInviteWithButtons(sock, targetJid, groupName, link, reasonTex
       },
       {}
     )
-
     await sock.relayMessage(targetJid, msg.message, { messageId: msg.key.id })
-    return true
-  } catch (e) {
-    // fallback link plano
+  } catch {
+    // fallback texto
     await sock.sendMessage(targetJid, { text: `${caption}\n\n${link}` }).catch(() => {})
+  }
+
+  // fallback extra: manda link sí o sí
+  await sock.sendMessage(targetJid, { text: link }).catch(() => {})
+}
+
+// ✅ DETECTOR ROBUSTO: bot admin en groupMetadata
+function isBotAdminInGroup(sock, md) {
+  try {
+    const parts = md?.participants || []
+    if (!parts.length) return false
+
+    const rawBot = sock?.user?.id || ""
+    let decBot = rawBot
+    try { if (sock?.decodeJid) decBot = sock.decodeJid(rawBot) } catch {}
+
+    // Candidatos posibles del bot (con y sin device)
+    const candidates = new Set([
+      rawBot,
+      decBot,
+      stripDevice(rawBot),
+      stripDevice(decBot),
+    ])
+
+    // Algunas builds traen sock.user.lid
+    const botLid = sock?.user?.lid
+    if (botLid) {
+      candidates.add(botLid)
+      candidates.add(stripDevice(botLid))
+      try {
+        const decLid = sock.decodeJid(botLid)
+        candidates.add(decLid)
+        candidates.add(stripDevice(decLid))
+      } catch {}
+    }
+
+    // 1) match exacto / sin device (igual al bot viejo, pero con más variantes)
+    for (const p of parts) {
+      const pid = String(p?.id || "")
+      const pid2 = stripDevice(pid)
+      if (candidates.has(pid) || candidates.has(pid2)) {
+        return p?.admin === "admin" || p?.admin === "superadmin"
+      }
+    }
+
+    // 2) fallback por dígitos (por si cambia @s.whatsapp / @lid / :device)
+    const candDigits = new Set(Array.from(candidates).map(normalizeDigits).filter(Boolean))
+    for (const p of parts) {
+      const pidDigits = normalizeDigits(p?.id)
+      if (!pidDigits) continue
+      if (candDigits.has(pidDigits)) {
+        return p?.admin === "admin" || p?.admin === "superadmin"
+      }
+    }
+
+    return false
+  } catch {
     return false
   }
 }
 
-export default async function add(
-  sock,
-  msg,
-  { args, usedPrefix = ".", command = "add", isOwner: isOwnerFromRouter } = {}
-) {
+export default async function add(sock, msg, ctx = {}) {
   try {
     const chatId = msg?.key?.remoteJid
     if (!chatId) return
 
     const isGroup = String(chatId).endsWith("@g.us")
     if (!isGroup) {
-      return sock.sendMessage(chatId, { text: "❌ Este comando solo funciona en grupos." }, { quoted: msg })
+      return sock.sendMessage(chatId, { text: "⛔ Este comando solo funciona en grupos." }, { quoted: msg })
     }
 
-    // reacción
-    await sock.sendMessage(chatId, { react: { text: "⏰", key: msg.key } }).catch(() => {})
+    // args
+    const usedPrefix = ctx.usedPrefix || config.prefix || "."
+    const command = ctx.command || "add"
+    const fullText = getText(msg)
+
+    const input =
+      (ctx.args?.join(" ") || "").trim() ||
+      fullText.replace(new RegExp(`^\\${usedPrefix}${command}\\s*`, "i"), "").trim()
+
+    if (!input) {
+      return sock.sendMessage(chatId, {
+        text:
+          `📌 Uso:\n` +
+          `• ${usedPrefix}${command} 504XXXXXXXX\n` +
+          `• ${usedPrefix}${command} +504 XXXX-XXXX`
+      }, { quoted: msg })
+    }
+
+    const cleanNumber = normalizeDigits(input)
+    if (!cleanNumber || cleanNumber.length < 8) {
+      return sock.sendMessage(chatId, {
+        text:
+          `⚠️ Número inválido.\n` +
+          `Ejemplo: ${usedPrefix}${command} 504XXXXXXXX`
+      }, { quoted: msg })
+    }
+
+    const targetJid = `${cleanNumber}@s.whatsapp.net`
 
     // sender
     const senderJid = getSenderJid(msg)
@@ -113,139 +184,83 @@ export default async function add(
     try { if (sock?.decodeJid) decoded = sock.decodeJid(senderJid) } catch {}
     const senderNumDecoded = jidToNumber(decoded)
 
+    const isOwner = !!ctx.isOwner || isOwnerByNumbers({ senderNum, senderNumDecoded })
     const fromMe = !!msg.key?.fromMe
-    const isOwner = !!isOwnerFromRouter || isOwnerByNumbers({ senderNum, senderNumDecoded })
-
-    // número objetivo
-    const text = (args || []).join(" ").trim()
-    if (!text) {
-      return sock.sendMessage(
-        chatId,
-        {
-          text:
-            `📌 Uso:\n` +
-            `• ${usedPrefix}${command} 504XXXXXXXX\n` +
-            `• ${usedPrefix}${command} +504 XXXX-XXXX\n\n` +
-            `Ejemplo:\n` +
-            `• ${usedPrefix}${command} 50499998888`
-        },
-        { quoted: msg }
-      )
-    }
-
-    const clean = cleanNumberInput(text)
-    if (!clean || clean.length < 8) {
-      return sock.sendMessage(
-        chatId,
-        { text: `⚠️ Número inválido.\nEjemplo: ${usedPrefix}${command} 50499998888` },
-        { quoted: msg }
-      )
-    }
-
-    const targetJid = `${clean}@s.whatsapp.net`
 
     // metadata
-    let md = null
-    try { md = await sock.groupMetadata(chatId) } catch {}
-    const participants = md?.participants || []
-    const groupName = (md?.subject || "Grupo").trim()
+    const md = await sock.groupMetadata(chatId)
+    const groupName = (md?.subject || "un grupo").trim()
 
-    // ✅ admin del usuario EXACTO como close.js
+    // ✅ isAdmin del usuario (igual close.js)
     let isAdmin = false
     try {
-      const p = participants.find((x) => x.id === senderJid || x.id === decoded)
+      const p = md.participants?.find(x => x.id === senderJid || x.id === decoded)
       isAdmin = p?.admin === "admin" || p?.admin === "superadmin"
     } catch {}
 
     if (!isAdmin && !isOwner && !fromMe) {
-      return sock.sendMessage(
-        chatId,
-        { text: "🚫 Solo administradores del grupo o el owner pueden usar este comando." },
-        { quoted: msg }
-      )
+      return sock.sendMessage(chatId, {
+        text: "⛔ No tienes permisos.\n⚠️ Solo administradores o el dueño del bot pueden usar este comando."
+      }, { quoted: msg })
     }
 
-    // ✅ admin del BOT (POR DÍGITOS) ✅ FIX REAL
-    const botIsAdmin = botIsAdminInGroup(sock, md)
-    if (!botIsAdmin) {
-      return sock.sendMessage(
-        chatId,
-        { text: "⛔ Necesito ser administrador para agregar usuarios." },
-        { quoted: msg }
-      )
+    // ✅ isAdmin del bot (FIX REAL)
+    const isBotAdmin = isBotAdminInGroup(sock, md)
+    if (!isBotAdmin) {
+      return sock.sendMessage(chatId, { text: "⛔ Necesito ser administrador para agregar usuarios." }, { quoted: msg })
     }
 
-    // existe en WhatsApp
+    // verificar existe en WhatsApp
     let exists = null
-    try { exists = await sock.onWhatsApp(targetJid) } catch { exists = null }
-
-    if (!exists || !Array.isArray(exists) || exists.length === 0) {
-      return sock.sendMessage(
-        chatId,
-        { text: `📍 El número +${clean} no existe en WhatsApp.\nVerifica el código de país.` },
-        { quoted: msg }
-      )
+    try { exists = await sock.onWhatsApp(targetJid) } catch {}
+    if (!exists || !exists.length) {
+      return sock.sendMessage(chatId, {
+        text:
+          `📍 El número +${cleanNumber} no existe en WhatsApp o es inválido.\n` +
+          `Verifica el código de país.`
+      }, { quoted: msg })
     }
 
-    // intentar agregar
-    let addRes = null
-    try {
-      addRes = await sock.groupParticipantsUpdate(chatId, [targetJid], "add")
-    } catch {}
+    await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }).catch(() => {})
 
-    const row = Array.isArray(addRes) ? addRes[0] : null
+    // intentar agregar directo
+    let res = null
+    try { res = await sock.groupParticipantsUpdate(chatId, [targetJid], "add") } catch {}
+
+    const row = Array.isArray(res) ? res[0] : null
     const status = row?.status
 
+    // agregado
     if (status === 200 || status === "200") {
-      return sock.sendMessage(
-        chatId,
-        { text: `✅ Usuario agregado\n• Número: +${clean}` },
-        { quoted: msg }
-      )
+      await sock.sendMessage(chatId, { text: `✅ Usuario agregado\n• Número: +${cleanNumber}` }, { quoted: msg })
+      await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {})
+      return
     }
 
+    // ya estaba
     if (status === 409 || status === "409") {
-      return sock.sendMessage(chatId, { text: "📍 Ese usuario ya está en el grupo." }, { quoted: msg })
+      await sock.sendMessage(chatId, { text: "📍 Ese usuario ya está en el grupo." }, { quoted: msg })
+      await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {})
+      return
     }
 
-    // privacidad/otros -> invitación (NO digas que bot no es admin)
-    const reason =
-      (status === 403 || status === "403")
-        ? "📍 El usuario tiene privacidad y no permite ser agregado."
-        : (status === 408 || status === "408")
-          ? "📍 No se pudo agregar (posible privacidad / timeout)."
-          : "📍 No se pudo agregar (posible privacidad)."
-
-    let link = ""
-    try {
-      const code = await sock.groupInviteCode(chatId)
-      link = `https://chat.whatsapp.com/${code}`
-    } catch {}
-
-    if (!link) {
-      return sock.sendMessage(
-        chatId,
-        { text: `📍 No pude generar el link de invitación.\nEnvíalo manualmente desde info del grupo.` },
-        { quoted: msg }
-      )
-    }
-
-    await sendInviteWithButtons(sock, targetJid, groupName, link, reason)
-
-    return sock.sendMessage(
-      chatId,
-      {
-        text:
-          `✅ Invitación enviada a +${clean}\n\n` +
-          `📌 Nota: si el usuario tiene privacidad, solo podrá unirse con el enlace.`
-      },
-      { quoted: msg }
+    // privacidad / invitación requerida (403/408 o cualquier otro)
+    const link = await getGroupInviteLink(sock, chatId)
+    await sendInviteWithButtons(
+      sock,
+      targetJid,
+      groupName,
+      link,
+      "📍 Es posible que el usuario tenga privacidad y no permita ser agregado."
     )
-  } catch (error) {
-    console.error("❌ Error en el comando add:", error)
+
+    await sock.sendMessage(chatId, { text: `✅ Invitación enviada a +${cleanNumber}` }, { quoted: msg })
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {})
+  } catch (e) {
+    console.error("❌ Error en add:", e)
     const chatId = msg?.key?.remoteJid
     if (chatId) {
-      await sock.sendMessage(chatId, { text: "❌ Ocurrió un error al ejecutar el comando add." }, { quoted: msg }).catch(() => {})
+      await sock.sendMessage(chatId, { text: "❌ Ocurrió un error al ejecutar add." }, { quoted: msg }).catch(() => {})
     }
   }
 }
