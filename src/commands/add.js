@@ -4,7 +4,7 @@ import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { proto, generateWAMessageFromContent } from "baileys"
 
 // ─────────────────────────────────────────────
-// ✅ Owner helper (igual estilo que close.js)
+// ✅ Owner helper (igual estilo close.js)
 // ─────────────────────────────────────────────
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
@@ -17,21 +17,20 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   )
 }
 
-// ─────────────────────────────────────────────
-// ✅ Helpers
-// ─────────────────────────────────────────────
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
 const cleanNumberInput = (txt = "") => onlyDigits(txt)
 
+// ─────────────────────────────────────────────
+// ✅ Invitación con botones (Baileys 7 rc.9)
+// ─────────────────────────────────────────────
 async function sendInviteWithButtons(sock, targetJid, groupName, link, reasonText = "") {
   const caption =
     `👋 Hola!\n` +
-    `Te invitaron a unirte al grupo:\n` +
+    `Te invitaron al grupo:\n` +
     `• ${groupName}\n\n` +
     (reasonText ? `${reasonText}\n\n` : "") +
-    `Pulsa el botón para entrar:`
+    `Pulsa el botón para unirte:`
 
-  // ✅ Native Flow URL button (funciona en Baileys 7.0.0-rc.9)
   try {
     const msg = generateWAMessageFromContent(
       targetJid,
@@ -62,13 +61,20 @@ async function sendInviteWithButtons(sock, targetJid, groupName, link, reasonTex
     await sock.relayMessage(targetJid, msg.message, { messageId: msg.key.id })
     return true
   } catch (e) {
-    // fallback fuerte
+    // fallback: link plano
     await sock.sendMessage(targetJid, { text: `${caption}\n\n${link}` }).catch(() => {})
     return false
   }
 }
 
-export default async function add(sock, msg, { args, usedPrefix = ".", command = "add", isOwner: isOwnerFromRouter } = {}) {
+// ─────────────────────────────────────────────
+// ✅ comando
+// ─────────────────────────────────────────────
+export default async function add(
+  sock,
+  msg,
+  { args, usedPrefix = ".", command = "add", isOwner: isOwnerFromRouter } = {}
+) {
   try {
     const chatId = msg?.key?.remoteJid
     if (!chatId) return
@@ -78,9 +84,10 @@ export default async function add(sock, msg, { args, usedPrefix = ".", command =
       return sock.sendMessage(chatId, { text: "❌ Este comando solo funciona en grupos." }, { quoted: msg })
     }
 
-    // reaccion (opcional)
+    // reacción
     await sock.sendMessage(chatId, { react: { text: "⏰", key: msg.key } }).catch(() => {})
 
+    // ── sender
     const senderJid = getSenderJid(msg)
     const senderNum = jidToNumber(senderJid)
 
@@ -91,7 +98,7 @@ export default async function add(sock, msg, { args, usedPrefix = ".", command =
     const fromMe = !!msg.key?.fromMe
     const isOwner = !!isOwnerFromRouter || isOwnerByNumbers({ senderNum, senderNumDecoded })
 
-    // args -> número
+    // ── args (número)
     const text = (args || []).join(" ").trim()
     if (!text) {
       return sock.sendMessage(
@@ -112,21 +119,20 @@ export default async function add(sock, msg, { args, usedPrefix = ".", command =
     if (!clean || clean.length < 8) {
       return sock.sendMessage(
         chatId,
-        { text: `⚠️ Número inválido.\nDebe contener solo números y el código de país.\n\nEjemplo: ${usedPrefix}${command} 50499998888` },
+        { text: `⚠️ Número inválido.\nDebe contener solo números y código de país.\n\nEjemplo: ${usedPrefix}${command} 50499998888` },
         { quoted: msg }
       )
     }
 
     const targetJid = `${clean}@s.whatsapp.net`
 
-    // ── metadata para permisos + nombre grupo
-    let md
-    try { md = await sock.groupMetadata(chatId) } catch { md = null }
-
-    const groupName = (md?.subject || "Grupo").trim()
+    // ── metadata (permisos)
+    let md = null
+    try { md = await sock.groupMetadata(chatId) } catch {}
     const participants = md?.participants || []
+    const groupName = (md?.subject || "Grupo").trim()
 
-    // ✅ Permisos del usuario (admin/owner/fromMe)
+    // ✅ Detectar admin del usuario EXACTO como close.js
     let isAdmin = false
     try {
       const p = participants.find(x => x.id === senderJid || x.id === decoded)
@@ -141,63 +147,51 @@ export default async function add(sock, msg, { args, usedPrefix = ".", command =
       )
     }
 
-    // ✅ Verificar que EL BOT sea admin (si no, no puede agregar)
-    const botJid = sock?.user?.id
+    // ✅ Detectar admin del BOT (también con decode, para lid/real)
+    const botJidRaw = sock?.user?.id
+    let botJidDecoded = botJidRaw
+    try { if (sock?.decodeJid) botJidDecoded = sock.decodeJid(botJidRaw) } catch {}
+
     let botIsAdmin = false
     try {
-      const b = participants.find(x => x.id === botJid)
+      const b = participants.find(x => x.id === botJidRaw || x.id === botJidDecoded)
       botIsAdmin = b?.admin === "admin" || b?.admin === "superadmin"
     } catch {}
 
     if (!botIsAdmin) {
-      // aquí SÍ aplica decirlo: si no es admin, no puede agregar ni invitar por "add" directo
-      return sock.sendMessage(
-        chatId,
-        { text: "⛔ Necesito ser administrador para agregar usuarios." },
-        { quoted: msg }
-      )
+      return sock.sendMessage(chatId, { text: "⛔ Necesito ser administrador para agregar usuarios." }, { quoted: msg })
     }
 
-    // ✅ Verificar si existe en WhatsApp
+    // ✅ existe en WhatsApp?
     let exists = null
     try { exists = await sock.onWhatsApp(targetJid) } catch { exists = null }
 
     if (!exists || !Array.isArray(exists) || exists.length === 0) {
       return sock.sendMessage(
         chatId,
-        { text: `📍 El número +${clean} no existe en WhatsApp.\nVerifica el código de país y que sea correcto.` },
+        { text: `📍 El número +${clean} no existe en WhatsApp.\nVerifica código de país y que sea correcto.` },
         { quoted: msg }
       )
     }
 
-    // ✅ Intentar agregar
-    let addRes
+    // ✅ intentar agregar
+    let addRes = null
     try {
       addRes = await sock.groupParticipantsUpdate(chatId, [targetJid], "add")
-    } catch (e) {
-      addRes = null
-    }
+    } catch {}
 
-    // Baileys a veces devuelve array de objetos { jid, status }
     const row = Array.isArray(addRes) ? addRes[0] : null
     const status = row?.status
 
-    // ✅ 200 -> agregado
     if (status === 200 || status === "200") {
-      return sock.sendMessage(
-        chatId,
-        { text: `✅ Usuario agregado\n• Número: +${clean}` },
-        { quoted: msg }
-      )
+      return sock.sendMessage(chatId, { text: `✅ Usuario agregado\n• Número: +${clean}` }, { quoted: msg })
     }
 
-    // ✅ 409 -> ya está
     if (status === 409 || status === "409") {
       return sock.sendMessage(chatId, { text: "📍 Ese usuario ya está en el grupo." }, { quoted: msg })
     }
 
-    // ✅ 403/408/otros -> privacidad o no se pudo -> enviar invitación (NO decir que bot no es admin)
-    //    (esto es lo que querías: invitación = privacidad u otro bloqueo)
+    // ✅ privacidad / timeout / otros -> invitación
     const reason =
       (status === 403 || status === "403")
         ? "📍 El usuario tiene privacidad y no permite ser agregado."
@@ -209,14 +203,12 @@ export default async function add(sock, msg, { args, usedPrefix = ".", command =
     try {
       const code = await sock.groupInviteCode(chatId)
       link = `https://chat.whatsapp.com/${code}`
-    } catch {
-      link = ""
-    }
+    } catch {}
 
     if (!link) {
       return sock.sendMessage(
         chatId,
-        { text: `📍 No pude generar el link de invitación.\nEnvía el link manual:\n(WhatsApp > Info del grupo > Invitar con enlace)` },
+        { text: `📍 No pude generar el link de invitación.\nEnvía el enlace manualmente desde info del grupo.` },
         { quoted: msg }
       )
     }
