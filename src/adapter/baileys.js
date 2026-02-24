@@ -1,12 +1,12 @@
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
-  Browsers
+  Browsers,
+  fetchLatestBaileysVersion
 } from "baileys"
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
-import figlet from "figlet"
 
 // ✅ bienvenida/despedida (evento)
 import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
@@ -48,20 +48,8 @@ function createInput() {
 }
 const inputLine = createInput()
 
-function line() {
-  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
-}
-
-function center(text, width = 38) {
-  const s = String(text)
-  if (s.length >= width) return s
-  const left = Math.floor((width - s.length) / 2)
-  return " ".repeat(left) + s
-}
-
-// ✅ Banner (estilo B: limpio, pro, sin cajas raras)
+// ✅ Banner helpers
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
-
 const centerAnsi = (txt, width) => {
   const raw = stripAnsi(txt)
   if (raw.length >= width) return txt
@@ -73,7 +61,6 @@ const centerAnsi = (txt, width) => {
 function banner() {
   const OUT = 44
   const DASH = 10
-
   const top =
     chalk.whiteBright("─".repeat(DASH)) +
     chalk.whiteBright("(") +
@@ -99,7 +86,7 @@ function formatPairingCode(code = "") {
 }
 
 // ─────────────────────────────────────────────
-// ✅ UI PRO (sin emojis) - combina con el banner
+// ✅ UI PRO (sin emojis)
 // ─────────────────────────────────────────────
 const UI = {
   OUT: 44,
@@ -150,7 +137,6 @@ async function askMode() {
 
     const pick = (await inputLine()).trim()
     if (pick === "1" || pick === "2") return pick
-
     UI.error("Opción inválida. Escribe 1 o 2.")
   }
 }
@@ -185,6 +171,18 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
+// ✅ Reconnect backoff (anti-loop)
+// ─────────────────────────────────────────────
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+let RECONNECT_TRIES = 0
+
+function nextBackoffMs() {
+  // 2s, 4s, 7s, 12s, 20s (cap)
+  const seq = [2000, 4000, 7000, 12000, 20000]
+  return seq[Math.min(RECONNECT_TRIES, seq.length - 1)]
+}
+
+// ─────────────────────────────────────────────
 // ✅ Socket
 // ─────────────────────────────────────────────
 export async function startSock(onMessage) {
@@ -194,19 +192,33 @@ export async function startSock(onMessage) {
   banner()
 
   let mode = "qr"
+  let phoneForCode = ""
   if (!alreadyLinked) {
     const pick = await askMode()
     mode = pick === "2" ? "code" : "qr"
+    if (mode === "code") phoneForCode = await askPhone()
     console.log("")
   } else {
     UI.success("Sesión ya vinculada, iniciando...\n")
   }
 
+  // ✅ SIEMPRE usa la versión más reciente compatible (evita 428 / precondition / close raros)
+  let waVersion = undefined
+  try {
+    const v = await fetchLatestBaileysVersion()
+    waVersion = v?.version
+  } catch {}
+
   const sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
     logger,
-    browser: Browsers.ubuntu("Chrome")
+
+    // ✅ recomendado para pairing code (formato correcto)
+    browser: Browsers.macOS("Chrome"),
+
+    // ✅ si obtuvimos versión, pásala
+    ...(Array.isArray(waVersion) ? { version: waVersion } : {})
   })
 
   sock.ev.on("creds.update", saveCreds)
@@ -217,7 +229,6 @@ export async function startSock(onMessage) {
       console.log("[group-participants.update] RAW:", JSON.stringify(update))
 
       // ✅ 1) ANTIARABE primero
-      // ✅ si expulsó a alguien => bloquea bienvenida
       const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
       if (blocked) {
         console.log("[antiarabeGuard] blocked -> NO welcome")
@@ -231,26 +242,10 @@ export async function startSock(onMessage) {
     }
   })
 
-  // ── Pairing code flow
-  if (!alreadyLinked && mode === "code") {
-    const clean = await askPhone()
+  // ✅ Pairing: pedir código SOLO cuando llega `qr` (socket listo para auth)
+  let pairingRequested = false
 
-    console.log("")
-    UI.title("Generando código")
-    UI.dim(chalk.redBright("  • Espera un momento..."))
-    console.log("")
-
-    const code = await sock.requestPairingCode(clean)
-
-    UI.hrSoft(26)
-    console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code)))
-    UI.info("WhatsApp > Dispositivos vinculados > Vincular con número")
-    UI.info("Ingresa el código")
-    UI.hrCyan(30)
-    console.log("")
-  }
-
-  sock.ev.on("connection.update", (u) => {
+  sock.ev.on("connection.update", async (u) => {
     const { connection, lastDisconnect, qr } = u
 
     // ── QR flow
@@ -267,15 +262,55 @@ export async function startSock(onMessage) {
       console.log("")
     }
 
+    // ── CODE flow (IMPORTANTE: pedirlo cuando llega qr)
+    if (!alreadyLinked && mode === "code" && qr && !pairingRequested) {
+      pairingRequested = true
+      try {
+        UI.title("Generando código")
+        UI.dim(chalk.redBright("  • Espera un momento..."))
+        console.log("")
+
+        const clean = String(phoneForCode || "").replace(/\D/g, "")
+        const code = await sock.requestPairingCode(clean)
+
+        UI.hrSoft(26)
+        console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code)))
+        UI.info("WhatsApp > Dispositivos vinculados > Vincular con número")
+        UI.info("Ingresa el código")
+        UI.hrCyan(30)
+        console.log("")
+      } catch (e) {
+        pairingRequested = false
+        UI.error("No se pudo generar el código (se reintentará).")
+        console.error("[pairingCode] error:", e)
+      }
+    }
+
     if (connection === "open") {
+      RECONNECT_TRIES = 0
       UI.success("Conectado\n")
     }
 
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode
-      const reconnect = code !== DisconnectReason.loggedOut
-      UI.error(`Conexión cerrada. Reconnect: ${reconnect} code: ${code}`)
-      if (reconnect) startSock(onMessage)
+      const reason = lastDisconnect?.error?.output?.payload?.message || ""
+      const isLoggedOut = code === DisconnectReason.loggedOut
+
+      UI.error(`Conexión cerrada. code: ${code} ${reason ? `| ${reason}` : ""}`)
+
+      if (isLoggedOut) {
+        UI.error("Sesión cerrada (loggedOut). Borra /sessions y vuelve a vincular.")
+        return
+      }
+
+      // ✅ backoff
+      RECONNECT_TRIES++
+      const wait = nextBackoffMs()
+      UI.dim(`Reintentando en ${Math.round(wait / 1000)}s...`)
+      await sleep(wait)
+
+      // ⚠️ reiniciar
+      startSock(onMessage)
     }
   })
 
