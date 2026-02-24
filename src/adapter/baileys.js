@@ -1,3 +1,4 @@
+// src/adapter/baileys.js
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
@@ -48,18 +49,7 @@ function createInput() {
 }
 const inputLine = createInput()
 
-function line() {
-  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
-}
-
-function center(text, width = 38) {
-  const s = String(text)
-  if (s.length >= width) return s
-  const left = Math.floor((width - s.length) / 2)
-  return " ".repeat(left) + s
-}
-
-// ✅ Banner (estilo B: limpio, pro, sin cajas raras)
+// ✅ Banner (estilo B)
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 
 const centerAnsi = (txt, width) => {
@@ -185,139 +175,132 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ BLINDAJE: anti-loop + backoff
+// ✅ helpers anti-cuelgue / reconexión
 // ─────────────────────────────────────────────
-let STARTING = false
-let RECONNECT_TIMER = null
-let RECONNECT_TRIES = 0
-
-function clearReconnectTimer() {
-  if (RECONNECT_TIMER) {
-    clearTimeout(RECONNECT_TIMER)
-    RECONNECT_TIMER = null
-  }
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms))
 }
 
-function backoffMs() {
-  // 2s, 4s, 8s, 12s, 20s, 30s max
-  const base = Math.min(30000, 2000 * Math.pow(2, Math.min(RECONNECT_TRIES, 4)))
-  const jitter = Math.floor(Math.random() * 400) // pequeño jitter
-  return base + jitter
+function getStatusCode(err) {
+  return err?.output?.statusCode || err?.data?.statusCode || err?.statusCode
 }
 
-// ─────────────────────────────────────────────
-// ✅ BLINDAJE: esperar "open" antes de pairing
-// ─────────────────────────────────────────────
-async function waitForOpen(sock, timeoutMs = 25000) {
-  if (!sock?.ev) throw new Error("Socket inválido para waitForOpen")
-
-  return await new Promise((resolve, reject) => {
-    const t0 = Date.now()
-
-    const onUpdate = (u) => {
-      const { connection, lastDisconnect } = u || {}
-
-      if (connection === "open") {
-        sock.ev.off("connection.update", onUpdate)
-        return resolve(true)
-      }
-
-      // si cerró mientras esperamos, abortar rápido
-      if (connection === "close") {
-        const code = lastDisconnect?.error?.output?.statusCode
-        sock.ev.off("connection.update", onUpdate)
-        return reject(new Error(`Conexión cerrada mientras esperaba open (code=${code})`))
-      }
-
-      if (Date.now() - t0 > timeoutMs) {
-        sock.ev.off("connection.update", onUpdate)
-        return reject(new Error("Timeout esperando conexión open"))
-      }
-    }
-
-    sock.ev.on("connection.update", onUpdate)
+// timeout wrapper (para que requestPairingCode NO se quede colgado)
+async function withTimeout(promise, ms, label = "timeout") {
+  let t
+  const timeout = new Promise((_, rej) => {
+    t = setTimeout(() => rej(new Error(label)), ms)
   })
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    clearTimeout(t)
+  }
 }
 
-async function safeRequestPairingCode(sock, phone, tries = 3) {
-  let lastErr = null
-  for (let i = 0; i < tries; i++) {
-    try {
-      // ✅ esperar open antes de pedir el code
-      await waitForOpen(sock, 30000)
-      const code = await sock.requestPairingCode(phone)
-      return code
-    } catch (e) {
-      lastErr = e
-      // pequeño delay antes de reintentar
-      await new Promise((r) => setTimeout(r, 1200 + i * 800))
-    }
-  }
-  throw lastErr || new Error("No se pudo obtener pairing code")
+// esperar a que el socket esté “vivo” (conecta al WS)
+async function waitSocketReady(sock, ms = 15000) {
+  return await withTimeout(
+    new Promise((resolve) => {
+      const onUpdate = (u) => {
+        const c = u?.connection
+        // "connecting" ya significa que el WS está en proceso, y normalmente basta para pairing
+        if (c === "open" || c === "connecting") {
+          sock.ev.off("connection.update", onUpdate)
+          resolve(true)
+        }
+      }
+      sock.ev.on("connection.update", onUpdate)
+    }),
+    ms,
+    "waitSocketReady_timeout"
+  )
 }
 
 // ─────────────────────────────────────────────
 // ✅ Socket
 // ─────────────────────────────────────────────
 export async function startSock(onMessage) {
-  if (STARTING) return
-  STARTING = true
-  clearReconnectTimer()
+  const { state, saveCreds } = await useMultiFileAuthState("sessions")
+  const alreadyLinked = !!state?.creds?.registered
 
-  try {
-    const { state, saveCreds } = await useMultiFileAuthState("sessions")
-    const alreadyLinked = !!state?.creds?.registered
+  banner()
 
-    banner()
+  let mode = "qr"
+  if (!alreadyLinked) {
+    const pick = await askMode()
+    mode = pick === "2" ? "code" : "qr"
+    console.log("")
+  } else {
+    UI.success("Sesión ya vinculada, iniciando...\n")
+  }
 
-    let mode = "qr"
-    if (!alreadyLinked) {
-      const pick = await askMode()
-      mode = pick === "2" ? "code" : "qr"
-      console.log("")
-    } else {
-      UI.success("Sesión ya vinculada, iniciando...\n")
-    }
-
-    const sock = makeWASocket({
+  // ✅ factory para recrear socket en reintentos
+  const makeSock = () =>
+    makeWASocket({
       auth: state,
       printQRInTerminal: false,
       logger,
-      browser: Browsers.ubuntu("Chrome")
+      browser: Browsers.ubuntu("Chrome"),
+
+      // ✅ “blindaje” básico (reduce cuelgues)
+      syncFullHistory: false,
+      markOnlineOnConnect: false,
+      connectTimeoutMs: 60_000,
+      defaultQueryTimeoutMs: 60_000,
+      keepAliveIntervalMs: 20_000
     })
 
-    sock.ev.on("creds.update", saveCreds)
+  let sock = makeSock()
 
-    // ✅ EVENTO: entradas/salidas del grupo
-    sock.ev.on("group-participants.update", async (update) => {
-      try {
-        console.log("[group-participants.update] RAW:", JSON.stringify(update))
+  sock.ev.on("creds.update", saveCreds)
 
-        // ✅ 1) ANTIARABE primero
-        const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
-        if (blocked) {
-          console.log("[antiarabeGuard] blocked -> NO welcome")
-          return
-        }
+  // ✅ EVENTO: entradas/salidas del grupo
+  sock.ev.on("group-participants.update", async (update) => {
+    try {
+      console.log("[group-participants.update] RAW:", JSON.stringify(update))
 
-        // ✅ 2) BIENVENIDA / DESPEDIDA
-        await onGroupParticipantsUpdate(sock, update)
-      } catch (e) {
-        console.error("[group-participants.update] ERROR:", e)
+      // ✅ 1) ANTIARABE primero
+      const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
+      if (blocked) {
+        console.log("[antiarabeGuard] blocked -> NO welcome")
+        return
       }
-    })
 
-    // ── Pairing code flow (BLINDADO)
-    if (!alreadyLinked && mode === "code") {
-      const clean = await askPhone()
+      // ✅ 2) BIENVENIDA / DESPEDIDA
+      await onGroupParticipantsUpdate(sock, update)
+    } catch (e) {
+      console.error("[group-participants.update] ERROR:", e)
+    }
+  })
 
-      console.log("")
-      UI.title("Generando código")
-      UI.dim(chalk.redBright("  • Espera un momento..."))
-      console.log("")
+  // ─────────────────────────────────────────────
+  // ✅ Pairing code flow (BLINDADO)
+  // ─────────────────────────────────────────────
+  if (!alreadyLinked && mode === "code") {
+    const clean = await askPhone()
 
+    console.log("")
+    UI.title("Generando código")
+    UI.dim(chalk.redBright("  • Espera un momento..."))
+    console.log("")
+
+    // ✅ reintentos (si da 428 / Connection Closed / se cuelga)
+    const MAX_TRIES = 4
+    const PAIR_TIMEOUT_MS = 25_000
+
+    let lastErr = null
+    for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
       try {
-        const code = await safeRequestPairingCode(sock, clean, 3)
+        // 1) esperar socket listo
+        await waitSocketReady(sock, 15_000)
+
+        // 2) pedir código con timeout
+        const code = await withTimeout(
+          sock.requestPairingCode(clean),
+          PAIR_TIMEOUT_MS,
+          "requestPairingCode_timeout"
+        )
 
         UI.hrSoft(26)
         console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code)))
@@ -325,78 +308,91 @@ export async function startSock(onMessage) {
         UI.info("Ingresa el código")
         UI.hrCyan(30)
         console.log("")
+        lastErr = null
+        break
       } catch (e) {
-        UI.error("No se pudo generar el código.")
-        UI.hint("Causa: " + (e?.message || "desconocida"))
-        UI.hint("Reintenta: vuelve a iniciar el bot y elige 'Código'.")
+        lastErr = e
+        const sc = getStatusCode(e)
+        console.error("[pairing] attempt", attempt, "error:", e?.message || e, "status:", sc)
+
+        // si fue timeout o 428/ConnectionClosed => recrear socket y reintentar
+        const msg = String(e?.message || "")
+        const shouldRecreate =
+          msg.includes("Connection Closed") ||
+          msg.includes("Precondition Required") ||
+          msg.includes("timeout") ||
+          sc === 428
+
+        if (attempt < MAX_TRIES && shouldRecreate) {
+          UI.error(`Fallo de conexión (intento ${attempt}/${MAX_TRIES}). Reintentando...`)
+          try { sock.end?.() } catch {}
+          await sleep(1200 + attempt * 700)
+          sock = makeSock()
+          sock.ev.on("creds.update", saveCreds)
+          // re-enganchar eventos
+          sock.ev.on("group-participants.update", async (update) => {
+            try {
+              const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
+              if (blocked) return
+              await onGroupParticipantsUpdate(sock, update)
+            } catch {}
+          })
+          continue
+        }
+
+        // si no se puede recuperar
+        break
       }
     }
 
-    sock.ev.on("connection.update", (u) => {
-      const { connection, lastDisconnect, qr } = u
-
-      // ── QR flow
-      if (!alreadyLinked && mode === "qr" && qr) {
-        UI.hrSoft(26)
-        UI.title("QR de vinculación")
-        UI.info("WhatsApp > Dispositivos vinculados > Vincular dispositivo")
-        UI.info("Escanea el QR")
-        UI.hrSoft(26)
-        console.log("")
-        qrcode.generate(qr, { small: true })
-        console.log("")
-        UI.hrCyan(30)
-        console.log("")
-      }
-
-      if (connection === "open") {
-        // ✅ cuando abre, resetea backoff
-        RECONNECT_TRIES = 0
-        UI.success("Conectado\n")
-      }
-
-      if (connection === "close") {
-        const statusCode = lastDisconnect?.error?.output?.statusCode
-        const reason = lastDisconnect?.error?.output?.payload?.message || ""
-        const isLoggedOut = statusCode === DisconnectReason.loggedOut
-
-        const reconnect = !isLoggedOut
-        UI.error(`Conexión cerrada. Reconnect: ${reconnect} code: ${statusCode}`)
-
-        // ✅ loggedOut: no reconectar en loop
-        if (isLoggedOut) {
-          UI.hint("Sesión cerrada (loggedOut). Borra 'sessions/' y vuelve a vincular.")
-          return
-        }
-
-        // ✅ anti-loop: programa reconexión con backoff
-        RECONNECT_TRIES++
-        const ms = backoffMs()
-
-        clearReconnectTimer()
-        RECONNECT_TIMER = setTimeout(() => {
-          startSock(onMessage)
-        }, ms)
-      }
-    })
-
-    sock.ev.on("messages.upsert", async ({ messages }) => {
-      for (const msg of messages || []) {
-        try { await onMessage(sock, msg) } catch {}
-      }
-    })
-
-    return sock
-  } catch (e) {
-    UI.error("Fallo crítico al iniciar socket.")
-    UI.hint(e?.message || String(e))
-
-    // ✅ reintento con backoff también si explota aquí
-    RECONNECT_TRIES++
-    const ms = backoffMs()
-    clearReconnectTimer()
-    RECONNECT_TIMER = setTimeout(() => startSock(onMessage), ms)
-  } finally {
-    STARTING = false
+    if (lastErr) {
+      UI.error("No se pudo generar el código.")
+      UI.hint("Si cerraste sesión o se corrompió auth, borra la carpeta sessions/ y vuelve a vincular.")
+      UI.hint("También prueba QR si el código sigue fallando.")
+      console.log("")
+    }
   }
+
+  // ─────────────────────────────────────────────
+  // ✅ connection.update
+  // ─────────────────────────────────────────────
+  sock.ev.on("connection.update", (u) => {
+    const { connection, lastDisconnect, qr } = u
+
+    // ── QR flow
+    if (!alreadyLinked && mode === "qr" && qr) {
+      UI.hrSoft(26)
+      UI.title("QR de vinculación")
+      UI.info("WhatsApp > Dispositivos vinculados > Vincular dispositivo")
+      UI.info("Escanea el QR")
+      UI.hrSoft(26)
+      console.log("")
+      qrcode.generate(qr, { small: true })
+      console.log("")
+      UI.hrCyan(30)
+      console.log("")
+    }
+
+    if (connection === "open") {
+      UI.success("Conectado\n")
+    }
+
+    if (connection === "close") {
+      const code = lastDisconnect?.error?.output?.statusCode
+      const reconnect = code !== DisconnectReason.loggedOut
+      UI.error(`Conexión cerrada. Reconnect: ${reconnect} code: ${code}`)
+      if (reconnect) startSock(onMessage)
+    }
+  })
+
+  // ─────────────────────────────────────────────
+  // ✅ messages.upsert
+  // ─────────────────────────────────────────────
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    for (const msg of messages || []) {
+      try { await onMessage(sock, msg) } catch {}
+    }
+  })
+
+  return sock
 }
