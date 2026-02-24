@@ -1,4 +1,3 @@
-// src/adapter/baileys.js
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
@@ -49,7 +48,18 @@ function createInput() {
 }
 const inputLine = createInput()
 
-// ✅ Banner (estilo B)
+function line() {
+  console.log(chalk.cyanBright("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+}
+
+function center(text, width = 38) {
+  const s = String(text)
+  if (s.length >= width) return s
+  const left = Math.floor((width - s.length) / 2)
+  return " ".repeat(left) + s
+}
+
+// ✅ Banner (estilo B: limpio, pro, sin cajas raras)
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 
 const centerAnsi = (txt, width) => {
@@ -175,49 +185,6 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
-// ✅ helpers anti-cuelgue / reconexión
-// ─────────────────────────────────────────────
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms))
-}
-
-function getStatusCode(err) {
-  return err?.output?.statusCode || err?.data?.statusCode || err?.statusCode
-}
-
-// timeout wrapper (para que requestPairingCode NO se quede colgado)
-async function withTimeout(promise, ms, label = "timeout") {
-  let t
-  const timeout = new Promise((_, rej) => {
-    t = setTimeout(() => rej(new Error(label)), ms)
-  })
-  try {
-    return await Promise.race([promise, timeout])
-  } finally {
-    clearTimeout(t)
-  }
-}
-
-// esperar a que el socket esté “vivo” (conecta al WS)
-async function waitSocketReady(sock, ms = 15000) {
-  return await withTimeout(
-    new Promise((resolve) => {
-      const onUpdate = (u) => {
-        const c = u?.connection
-        // "connecting" ya significa que el WS está en proceso, y normalmente basta para pairing
-        if (c === "open" || c === "connecting") {
-          sock.ev.off("connection.update", onUpdate)
-          resolve(true)
-        }
-      }
-      sock.ev.on("connection.update", onUpdate)
-    }),
-    ms,
-    "waitSocketReady_timeout"
-  )
-}
-
-// ─────────────────────────────────────────────
 // ✅ Socket
 // ─────────────────────────────────────────────
 export async function startSock(onMessage) {
@@ -235,23 +202,12 @@ export async function startSock(onMessage) {
     UI.success("Sesión ya vinculada, iniciando...\n")
   }
 
-  // ✅ factory para recrear socket en reintentos
-  const makeSock = () =>
-    makeWASocket({
-      auth: state,
-      printQRInTerminal: false,
-      logger,
-      browser: Browsers.ubuntu("Chrome"),
-
-      // ✅ “blindaje” básico (reduce cuelgues)
-      syncFullHistory: false,
-      markOnlineOnConnect: false,
-      connectTimeoutMs: 60_000,
-      defaultQueryTimeoutMs: 60_000,
-      keepAliveIntervalMs: 20_000
-    })
-
-  let sock = makeSock()
+  const sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: false,
+    logger,
+    browser: Browsers.ubuntu("Chrome")
+  })
 
   sock.ev.on("creds.update", saveCreds)
 
@@ -261,6 +217,7 @@ export async function startSock(onMessage) {
       console.log("[group-participants.update] RAW:", JSON.stringify(update))
 
       // ✅ 1) ANTIARABE primero
+      // ✅ si expulsó a alguien => bloquea bienvenida
       const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
       if (blocked) {
         console.log("[antiarabeGuard] blocked -> NO welcome")
@@ -274,9 +231,7 @@ export async function startSock(onMessage) {
     }
   })
 
-  // ─────────────────────────────────────────────
-  // ✅ Pairing code flow (BLINDADO)
-  // ─────────────────────────────────────────────
+  // ── Pairing code flow
   if (!alreadyLinked && mode === "code") {
     const clean = await askPhone()
 
@@ -285,77 +240,16 @@ export async function startSock(onMessage) {
     UI.dim(chalk.redBright("  • Espera un momento..."))
     console.log("")
 
-    // ✅ reintentos (si da 428 / Connection Closed / se cuelga)
-    const MAX_TRIES = 4
-    const PAIR_TIMEOUT_MS = 25_000
+    const code = await sock.requestPairingCode(clean)
 
-    let lastErr = null
-    for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
-      try {
-        // 1) esperar socket listo
-        await waitSocketReady(sock, 15_000)
-
-        // 2) pedir código con timeout
-        const code = await withTimeout(
-          sock.requestPairingCode(clean),
-          PAIR_TIMEOUT_MS,
-          "requestPairingCode_timeout"
-        )
-
-        UI.hrSoft(26)
-        console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code)))
-        UI.info("WhatsApp > Dispositivos vinculados > Vincular con número")
-        UI.info("Ingresa el código")
-        UI.hrCyan(30)
-        console.log("")
-        lastErr = null
-        break
-      } catch (e) {
-        lastErr = e
-        const sc = getStatusCode(e)
-        console.error("[pairing] attempt", attempt, "error:", e?.message || e, "status:", sc)
-
-        // si fue timeout o 428/ConnectionClosed => recrear socket y reintentar
-        const msg = String(e?.message || "")
-        const shouldRecreate =
-          msg.includes("Connection Closed") ||
-          msg.includes("Precondition Required") ||
-          msg.includes("timeout") ||
-          sc === 428
-
-        if (attempt < MAX_TRIES && shouldRecreate) {
-          UI.error(`Fallo de conexión (intento ${attempt}/${MAX_TRIES}). Reintentando...`)
-          try { sock.end?.() } catch {}
-          await sleep(1200 + attempt * 700)
-          sock = makeSock()
-          sock.ev.on("creds.update", saveCreds)
-          // re-enganchar eventos
-          sock.ev.on("group-participants.update", async (update) => {
-            try {
-              const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
-              if (blocked) return
-              await onGroupParticipantsUpdate(sock, update)
-            } catch {}
-          })
-          continue
-        }
-
-        // si no se puede recuperar
-        break
-      }
-    }
-
-    if (lastErr) {
-      UI.error("No se pudo generar el código.")
-      UI.hint("Si cerraste sesión o se corrompió auth, borra la carpeta sessions/ y vuelve a vincular.")
-      UI.hint("También prueba QR si el código sigue fallando.")
-      console.log("")
-    }
+    UI.hrSoft(26)
+    console.log(chalk.cyanBright("CÓDIGO: ") + chalk.whiteBright(formatPairingCode(code)))
+    UI.info("WhatsApp > Dispositivos vinculados > Vincular con número")
+    UI.info("Ingresa el código")
+    UI.hrCyan(30)
+    console.log("")
   }
 
-  // ─────────────────────────────────────────────
-  // ✅ connection.update
-  // ─────────────────────────────────────────────
   sock.ev.on("connection.update", (u) => {
     const { connection, lastDisconnect, qr } = u
 
@@ -385,9 +279,6 @@ export async function startSock(onMessage) {
     }
   })
 
-  // ─────────────────────────────────────────────
-  // ✅ messages.upsert
-  // ─────────────────────────────────────────────
   sock.ev.on("messages.upsert", async ({ messages }) => {
     for (const msg of messages || []) {
       try { await onMessage(sock, msg) } catch {}
