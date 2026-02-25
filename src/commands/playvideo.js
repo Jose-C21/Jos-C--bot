@@ -2,7 +2,10 @@
 import yts from "yt-search"
 import axios from "axios"
 
-const VIDEO_API = "https://gawrgura-api.onrender.com/download/ytdl?url="
+// ✅ NUEVA API (Sylphy)
+const SYLPHY_BASE = "https://sylphy.xyz/download/ytmp4"
+const SYLPHY_API_KEY = "sylphy-MtyAgpx" // ← tu api_key
+const SYLPHY_QUALITY = "720p" // puedes cambiar: 360p, 480p, 720p, etc
 
 function safeFileName(name = "") {
   return String(name)
@@ -28,11 +31,9 @@ export default async function playvideo(sock, msg, { args = [], usedPrefix = "."
     return
   }
 
-  // user para mention (grupo o privado)
   const jidUsuario = msg?.key?.participant || msg?.participant || chatId
   const userNum = String(jidUsuario).split("@")[0]
 
-  // reacción cargando
   try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
 
   try {
@@ -46,12 +47,19 @@ export default async function playvideo(sock, msg, { args = [], usedPrefix = "."
 
     const ytUrl = video.url
 
-    // Resolver mp4 con tu API vieja
-    const apiUrl = VIDEO_API + encodeURIComponent(ytUrl)
-    const apiRes = await axios.get(apiUrl, { timeout: 60_000 })
+    // ✅ Resolver mp4 con Sylphy
+    const apiRes = await axios.get(SYLPHY_BASE, {
+      params: {
+        url: ytUrl,
+        q: SYLPHY_QUALITY,
+        api_key: SYLPHY_API_KEY
+      },
+      timeout: 60_000
+    })
 
-    const videoUrl = apiRes?.data?.result?.mp4
-    const title = apiRes?.data?.result?.title || video.title || "Video"
+    const data = apiRes?.data
+    const videoUrl = data?.result?.dl_url
+    const title = data?.result?.title || video.title || "Video"
 
     if (!videoUrl) {
       await sock.sendMessage(chatId, { text: "❌ No se pudo obtener el video." }, { quoted: msg })
@@ -60,7 +68,7 @@ export default async function playvideo(sock, msg, { args = [], usedPrefix = "."
     }
 
     // Descargar buffer
-    const dl = await axios.get(videoUrl, { responseType: "arraybuffer", timeout: 120_000 })
+    const dl = await axios.get(videoUrl, { responseType: "arraybuffer", timeout: 180_000 })
     const videoBuffer = Buffer.from(dl.data)
 
     // Enviar video
@@ -74,7 +82,7 @@ export default async function playvideo(sock, msg, { args = [], usedPrefix = "."
 
     try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
   } catch (e) {
-    console.error("[playvideo]", e)
+    console.error("[playvideo]", e?.response?.data || e)
     await sock.sendMessage(chatId, { text: "❌ Ocurrió un error al procesar la solicitud." }, { quoted: msg })
     try { await sock.sendMessage(chatId, { react: { text: "⚠️", key: msg.key } }) } catch {}
   }
