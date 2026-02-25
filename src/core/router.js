@@ -22,6 +22,9 @@ import playvideo from "../commands/playvideo.js"
 import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
 
+// ✅ ytsearch + hook (replies)
+import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
+
 // ✅ IMPORTA PAGE TAMBIÉN
 import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
 
@@ -56,6 +59,10 @@ const COMMANDS = {
   playvideo,
   golpear,
   kiss,
+
+  // ✅ nuevo
+  ytsearch,
+  yts: ytsearch,
 
   totalmensajes,
   totalmensajes2: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 2 }),
@@ -641,6 +648,13 @@ export async function routeMessage(sock, msg) {
       })
       return
     }
+
+    // ✅ REPLIES (ytsearch: siguiente/anterior/N1) — sin comandos
+    // Va antes del prefijo para que funcione respondiendo al bot.
+    try {
+      const handled = await ytsearchReplyHook(sock, msg)
+      if (handled) return
+    } catch {}
 
     if (!text.startsWith(prefix)) {
       logRouter({
