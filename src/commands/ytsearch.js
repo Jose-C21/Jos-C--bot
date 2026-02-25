@@ -15,8 +15,8 @@ const MAX_PAGES = 10
 const MAX_MB_DOC = 80
 
 // ✅ SESIONES: 1 búsqueda = 1 sessionId (vive 3 min, aunque cambies página)
-const SESSIONS = new Map()        // sessionId -> sessionData
-const MSG2SESSION = new Map()     // messageId(bot) -> sessionId
+const SESSIONS = new Map() // sessionId -> sessionData
+const MSG2SESSION = new Map() // messageId(bot) -> sessionId
 
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
 
@@ -35,9 +35,18 @@ function safeFileName(name = "") {
 function unwrapMessage(msg) {
   let m = msg?.message || {}
   while (true) {
-    if (m?.ephemeralMessage?.message) { m = m.ephemeralMessage.message; continue }
-    if (m?.viewOnceMessageV2?.message) { m = m.viewOnceMessageV2.message; continue }
-    if (m?.viewOnceMessageV2Extension?.message) { m = m.viewOnceMessageV2Extension.message; continue }
+    if (m?.ephemeralMessage?.message) {
+      m = m.ephemeralMessage.message
+      continue
+    }
+    if (m?.viewOnceMessageV2?.message) {
+      m = m.viewOnceMessageV2.message
+      continue
+    }
+    if (m?.viewOnceMessageV2Extension?.message) {
+      m = m.viewOnceMessageV2Extension.message
+      continue
+    }
     break
   }
   return m
@@ -72,7 +81,9 @@ function getText(msg) {
 function getMentionJid(sock, msg) {
   const raw = getSenderJid(msg)
   let decoded = raw
-  try { if (sock?.decodeJid) decoded = sock.decodeJid(raw) } catch {}
+  try {
+    if (sock?.decodeJid) decoded = sock.decodeJid(raw)
+  } catch {}
   return decoded || raw
 }
 
@@ -88,7 +99,7 @@ function nowSecLeft(session) {
 }
 
 function isExpired(session) {
-  return !session || session.expired || (Date.now() - session.createdAt > TTL_MS)
+  return !session || session.expired || Date.now() - session.createdAt > TTL_MS
 }
 
 function cleanup() {
@@ -155,11 +166,11 @@ async function resolveMp4Sylphy(ytUrl) {
 }
 
 async function getContentLengthBytes(url) {
-  // HEAD suele fallar en algunas URLs; si falla devolvemos 0 y mandamos normal
+  // HEAD suele fallar; si falla devolvemos 0 (y aún así enviamos)
   try {
     const head = await axios.head(url, {
       timeout: 20_000,
-      maxRedirects: 3,
+      maxRedirects: 5,
       validateStatus: () => true
     })
     const len = head?.headers?.["content-length"]
@@ -179,6 +190,40 @@ async function sendWithTimeout(promise, ms, label = "send") {
   } finally {
     clearTimeout(t)
   }
+}
+
+// ─────────────────────────────────────────────
+// ✅ STREAM SENDER (evita ENOSPC /tmp en Pterodactyl)
+// ─────────────────────────────────────────────
+async function getStream(url) {
+  const res = await axios.get(url, {
+    responseType: "stream",
+    timeout: 120_000,
+    maxRedirects: 5,
+    validateStatus: () => true,
+    headers: { "User-Agent": "Mozilla/5.0" }
+  })
+
+  if (!res || res.status >= 400 || !res.data) {
+    throw new Error(`STREAM_HTTP_${res?.status || "?"}`)
+  }
+
+  // IMPORTANTÍSIMO: manejar errores del stream (si no, tumba el proceso)
+  res.data.on("error", (e) => {
+    console.error("[ytsearch stream] error:", e?.message || e)
+  })
+
+  return res.data
+}
+
+async function sendVideoStream(sock, chatId, url, payload, quoted) {
+  const stream = await getStream(url)
+  return sock.sendMessage(chatId, { ...payload, video: stream }, { quoted })
+}
+
+async function sendDocStream(sock, chatId, url, payload, quoted) {
+  const stream = await getStream(url)
+  return sock.sendMessage(chatId, { ...payload, document: stream }, { quoted })
 }
 
 // ─────────────────────────────────────────────
@@ -216,7 +261,7 @@ export async function ytsearchReplyHook(sock, msg) {
     return true
   }
 
-  // ✅ SOLO EL MISMO USUARIO (dueño) controla
+  // ✅ SOLO EL MISMO USUARIO controla
   const replierJid = getMentionJid(sock, msg)
   const replierNum = jidToNumber(replierJid) || onlyDigits(replierJid)
 
@@ -324,7 +369,6 @@ export async function ytsearchReplyHook(sock, msg) {
   }
 
   try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }).catch(() => {}) } catch {}
-
   console.log(`[ytsearch] download request N${n} page=${session.page} url=${video.url}`)
 
   try {
@@ -339,22 +383,21 @@ export async function ytsearchReplyHook(sock, msg) {
     const finalTitle = title || video.title || "Video"
     const fileName = `${safeFileName(finalTitle)}.mp4`
 
-    // tamaño
+    // tamaño (si no se puede, bytes=0 y decidimos enviar como VIDEO por defecto)
     const bytes = await getContentLengthBytes(dl_url)
-    const mb = bytes ? (bytes / (1024 * 1024)) : 0
-    const sendAsDoc = bytes ? (mb >= MAX_MB_DOC) : false
+    const mb = bytes ? bytes / (1024 * 1024) : 0
+    const sendAsDoc = bytes ? mb >= MAX_MB_DOC : false
 
     const captionBase =
       `*${finalTitle}*\n` +
       `\n🎞️ Calidad: ${quality || SYLPHY_QUALITY}\n` +
       `👑 Solicitado por: ${session.ownerTag}`
 
-    // ✅ ENVIAR con timeout (para que no se quede cargando infinito)
+    // ✅ ENVIAR POR STREAM (evita ENOSPC) + timeout
     if (sendAsDoc) {
       console.log(`[ytsearch] sending as DOCUMENT (~${mb.toFixed(2)}MB)`)
       await sendWithTimeout(
-        sock.sendMessage(chatId, {
-          document: { url: dl_url },
+        sendDocStream(sock, chatId, dl_url, {
           mimetype: "video/mp4",
           fileName,
           caption:
@@ -362,22 +405,21 @@ export async function ytsearchReplyHook(sock, msg) {
             `\n📦 Enviado como *documento* porque pesa ~${mb.toFixed(2)}MB (límite: ${MAX_MB_DOC}MB).` +
             signature(),
           mentions: session.ownerJid ? [session.ownerJid] : []
-        }, { quoted: msg }),
-        90_000,
-        "doc"
+        }, msg),
+        120_000,
+        "doc_stream"
       )
     } else {
-      console.log(`[ytsearch] sending as VIDEO (~${mb ? mb.toFixed(2) : "?"}MB)`)
+      console.log(`[ytsearch] sending as VIDEO (~${bytes ? mb.toFixed(2) : "?"}MB)`)
       await sendWithTimeout(
-        sock.sendMessage(chatId, {
-          video: { url: dl_url },
+        sendVideoStream(sock, chatId, dl_url, {
           mimetype: "video/mp4",
           fileName,
           caption: captionBase + signature(),
           mentions: session.ownerJid ? [session.ownerJid] : []
-        }, { quoted: msg }),
-        90_000,
-        "video"
+        }, msg),
+        120_000,
+        "video_stream"
       )
     }
 
@@ -387,15 +429,14 @@ export async function ytsearchReplyHook(sock, msg) {
   } catch (e) {
     console.error("[ytsearch send error]", e)
 
-    // 🔁 Fallback: si se colgó enviando como video, intenta documento
-    try {
-      await sock.sendMessage(chatId, {
-        text:
-          `⚠️ El envío se quedó colgado o falló.\n` +
-          `📦 Probando enviarlo como *documento*...\n` +
-          `(Esto pasa con videos largos en algunos servidores.)`
-      }, { quoted: msg }).catch(() => {})
-    } catch {}
+    // Aviso (sin mandar link)
+    await sock.sendMessage(chatId, {
+      text:
+        `⚠️ No se pudo enviar ese video.\n` +
+        `• Puede estar demasiado pesado o el host devolvió error.\n` +
+        `• Intenta con otro resultado o espera un momento.` +
+        signature()
+    }, { quoted: msg }).catch(() => {})
 
     try { await sock.sendMessage(chatId, { react: { text: "⚠️", key: msg.key } }).catch(() => {}) } catch {}
     return true
@@ -455,6 +496,7 @@ export default async function ytsearch(sock, msg, { args = [], usedPrefix = ".",
 
     const slice = vids.slice(0, PAGE_SIZE)
 
+    // ✅ el contador real lo llevamos por sesión; aquí mostramos 180s iniciales
     const pageText = buildPageText({
       subject,
       query,
