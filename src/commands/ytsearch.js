@@ -1,24 +1,28 @@
 // src/commands/ytsearch.js
 import yts from "yt-search"
 import axios from "axios"
-import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
 // ✅ API NUEVA (Sylphy)
 const SYLPHY_API = "https://sylphy.xyz/download/ytmp4"
 const SYLPHY_KEY = "sylphy-MtyAgpx"
-const SYLPHY_QUALITY = "720p"
+const SYLPHY_QUALITY = "360p"
 
-// configuración
+// Config
 const PAGE_SIZE = 7
-const CACHE_TTL_MS = 3 * 60 * 1000 // 3 min
+const TTL_MS = 3 * 60 * 1000 // 3 min reales por SESIÓN
 const MAX_PAGES = 10
 const MAX_MB_DOC = 80
 
-// cache en memoria (por id del mensaje del bot)
-const CACHE = new Map()
+// ✅ SESIONES: 1 búsqueda = 1 sessionId (vive 3 min, aunque cambies página)
+const SESSIONS = new Map()        // sessionId -> sessionData
+const MSG2SESSION = new Map()     // messageId(bot) -> sessionId
 
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
+
+function signature() {
+  return `\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗢𝘄𝗻𝗲𝗿: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
+}
 
 function safeFileName(name = "") {
   return String(name)
@@ -28,35 +32,6 @@ function safeFileName(name = "") {
     .slice(0, 80) || "video"
 }
 
-function signature() {
-  return `\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗢𝘄𝗻𝗲𝗿: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
-}
-
-function setCache(messageId, data) {
-  CACHE.set(messageId, data)
-}
-
-function getCache(messageId) {
-  const row = CACHE.get(messageId)
-  if (!row) return null
-  if (!row?.ts || Date.now() - row.ts > CACHE_TTL_MS) {
-    CACHE.delete(messageId)
-    return null
-  }
-  return row
-}
-
-function cleanupCache() {
-  const now = Date.now()
-  for (const [k, v] of CACHE.entries()) {
-    if (!v?.ts || now - v.ts > CACHE_TTL_MS) CACHE.delete(k)
-  }
-}
-setInterval(cleanupCache, 30_000).unref?.()
-
-// ─────────────────────────────────────────────
-// ✅ quoted helpers (para detectar replies)
-// ─────────────────────────────────────────────
 function unwrapMessage(msg) {
   let m = msg?.message || {}
   while (true) {
@@ -76,7 +51,6 @@ function getQuotedInfo(msg) {
     m?.videoMessage?.contextInfo ||
     m?.documentMessage?.contextInfo ||
     null
-
   if (!ctx) return null
   const stanzaId = ctx.stanzaId || ctx?.quotedMessage?.stanzaId
   const participant = ctx.participant
@@ -108,14 +82,28 @@ function getMentionTag(sock, msg) {
   return `@${num || "usuario"}`
 }
 
-function getExpireLeftSec(row) {
-  const left = Math.ceil((row.ts + CACHE_TTL_MS - Date.now()) / 1000)
+function nowSecLeft(session) {
+  const left = Math.ceil((session.createdAt + TTL_MS - Date.now()) / 1000)
   return Math.max(0, left)
 }
 
-// ─────────────────────────────────────────────
-// ✅ render página (MISMO DISEÑO QUE TE GUSTA)
-// ─────────────────────────────────────────────
+function isExpired(session) {
+  return !session || session.expired || (Date.now() - session.createdAt > TTL_MS)
+}
+
+function cleanup() {
+  const now = Date.now()
+  for (const [sid, s] of SESSIONS.entries()) {
+    if (!s?.createdAt || now - s.createdAt > TTL_MS + 30_000) {
+      SESSIONS.delete(sid)
+    }
+  }
+  for (const [mid, sid] of MSG2SESSION.entries()) {
+    if (!SESSIONS.has(sid)) MSG2SESSION.delete(mid)
+  }
+}
+setInterval(cleanup, 30_000).unref?.()
+
 function buildPageText({ subject, query, page, totalPages, total, ownerTag, usedPrefix, slice, startIndex, expiresSec }) {
   const head =
 `╭─ 𝗬𝗢𝗨𝗧𝗨𝗕𝗘 𝗦𝗘𝗔𝗥𝗖𝗛
@@ -152,23 +140,28 @@ function buildPageText({ subject, query, page, totalPages, total, ownerTag, used
 }
 
 // ─────────────────────────────────────────────
-// ✅ resolver mp4 por API Sylphy
+// ✅ Sylphy resolver
 // ─────────────────────────────────────────────
 async function resolveMp4Sylphy(ytUrl) {
   const apiUrl =
     `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&q=${encodeURIComponent(SYLPHY_QUALITY)}&api_key=${encodeURIComponent(SYLPHY_KEY)}`
-
   const apiRes = await axios.get(apiUrl, { timeout: 60_000 })
   const ok = !!apiRes?.data?.status
   const dl_url = apiRes?.data?.result?.dl_url
   const title = apiRes?.data?.result?.title
   const quality = apiRes?.data?.result?.quality
-  return { ok, dl_url, title, quality, raw: apiRes?.data }
+  const author = apiRes?.data?.result?.author
+  return { ok, dl_url, title, quality, author, raw: apiRes?.data }
 }
 
 async function getContentLengthBytes(url) {
+  // HEAD suele fallar en algunas URLs; si falla devolvemos 0 y mandamos normal
   try {
-    const head = await axios.head(url, { timeout: 20_000 })
+    const head = await axios.head(url, {
+      timeout: 20_000,
+      maxRedirects: 3,
+      validateStatus: () => true
+    })
     const len = head?.headers?.["content-length"]
     return len ? parseInt(len, 10) : 0
   } catch {
@@ -176,219 +169,236 @@ async function getContentLengthBytes(url) {
   }
 }
 
+async function sendWithTimeout(promise, ms, label = "send") {
+  let t
+  const timeout = new Promise((_, rej) => {
+    t = setTimeout(() => rej(new Error(`TIMEOUT_${label}_${ms}ms`)), ms)
+  })
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 // ─────────────────────────────────────────────
-// ✅ HOOK: manejar replies (siguiente/anterior/Nx)
+// ✅ HOOK replies
 // ─────────────────────────────────────────────
 export async function ytsearchReplyHook(sock, msg) {
+  const chatId = msg?.key?.remoteJid
+  if (!chatId) return false
+  if (!msg?.message) return false
+
+  const text = getText(msg)
+  if (!text) return false
+
+  const quoted = getQuotedInfo(msg)
+  if (!quoted?.stanzaId) return false
+
+  const sessionId = MSG2SESSION.get(quoted.stanzaId)
+  if (!sessionId) return false
+
+  const session = SESSIONS.get(sessionId)
+  if (!session || session.chatId !== chatId) return false
+
+  // expiró
+  if (isExpired(session)) {
+    session.expired = true
+    await sock.sendMessage(chatId, {
+      text:
+        `📭 Esta lista ya expiró (3 minutos).\n\n` +
+        `✅ Para buscar otra vez:\n` +
+        `• ${session.usedPrefix}ytsearch <texto>\n\n` +
+        `Ejemplo:\n` +
+        `• ${session.usedPrefix}ytsearch anuel` +
+        signature()
+    }, { quoted: msg }).catch(() => {})
+    return true
+  }
+
+  // ✅ SOLO EL MISMO USUARIO (dueño) controla
+  const replierJid = getMentionJid(sock, msg)
+  const replierNum = jidToNumber(replierJid) || onlyDigits(replierJid)
+
+  const ownerJid = session.ownerJid
+  const ownerNum = session.ownerNum
+
+  if ((ownerJid && String(replierJid) !== String(ownerJid)) && (ownerNum && String(replierNum) !== String(ownerNum))) {
+    const tag = getMentionTag(sock, msg)
+    await sock.sendMessage(chatId, {
+      text:
+        `⛔ ${tag}\n` +
+        `Solo quien hizo la búsqueda puede controlar esta lista.\n\n` +
+        `📌 Haz tu propia búsqueda con:\n` +
+        `• ${session.usedPrefix}ytsearch <texto>`,
+      mentions: [replierJid]
+    }, { quoted: msg }).catch(() => {})
+    return true
+  }
+
+  const t = text.trim().toLowerCase()
+
+  // ── PAGINACIÓN
+  if (t === "siguiente" || t === "next") {
+    const newPage = Math.min(session.totalPages, session.page + 1)
+    if (newPage === session.page) return true
+    session.page = newPage
+
+    const start = (session.page - 1) * PAGE_SIZE
+    const slice = session.results.slice(start, start + PAGE_SIZE)
+
+    const pageText = buildPageText({
+      subject: session.subject,
+      query: session.query,
+      page: session.page,
+      totalPages: session.totalPages,
+      total: session.results.length,
+      ownerTag: session.ownerTag,
+      usedPrefix: session.usedPrefix,
+      slice,
+      startIndex: start,
+      expiresSec: nowSecLeft(session)
+    })
+
+    const sent = await sock.sendMessage(chatId, {
+      text: pageText,
+      mentions: session.ownerJid ? [session.ownerJid] : []
+    }, { quoted: msg }).catch(() => null)
+
+    if (sent?.key?.id) {
+      MSG2SESSION.set(sent.key.id, sessionId)
+      session.lastBotMsgId = sent.key.id
+    }
+    return true
+  }
+
+  if (t === "anterior" || t === "prev") {
+    const newPage = Math.max(1, session.page - 1)
+    if (newPage === session.page) return true
+    session.page = newPage
+
+    const start = (session.page - 1) * PAGE_SIZE
+    const slice = session.results.slice(start, start + PAGE_SIZE)
+
+    const pageText = buildPageText({
+      subject: session.subject,
+      query: session.query,
+      page: session.page,
+      totalPages: session.totalPages,
+      total: session.results.length,
+      ownerTag: session.ownerTag,
+      usedPrefix: session.usedPrefix,
+      slice,
+      startIndex: start,
+      expiresSec: nowSecLeft(session)
+    })
+
+    const sent = await sock.sendMessage(chatId, {
+      text: pageText,
+      mentions: session.ownerJid ? [session.ownerJid] : []
+    }, { quoted: msg }).catch(() => null)
+
+    if (sent?.key?.id) {
+      MSG2SESSION.set(sent.key.id, sessionId)
+      session.lastBotMsgId = sent.key.id
+    }
+    return true
+  }
+
+  // ── DESCARGA N1..N7 (página actual)
+  const mm = t.match(/^n\s*(\d{1,2})$/i) || t.match(/^n(\d{1,2})$/i)
+  if (!mm) return false
+
+  const n = parseInt(mm[1], 10)
+  if (!n || n < 1 || n > PAGE_SIZE) {
+    await sock.sendMessage(chatId, { text: `⚠️ Número inválido. Usa N1 hasta N${PAGE_SIZE}.` }, { quoted: msg }).catch(() => {})
+    return true
+  }
+
+  const start = (session.page - 1) * PAGE_SIZE
+  const index = start + (n - 1)
+  const video = session.results[index]
+  if (!video?.url) {
+    await sock.sendMessage(chatId, { text: `⚠️ Ese N${n} no existe en esta página.` }, { quoted: msg }).catch(() => {})
+    return true
+  }
+
+  try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }).catch(() => {}) } catch {}
+
+  console.log(`[ytsearch] download request N${n} page=${session.page} url=${video.url}`)
+
   try {
-    const chatId = msg?.key?.remoteJid
-    if (!chatId) return false
-    if (!msg?.message) return false
-
-    const text = getText(msg)
-    if (!text) return false
-
-    // debe ser reply a un mensaje del bot
-    const quoted = getQuotedInfo(msg)
-    if (!quoted?.stanzaId) return false
-
-    // ⚠️ si ya no existe cache, es porque expiró
-    const cachedRow = CACHE.get(quoted.stanzaId)
-    if (cachedRow && cachedRow.type === "ytsearch") {
-      const still = getCache(quoted.stanzaId)
-      if (!still) {
-        const prefix = cachedRow.usedPrefix || "."
-        await sock.sendMessage(chatId, {
-          text:
-            `📭 Esta lista ya expiró (3 minutos).\n\n` +
-            `✅ Para buscar otra vez:\n` +
-            `• ${prefix}ytsearch <texto>\n\n` +
-            `Ejemplo:\n` +
-            `• ${prefix}ytsearch anuel` +
-            signature()
-        }, { quoted: msg }).catch(() => {})
-        return true
-      }
-    }
-
-    const cache = getCache(quoted.stanzaId)
-    if (!cache || cache.type !== "ytsearch") return false
-    if (cache.chatId !== chatId) return false
-
-    // ✅ SOLO EL DUEÑO CONTROLA (comparar por jid y por número)
-    const replierJid = getMentionJid(sock, msg)
-    const replierNum = jidToNumber(replierJid) || onlyDigits(replierJid)
-
-    const ownerJid = cache.ownerJid
-    const ownerNum = cache.ownerNum
-
-    if ((ownerJid && String(replierJid) !== String(ownerJid)) && (ownerNum && String(replierNum) !== String(ownerNum))) {
-      const tag = getMentionTag(sock, msg)
-      await sock.sendMessage(chatId, {
-        text:
-          `⛔ ${tag}\n` +
-          `Solo quien hizo la búsqueda puede controlar esta lista.\n\n` +
-          `📌 Haz tu propia búsqueda con:\n` +
-          `• ${cache.usedPrefix || "."}ytsearch <texto>`,
-        mentions: [replierJid]
-      }, { quoted: msg }).catch(() => {})
+    const { ok, dl_url, title, quality, raw } = await resolveMp4Sylphy(video.url)
+    if (!ok || !dl_url) {
+      console.error("[ytsearch sylphy] bad response:", raw)
+      await sock.sendMessage(chatId, { text: "❌ La API no devolvió el MP4. Intenta otro video." }, { quoted: msg }).catch(() => {})
+      try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }).catch(() => {}) } catch {}
       return true
     }
 
-    const t = text.trim().toLowerCase()
+    const finalTitle = title || video.title || "Video"
+    const fileName = `${safeFileName(finalTitle)}.mp4`
 
-    // ── PAGINACIÓN
-    if (t === "siguiente" || t === "next") {
-      const newPage = Math.min(cache.totalPages, cache.page + 1)
-      if (newPage === cache.page) return true
+    // tamaño
+    const bytes = await getContentLengthBytes(dl_url)
+    const mb = bytes ? (bytes / (1024 * 1024)) : 0
+    const sendAsDoc = bytes ? (mb >= MAX_MB_DOC) : false
 
-      cache.page = newPage
-      cache.ts = Date.now()
+    const captionBase =
+      `*${finalTitle}*\n` +
+      `\n🎞️ Calidad: ${quality || SYLPHY_QUALITY}\n` +
+      `👑 Solicitado por: ${session.ownerTag}`
 
-      const start = (cache.page - 1) * PAGE_SIZE
-      const slice = cache.results.slice(start, start + PAGE_SIZE)
-
-      const expiresSec = getExpireLeftSec(cache)
-
-      const pageText = buildPageText({
-        subject: cache.subject,
-        query: cache.query,
-        page: cache.page,
-        totalPages: cache.totalPages,
-        total: cache.results.length,
-        ownerTag: cache.ownerTag,
-        usedPrefix: cache.usedPrefix || ".",
-        slice,
-        startIndex: start,
-        expiresSec
-      })
-
-      const sent = await sock.sendMessage(chatId, {
-        text: pageText,
-        mentions: cache.ownerJid ? [cache.ownerJid] : []
-      }, { quoted: msg }).catch(() => null)
-
-      // ✅ nueva página = nuevo control (nuevo id en cache)
-      if (sent?.key?.id) {
-        setCache(sent.key.id, { ...cache, ts: Date.now() })
-      }
-      return true
-    }
-
-    if (t === "anterior" || t === "prev") {
-      const newPage = Math.max(1, cache.page - 1)
-      if (newPage === cache.page) return true
-
-      cache.page = newPage
-      cache.ts = Date.now()
-
-      const start = (cache.page - 1) * PAGE_SIZE
-      const slice = cache.results.slice(start, start + PAGE_SIZE)
-
-      const expiresSec = getExpireLeftSec(cache)
-
-      const pageText = buildPageText({
-        subject: cache.subject,
-        query: cache.query,
-        page: cache.page,
-        totalPages: cache.totalPages,
-        total: cache.results.length,
-        ownerTag: cache.ownerTag,
-        usedPrefix: cache.usedPrefix || ".",
-        slice,
-        startIndex: start,
-        expiresSec
-      })
-
-      const sent = await sock.sendMessage(chatId, {
-        text: pageText,
-        mentions: cache.ownerJid ? [cache.ownerJid] : []
-      }, { quoted: msg }).catch(() => null)
-
-      if (sent?.key?.id) {
-        setCache(sent.key.id, { ...cache, ts: Date.now() })
-      }
-      return true
-    }
-
-    // ── DESCARGA: N1..N7 (de la página actual)
-    const m = t.match(/^n\s*(\d{1,2})$/i) || t.match(/^n(\d{1,2})$/i)
-    if (!m) return false
-
-    const n = parseInt(m[1], 10)
-    if (!n || n < 1 || n > PAGE_SIZE) {
-      await sock.sendMessage(chatId, { text: `⚠️ Número inválido. Usa N1 hasta N${PAGE_SIZE}.` }, { quoted: msg }).catch(() => {})
-      return true
-    }
-
-    const start = (cache.page - 1) * PAGE_SIZE
-    const index = start + (n - 1)
-    const video = cache.results[index]
-    if (!video?.url) {
-      await sock.sendMessage(chatId, { text: `⚠️ Ese N${n} no existe en esta página.` }, { quoted: msg }).catch(() => {})
-      return true
-    }
-
-    // reacción “cargando”
-    try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
-
-    try {
-      const { ok, dl_url, title, quality, raw } = await resolveMp4Sylphy(video.url)
-      if (!ok || !dl_url) {
-        console.error("[ytsearch sylphy]", raw)
-        await sock.sendMessage(chatId, { text: "❌ La API no devolvió el MP4. Intenta otro video." }, { quoted: msg }).catch(() => {})
-        try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }) } catch {}
-        return true
-      }
-
-      const finalTitle = title || video.title || "Video"
-      const ownerTag = cache.ownerTag
-      const ownerJid = cache.ownerJid
-      const fileName = `${safeFileName(finalTitle)}.mp4`
-
-      // medir tamaño (si no se puede, queda 0 y se manda normal)
-      const bytes = await getContentLengthBytes(dl_url)
-      const mb = bytes ? (bytes / (1024 * 1024)) : 0
-      const sendAsDoc = bytes ? (mb >= MAX_MB_DOC) : false
-
-      if (sendAsDoc) {
-        await sock.sendMessage(chatId, {
+    // ✅ ENVIAR con timeout (para que no se quede cargando infinito)
+    if (sendAsDoc) {
+      console.log(`[ytsearch] sending as DOCUMENT (~${mb.toFixed(2)}MB)`)
+      await sendWithTimeout(
+        sock.sendMessage(chatId, {
           document: { url: dl_url },
           mimetype: "video/mp4",
           fileName,
           caption:
-            `*${finalTitle}*\n` +
-            `\n📦 Enviado como *documento* porque pesa ~${mb.toFixed(2)}MB (límite: ${MAX_MB_DOC}MB).\n` +
-            `🎞️ Calidad: ${quality || SYLPHY_QUALITY}\n` +
-            `👑 Solicitado por: ${ownerTag}` +
+            captionBase +
+            `\n📦 Enviado como *documento* porque pesa ~${mb.toFixed(2)}MB (límite: ${MAX_MB_DOC}MB).` +
             signature(),
-          mentions: ownerJid ? [ownerJid] : []
-        }, { quoted: msg }).catch(() => {})
-      } else {
-        // ✅ envío normal por URL (más estable que buffer)
-        await sock.sendMessage(chatId, {
+          mentions: session.ownerJid ? [session.ownerJid] : []
+        }, { quoted: msg }),
+        90_000,
+        "doc"
+      )
+    } else {
+      console.log(`[ytsearch] sending as VIDEO (~${mb ? mb.toFixed(2) : "?"}MB)`)
+      await sendWithTimeout(
+        sock.sendMessage(chatId, {
           video: { url: dl_url },
           mimetype: "video/mp4",
           fileName,
-          caption:
-            `*${finalTitle}*\n` +
-            `\n🎞️ Calidad: ${quality || SYLPHY_QUALITY}\n` +
-            `👑 Solicitado por: ${ownerTag}` +
-            signature(),
-          mentions: ownerJid ? [ownerJid] : []
-        }, { quoted: msg }).catch(() => {})
-      }
-
-      try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
-      return true
-    } catch (e) {
-      console.error("[ytsearch download]", e)
-      await sock.sendMessage(chatId, { text: "❌ Error al descargar el video." }, { quoted: msg }).catch(() => {})
-      try { await sock.sendMessage(chatId, { react: { text: "⚠️", key: msg.key } }) } catch {}
-      return true
+          caption: captionBase + signature(),
+          mentions: session.ownerJid ? [session.ownerJid] : []
+        }, { quoted: msg }),
+        90_000,
+        "video"
+      )
     }
-  } catch {
-    return false
+
+    try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {}) } catch {}
+    console.log("[ytsearch] sent OK")
+    return true
+  } catch (e) {
+    console.error("[ytsearch send error]", e)
+
+    // 🔁 Fallback: si se colgó enviando como video, intenta documento
+    try {
+      await sock.sendMessage(chatId, {
+        text:
+          `⚠️ El envío se quedó colgado o falló.\n` +
+          `📦 Probando enviarlo como *documento*...\n` +
+          `(Esto pasa con videos largos en algunos servidores.)`
+      }, { quoted: msg }).catch(() => {})
+    } catch {}
+
+    try { await sock.sendMessage(chatId, { react: { text: "⚠️", key: msg.key } }).catch(() => {}) } catch {}
+    return true
   }
 }
 
@@ -415,7 +425,7 @@ export default async function ytsearch(sock, msg, { args = [], usedPrefix = ".",
     return
   }
 
-  try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
+  try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }).catch(() => {}) } catch {}
 
   let subject = "Chat"
   if (isGroup) {
@@ -435,7 +445,7 @@ export default async function ytsearch(sock, msg, { args = [], usedPrefix = ".",
 
     if (!vids.length) {
       await sock.sendMessage(chatId, { text: "❌ No encontré resultados en YouTube." }, { quoted: msg })
-      try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }) } catch {}
+      try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }).catch(() => {}) } catch {}
       return
     }
 
@@ -443,9 +453,7 @@ export default async function ytsearch(sock, msg, { args = [], usedPrefix = ".",
     const totalPages = Math.min(totalPagesReal, MAX_PAGES)
     const page = 1
 
-    const start = 0
-    const slice = vids.slice(start, start + PAGE_SIZE)
-    const expiresSec = Math.max(1, Math.ceil(CACHE_TTL_MS / 1000))
+    const slice = vids.slice(0, PAGE_SIZE)
 
     const pageText = buildPageText({
       subject,
@@ -456,8 +464,8 @@ export default async function ytsearch(sock, msg, { args = [], usedPrefix = ".",
       ownerTag,
       usedPrefix,
       slice,
-      startIndex: start,
-      expiresSec
+      startIndex: 0,
+      expiresSec: Math.ceil(TTL_MS / 1000)
     })
 
     const sent = await sock.sendMessage(chatId, {
@@ -467,8 +475,11 @@ export default async function ytsearch(sock, msg, { args = [], usedPrefix = ".",
 
     const msgId = sent?.key?.id
     if (msgId) {
-      setCache(msgId, {
+      const sessionId = `${msgId}:${Date.now()}`
+
+      const session = {
         type: "ytsearch",
+        sessionId,
         chatId,
         query,
         subject,
@@ -476,33 +487,44 @@ export default async function ytsearch(sock, msg, { args = [], usedPrefix = ".",
         results: vids,
         page,
         totalPages,
-        ts: Date.now(),
+        createdAt: Date.now(),
+        expired: false,
         ownerJid,
         ownerNum,
-        ownerTag
-      })
+        ownerTag,
+        firstBotMsgId: msgId,
+        lastBotMsgId: msgId
+      }
 
-      // ✅ aviso automático al expirar (3 min)
+      SESSIONS.set(sessionId, session)
+      MSG2SESSION.set(msgId, sessionId)
+
+      // ✅ Mensaje automático al expirar (sesión real)
       setTimeout(async () => {
-        const row = CACHE.get(msgId)
-        if (!row) return
-        if (!row?.ts || Date.now() - row.ts > CACHE_TTL_MS) {
-          await sock.sendMessage(chatId, {
-            text:
-              `⌛ La lista de *ytsearch* expiró (3 minutos).\n` +
-              `✅ Para buscar de nuevo:\n` +
-              `• ${usedPrefix}${command} <texto>` +
-              signature()
-          }, { quoted: sent }).catch(() => {})
-          CACHE.delete(msgId)
+        const s = SESSIONS.get(sessionId)
+        if (!s || s.expired) return
+        s.expired = true
+
+        await sock.sendMessage(chatId, {
+          text:
+            `⌛ La lista de *ytsearch* expiró (3 minutos).\n` +
+            `✅ Para buscar de nuevo:\n` +
+            `• ${usedPrefix}${command} <texto>` +
+            signature()
+        }, { quoted: sent }).catch(() => {})
+
+        // limpieza suave
+        SESSIONS.delete(sessionId)
+        for (const [mid, sid] of MSG2SESSION.entries()) {
+          if (sid === sessionId) MSG2SESSION.delete(mid)
         }
-      }, CACHE_TTL_MS + 8000)
+      }, TTL_MS)
     }
 
-    try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
+    try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {}) } catch {}
   } catch (e) {
     console.error("[ytsearch]", e)
     await sock.sendMessage(chatId, { text: "❌ Error al buscar en YouTube." }, { quoted: msg })
-    try { await sock.sendMessage(chatId, { react: { text: "⚠️", key: msg.key } }) } catch {}
+    try { await sock.sendMessage(chatId, { react: { text: "⚠️", key: msg.key } }).catch(() => {}) } catch {}
   }
 }
