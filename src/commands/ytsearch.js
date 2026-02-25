@@ -204,14 +204,15 @@ async function axiosStream(url) {
 }
 
 async function sendMediaStream(sock, chatId, msg, { asDoc, stream, fileName, caption, mentions }) {
-  // ⚠️ IMPORTANTE: pasar stream DIRECTO (no string), para que Baileys NO intente fs.open()
+  stream.on("error", () => {}) // evita crash por stream
+
   const payload = asDoc
-    ? { document: stream, mimetype: "video/mp4", fileName, caption, mentions }
-    : { video: stream, mimetype: "video/mp4", fileName, caption, mentions }
+    ? { document: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
+    : { video: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
 
   return await sendWithTimeout(
     sock.sendMessage(chatId, payload, { quoted: msg }),
-    150_000,
+    180_000,
     asDoc ? "doc_stream" : "video_stream"
   )
 }
@@ -233,15 +234,15 @@ async function downloadToFile(url, outPath) {
 
 async function sendFromFile(sock, chatId, msg, { asDoc, filePath, fileName, caption, mentions }) {
   const stream = fs.createReadStream(filePath)
-  stream.on("error", () => {}) // evita crash por error de stream
+  stream.on("error", () => {}) // evita crash
 
   const payload = asDoc
-    ? { document: stream, mimetype: "video/mp4", fileName, caption, mentions }
-    : { video: stream, mimetype: "video/mp4", fileName, caption, mentions }
+    ? { document: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
+    : { video: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
 
   return await sendWithTimeout(
     sock.sendMessage(chatId, payload, { quoted: msg }),
-    180_000,
+    220_000,
     asDoc ? "doc_file" : "video_file"
   )
 }
