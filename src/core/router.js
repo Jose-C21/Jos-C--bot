@@ -2,7 +2,7 @@
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
-import { antiLinkGuard } from "./antilinkGuard.js"
+import { antiLinkGuard } from "./antilinkGuard.js" // ✅ FIX: nombre correcto
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -25,6 +25,10 @@ import kiss from "../commands/kiss.js"
 // ✅ ytsearch + hook (replies)
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
 
+// ✅ NUEVO: antipersona (toggle) + watcher
+import antipersona from "../commands/antipersona.js"
+import { antiPersonaObserve } from "./antipersonaWatch.js"
+
 // ✅ IMPORTA PAGE TAMBIÉN
 import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
 
@@ -46,7 +50,6 @@ import fantasma, { fantasmaPage } from "../commands/fantasma.js"
 import fankick from "../commands/fankick.js"
 import add from "../commands/add.js"
 
-
 const COMMANDS = {
   resetsession,
   s: sticker,
@@ -60,9 +63,12 @@ const COMMANDS = {
   golpear,
   kiss,
 
-  // ✅ nuevo
+  // ✅ ytsearch
   ytsearch,
   yts: ytsearch,
+
+  // ✅ antipersona toggle
+  antipersona,
 
   totalmensajes,
   totalmensajes2: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 2 }),
@@ -150,7 +156,7 @@ function ensureActivosDB() {
   if (!fs.existsSync(ACTIVOS_PATH)) {
     fs.writeFileSync(
       ACTIVOS_PATH,
-      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {} }, null, 2)
+      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {} }, null, 2)
     )
     return
   }
@@ -160,11 +166,12 @@ function ensureActivosDB() {
     if (!j.despedidas) j.despedidas = {}
     if (!j.antilink) j.antilink = {}
     if (!j.antis) j.antis = {}
+    if (!j.antipersona) j.antipersona = {} // ✅ NUEVO
     fs.writeFileSync(ACTIVOS_PATH, JSON.stringify(j, null, 2))
   } catch {
     fs.writeFileSync(
       ACTIVOS_PATH,
-      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {} }, null, 2)
+      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {} }, null, 2)
     )
   }
 }
@@ -177,9 +184,10 @@ function readActivosSafe() {
     if (!j.despedidas) j.despedidas = {}
     if (!j.antilink) j.antilink = {}
     if (!j.antis) j.antis = {}
+    if (!j.antipersona) j.antipersona = {} // ✅ NUEVO
     return j
   } catch {
-    return { bienvenida: {}, despedidas: {}, antilink: {}, antis: {} }
+    return { bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {} }
   }
 }
 
@@ -361,6 +369,16 @@ export async function routeMessage(sock, msg) {
       if (blocked) return
     } catch (e) {
       console.error("[antilinkGuard] error:", e)
+    }
+
+    // ─────────────────────────────────────────────
+    // ✅ ANTIPERSONA WATCH (solo cambio de nombre)
+    // ─────────────────────────────────────────────
+    try {
+      const activos = readActivosSafe()
+      await antiPersonaObserve(sock, msg, { activos, isOwnerByNumbers })
+    } catch (e) {
+      console.error("[antipersona] error:", e)
     }
 
     // ─────────────────────────────────────────────
