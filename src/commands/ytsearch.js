@@ -147,39 +147,12 @@ function buildPageText({ subject, query, page, totalPages, total, ownerTag, used
 }
 
 // ─────────────────────────────────────────────
-// ✅ FIX: retry + timeout mayor SOLO para Sylphy (videos largos)
-// ─────────────────────────────────────────────
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-
-async function getWithRetry(url, opts, retries = 2) {
-  let lastErr
-  for (let i = 0; i <= retries; i++) {
-    try {
-      return await axios.get(url, opts)
-    } catch (e) {
-      lastErr = e
-      const code = e?.code || ""
-      const isTimeout = code === "ECONNABORTED" || /timeout/i.test(String(e?.message || ""))
-      if (!isTimeout || i === retries) throw e
-      await sleep(1200 * (i + 1))
-    }
-  }
-  throw lastErr
-}
-
-// ─────────────────────────────────────────────
 // ✅ Sylphy resolver
 // ─────────────────────────────────────────────
 async function resolveMp4Sylphy(ytUrl) {
   const apiUrl =
     `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&q=${encodeURIComponent(SYLPHY_QUALITY)}&api_key=${encodeURIComponent(SYLPHY_KEY)}`
-
-  const apiRes = await getWithRetry(apiUrl, {
-    timeout: 240_000, // ✅ antes 60s -> ahora 4 min (solo resolver)
-    maxRedirects: 3,
-    validateStatus: () => true
-  }, 2)
-
+  const apiRes = await axios.get(apiUrl, { timeout: 60_000 })
   const ok = !!apiRes?.data?.status
   const dl_url = apiRes?.data?.result?.dl_url
   const title = apiRes?.data?.result?.title
@@ -230,13 +203,12 @@ async function axiosStream(url) {
   return res.data // Readable stream
 }
 
-// ✅ FIX: Baileys NO acepta { stream }, debe ser stream directo
 async function sendMediaStream(sock, chatId, msg, { asDoc, stream, fileName, caption, mentions }) {
   stream.on("error", () => {}) // evita crash por stream
 
   const payload = asDoc
-    ? { document: stream, mimetype: "video/mp4", fileName, caption, mentions }
-    : { video: stream, mimetype: "video/mp4", fileName, caption, mentions }
+    ? { document: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
+    : { video: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
 
   return await sendWithTimeout(
     sock.sendMessage(chatId, payload, { quoted: msg }),
@@ -260,14 +232,13 @@ async function downloadToFile(url, outPath) {
   return outPath
 }
 
-// ✅ FIX: Baileys NO acepta { stream }, debe ser stream directo
 async function sendFromFile(sock, chatId, msg, { asDoc, filePath, fileName, caption, mentions }) {
   const stream = fs.createReadStream(filePath)
   stream.on("error", () => {}) // evita crash
 
   const payload = asDoc
-    ? { document: stream, mimetype: "video/mp4", fileName, caption, mentions }
-    : { video: stream, mimetype: "video/mp4", fileName, caption, mentions }
+    ? { document: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
+    : { video: { stream }, mimetype: "video/mp4", fileName, caption, mentions }
 
   return await sendWithTimeout(
     sock.sendMessage(chatId, payload, { quoted: msg }),
