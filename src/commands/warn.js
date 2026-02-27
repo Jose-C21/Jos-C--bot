@@ -35,6 +35,23 @@ function writeDB(db) {
 
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
 
+// ✅ FIX: limpiar razón (quita menciones tipo @Dalila / @504xxxx)
+function cleanReasonText(raw = "") {
+  let s = String(raw || "").trim()
+  if (!s) return ""
+
+  // quita menciones de nombres (@Dalila, @Jose, etc)
+  s = s.replace(/@\S+/g, "").trim()
+
+  // quita menciones numéricas (@504xxxxxx)
+  s = s.replace(/@\d{6,}/g, "").trim()
+
+  // limpia espacios
+  s = s.replace(/\s+/g, " ").trim()
+
+  return s
+}
+
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
@@ -137,6 +154,44 @@ async function isSenderAdminLikeKick(sock, chatId, senderJid, decodedJid) {
   return groupAdmins.some((p) => p.id === senderJid || p.id === decodedJid)
 }
 
+// ✅ ayuda pro cuando piden .warn sin target / sin reply
+function buildHelpPro({ subject }) {
+  const p = config.prefix || "."
+  return (
+`╭─ ⚠️ 𝗪𝗔𝗥𝗡 𝗦𝗬𝗦𝗧𝗘𝗠
+│ 📌 Grupo: ${subject}
+│ 🚨 Límite: ${LIMIT}/${LIMIT}  (al llegar: EXPULSIÓN)
+├────────────
+│ ✅ ¿Para qué sirve?
+│ Controla advertencias por usuario. A los ${LIMIT} warns: *kick automático*.
+├────────────
+│ 🧩 ¿Cómo usar?
+│ 1) Menciona al usuario o responde su mensaje (reply).
+│ 2) Escribe la razón (opcional, pero recomendado).
+├────────────
+│ ✅ 𝗖𝗢𝗠𝗔𝗡𝗗𝗢𝗦
+│
+│ • ${p}warn @usuario <razón>
+│   ↳ Agrega 1 advertencia.
+│   ↳ Ej: ${p}warn @Dalila insultos
+│
+│ • ${p}warns @usuario
+│   ↳ Muestra total e historial (últimos 10).
+│
+│ • ${p}unwarn @usuario <cantidad>
+│   ↳ Quita advertencias.
+│   ↳ Ej: ${p}unwarn @Dalila 1
+│
+│ • ${p}resetwarns @usuario
+│   ↳ Borra todas las advertencias del usuario.
+│
+│ 📍 Tip (reply):
+│ Responde al mensaje del usuario y escribe:
+│ • ${p}warn <razón>
+╰────────────` + SIGNATURE
+  )
+}
+
 export default async function warnSystem(sock, msg, { args = [], command = "warn" } = {}) {
   try {
     const chatId = msg?.key?.remoteJid
@@ -190,18 +245,9 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
     // ayuda rápida si no hay target cuando se requiere
     const needTarget = ["warn", "warns", "unwarn", "resetwarns", "resetwarnings"].includes(cmd)
     if (needTarget && !targetJid) {
-      const p = config.prefix || "."
       return await sock.sendMessage(
         chatId,
-        {
-          text:
-            `📝 *Uso:*\n` +
-            `• ${p}warn @usuario razón\n` +
-            `• ${p}warns @usuario\n` +
-            `• ${p}unwarn @usuario 1\n` +
-            `• ${p}resetwarns @usuario\n` +
-            SIGNATURE
-        },
+        { text: buildHelpPro({ subject }) },
         { quoted: msg }
       )
     }
@@ -297,7 +343,10 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
 
     // WARN (sumar)
     if (cmd === "warn") {
-      const reason = (args || []).join(" ").trim() || "Sin razón"
+      // ✅ FIX: limpiar razón para que no salga "@Dalila insultos"
+      const rawReason = (args || []).join(" ").trim()
+      const reason = cleanReasonText(rawReason) || "Sin razón"
+
       const row = db[chatId][key] || { count: 0, reasons: [] }
 
       row.count = (row.count || 0) + 1
