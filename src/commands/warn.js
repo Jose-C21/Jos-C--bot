@@ -173,7 +173,7 @@ function buildHelpPro({ subject }) {
 │
 │ • ${p}warn @usuario <razón>
 │   ↳ Agrega 1 advertencia.
-│   ↳ Ej: ${p}warn @Dalila insultos
+│   ↳ Ej: ${p}warn @usuario insultos
 │
 │ • ${p}warns @usuario
 │   ↳ Muestra total e historial (últimos 10).
