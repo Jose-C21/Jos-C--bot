@@ -49,6 +49,8 @@ import antiarabe from "../commands/antiarabe.js"
 import fantasma, { fantasmaPage } from "../commands/fantasma.js"
 import fankick from "../commands/fankick.js"
 import add from "../commands/add.js"
+import warnSystem from "../commands/warn.js"
+
 
 const COMMANDS = {
   resetsession,
@@ -62,6 +64,16 @@ const COMMANDS = {
   playvideo,
   golpear,
   kiss,
+  
+  warn: warnSystem,
+  warns: warnSystem,
+  unwarn: warnSystem,
+
+  // ✅ "restablecer advertencias" en inglés:
+  resetwarns: warnSystem,
+  resetwarnings: warnSystem, // alias opcional
+
+  warncfg: warnSystem,
 
   // ✅ ytsearch
   ytsearch,
