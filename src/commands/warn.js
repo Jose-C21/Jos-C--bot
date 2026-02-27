@@ -180,7 +180,7 @@ function buildHelpPro({ subject }) {
 │
 │ • ${p}unwarn @usuario <cantidad>
 │   ↳ Quita advertencias.
-│   ↳ Ej: ${p}unwarn @Dalila 1
+│   ↳ Ej: ${p}unwarn @usuario 1
 │
 │ • ${p}resetwarns @usuario
 │   ↳ Borra todas las advertencias del usuario.
