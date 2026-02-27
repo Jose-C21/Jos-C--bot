@@ -12,6 +12,9 @@ const WARNS_PATH = path.join(DATA_DIR, "warns.json")
 
 const LIMIT = 3
 
+// ✅ Grupo donde SOLO owners pueden usar warn system (aunque sean admins)
+const GRUPO_RESTRINGIDO = "120363402012008160@g.us"
+
 function ensureDB() {
   try { if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true }) } catch {}
   try { if (!fs.existsSync(WARNS_PATH)) fs.writeFileSync(WARNS_PATH, "{}") } catch {}
@@ -40,15 +43,14 @@ function cleanReasonText(raw = "") {
   let s = String(raw || "").trim()
   if (!s) return ""
 
-  // quita menciones de nombres (@Dalila, @Jose, etc)
+  // quita menciones tipo @Dalila, @Jose, etc
   s = s.replace(/@\S+/g, "").trim()
 
-  // quita menciones numéricas (@504xxxxxx)
+  // quita menciones numéricas @504xxxxxx
   s = s.replace(/@\d{6,}/g, "").trim()
 
   // limpia espacios
   s = s.replace(/\s+/g, " ").trim()
-
   return s
 }
 
@@ -225,7 +227,16 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
       isSenderAdmin = await isSenderAdminLikeKick(sock, chatId, senderJid, decodedJid)
     } catch {}
 
-    // Permisos: admin/owner/fromMe
+    // ✅ REGLA ESPECIAL: en este grupo, SOLO OWNERS (o fromMe)
+    if (String(chatId) === GRUPO_RESTRINGIDO && !isOwner && !fromMe) {
+      return await sock.sendMessage(
+        chatId,
+        { text: "⛔ *En este grupo, solo el owner puede usar el sistema de warns.*" + SIGNATURE },
+        { quoted: msg }
+      )
+    }
+
+    // Permisos normales (otros grupos): admin/owner/fromMe
     if (!isSenderAdmin && !isOwner && !fromMe) {
       return await sock.sendMessage(
         chatId,
@@ -259,7 +270,7 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
     const key = String(targetJid)
     db[chatId][key] = db[chatId][key] || { count: 0, reasons: [] }
 
-    // WARNCFG (opcional, si luego quieres expandir)
+    // WARNCFG (opcional)
     if (cmd === "warncfg") {
       return await sock.sendMessage(
         chatId,
@@ -296,7 +307,7 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
       return
     }
 
-    // RESETWARNS (restablecer advertencias)
+    // RESETWARNS (restablecer)
     if (cmd === "resetwarns" || cmd === "resetwarnings") {
       delete db[chatId][key]
       writeDB(db)
@@ -356,7 +367,6 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
       db[chatId][key] = row
       writeDB(db)
 
-      // aviso pro (con expulsión automática al 3/3)
       await sock.sendMessage(
         chatId,
         {
@@ -374,12 +384,10 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
 
       // kick automático al llegar a 3
       if (row.count >= LIMIT) {
-        // refrescar metadata y confirmar que sigue en el grupo
         let md
         try { md = await sock.groupMetadata(chatId) } catch {}
         const stillIn = (md?.participants || []).some((p) => p.id === targetJid)
         if (stillIn) {
-          // si es admin no expulsar
           const admins = (md?.participants || []).filter((p) => p.admin).map((p) => p.id)
           const isTargetAdmin = admins.includes(targetJid)
 
@@ -413,7 +421,6 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
       return
     }
 
-    // si cae aquí, comando desconocido
     await sock.sendMessage(chatId, { text: "❌ Comando de warn no reconocido." + SIGNATURE }, { quoted: msg }).catch(() => {})
   } catch (e) {
     console.error("❌ Error en warn system:", e)
