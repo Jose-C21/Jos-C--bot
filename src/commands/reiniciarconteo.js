@@ -123,7 +123,7 @@ export default async function reiniciarconteo(sock, msg, ctx) {
 ┃      fue completamente reiniciado
 ┃
 ┃ 👑  Owner: @${senderNum}
-┃ 👸🏻  Owner (Apoyo): @${jidToNumber(ownerApoyo)}
+┃ 👸🏻  Owner: @${jidToNumber(ownerApoyo)}
 ┃
 ┃ 🔄  Estado:
 ┃      Todos los contadores fueron
