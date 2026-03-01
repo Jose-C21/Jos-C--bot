@@ -117,18 +117,18 @@ export default async function reiniciarconteo(sock, msg, ctx) {
   await sock.sendMessage(elegido.id, {
     text:
 `╭━🧹𝗖𝗢𝗡𝗧𝗘𝗢 𝗥𝗘𝗜𝗡𝗜𝗖𝗜𝗔𝗗𝗢
-┃🏷️ Grupo: ${meta.subject}
+┃ 🏷️  Grupo: ${meta.subject}
 ┃
-┃📊 El conteo de mensajes ha sido
-┃ completamente *reiniciado*
+┃ 📊  El conteo de mensajes
+┃      fue completamente reiniciado
 ┃
-┃👑 Owner: @${senderNum}
-┃👸🏻 Owner: @${jidToNumber(ownerApoyo)}
+┃ 👑  Owner: @${senderNum}
+┃ 👸🏻  Owner (Apoyo): @${jidToNumber(ownerApoyo)}
 ┃
-┃🔄 Estado:
-│ Todos los conteos fueron
-│ restablecidos a *0*
-╰━━━━━━━━━━━━━━`,
+┃ 🔄  Estado:
+┃      Todos los contadores fueron
+┃      restablecidos a *0*
+╰━━━━━━━━━━━━━━━━`
     mentions: [ownerPrincipal, ownerApoyo, ...miembros]
   })
 
