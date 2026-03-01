@@ -63,7 +63,7 @@ const COMMANDS = {
   ts: textsticker,
   playvideo,
   golpear,
-  reiniciarconteo,
+  reiniciarconteo: reiniciarConteo,
   kiss,
   
   warn: warnSystem,
