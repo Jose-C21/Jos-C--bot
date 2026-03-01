@@ -116,16 +116,16 @@ export default async function reiniciarconteo(sock, msg, ctx) {
   // 📢 Aviso PRO
   await sock.sendMessage(elegido.id, {
     text:
-`╭━━━〔 🧹 𝗖𝗢𝗡𝗧𝗘𝗢 𝗥𝗘𝗜𝗡𝗜𝗖𝗜𝗔𝗗𝗢 〕━━━╮
-┃ 🏷️ Grupo: ${meta.subject}
+`╭━━━〔🧹𝗖𝗢𝗡𝗧𝗘𝗢 𝗥𝗘𝗜𝗡𝗜𝗖𝗜𝗔𝗗𝗢〕━━━╮
+┃🏷️ Grupo: ${meta.subject}
 ┃
-┃ 📊 El conteo de mensajes ha sido
+┃📊 El conteo de mensajes ha sido
 ┃ completamente *reiniciado*
 ┃
-┃ 👑 Owner: @${senderNum}
-┃ 👸🏻 Owner: @${jidToNumber(ownerApoyo)}
+┃👑 Owner: @${senderNum}
+┃👸🏻 Owner: @${jidToNumber(ownerApoyo)}
 ┃
-┃ 🔁 Todos los contadores vuelven a 0
+┃🔁 Todos los contadores vuelven a 0
 ╰━━━━━━━━━━━━━━━━━━━━━━╯`,
     mentions: [ownerPrincipal, ownerApoyo, ...miembros]
   })
