@@ -50,7 +50,7 @@ import fantasma, { fantasmaPage } from "../commands/fantasma.js"
 import fankick from "../commands/fankick.js"
 import add from "../commands/add.js"
 import warnSystem from "../commands/warn.js"
-
+import reiniciarConteo from "../commands/reiniciarconteo.js"
 
 const COMMANDS = {
   resetsession,
@@ -63,6 +63,7 @@ const COMMANDS = {
   ts: textsticker,
   playvideo,
   golpear,
+  reiniciarconteo,
   kiss,
   
   warn: warnSystem,
