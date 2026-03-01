@@ -126,9 +126,9 @@ export default async function reiniciarconteo(sock, msg, ctx) {
 ┃👸🏻 Owner: @${jidToNumber(ownerApoyo)}
 ┃
 ┃🔄 Estado:
-│Todos los conteos fueron
-│restablecidos a *0*
-╰━━━━━━━━━━━━━━━━━━`,
+│ Todos los conteos fueron
+│ restablecidos a *0*
+╰━━━━━━━━━━━━━━`,
     mentions: [ownerPrincipal, ownerApoyo, ...miembros]
   })
 
