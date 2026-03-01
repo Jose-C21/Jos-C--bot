@@ -767,7 +767,13 @@ export async function routeMessage(sock, msg) {
       command
     })
 
-    await handler(sock, msg, { args, command, isOwner, usedPrefix: prefix })
+    await handler(sock, msg, {
+  args,
+  command,
+  isOwner,
+  usedPrefix: prefix,
+  senderNum: finalNum
+})
   } catch (e) {
     console.error(chalk.redBright("[ROUTER] error:"), e)
   }
