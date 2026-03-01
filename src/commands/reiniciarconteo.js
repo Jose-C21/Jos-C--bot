@@ -128,7 +128,7 @@ export default async function reiniciarconteo(sock, msg, ctx) {
 ┃ 🔄  Estado:
 ┃      Todos los contadores fueron
 ┃      restablecidos a *0*
-╰━━━━━━━━━━━━━━━━`
+╰━━━━━━━━━━━━━━━━`,
     mentions: [ownerPrincipal, ownerApoyo, ...miembros]
   })
 
