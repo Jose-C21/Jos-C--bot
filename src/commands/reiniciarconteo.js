@@ -1,5 +1,14 @@
 import fs from "fs"
+import path from "path"
 import { jidToNumber } from "../utils/jid.js"
+
+const DATA_DIR = path.join(process.cwd(), "data")
+const CONTEO_PATH = path.join(DATA_DIR, "conteo.json")
+
+function ensureConteoDB() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+  if (!fs.existsSync(CONTEO_PATH)) fs.writeFileSync(CONTEO_PATH, "{}")
+}
 
 export default async function reiniciarconteo(sock, msg, ctx) {
   const chatId = msg.key.remoteJid
@@ -12,22 +21,16 @@ export default async function reiniciarconteo(sock, msg, ctx) {
     })
   }
 
-  // 👑 Solo owner (router ya lo calculó)
+  // 👑 Solo owner
   if (!isOwner) {
     return sock.sendMessage(chatId, {
       text: "⛔ *Solo OWNER* puede ejecutar este comando."
     })
   }
 
-  const conteoPath = "/home/container/conteo.json"
+  ensureConteoDB()
 
-  if (!fs.existsSync(conteoPath)) {
-    return sock.sendMessage(chatId, {
-      text: "❌ No existe el archivo de conteo aún."
-    })
-  }
-
-  const conteo = JSON.parse(fs.readFileSync(conteoPath, "utf-8"))
+  const conteo = JSON.parse(fs.readFileSync(CONTEO_PATH, "utf-8") || "{}")
   const grupos = Object.keys(conteo)
 
   if (!grupos.length) {
@@ -36,7 +39,7 @@ export default async function reiniciarconteo(sock, msg, ctx) {
     })
   }
 
-  // 📋 Lista de grupos
+  // 📋 Lista
   let texto = "> 📊 *Grupos con conteo activo*\n\n"
   const map = {}
   let i = 1
@@ -91,9 +94,9 @@ export default async function reiniciarconteo(sock, msg, ctx) {
   }
 
   // 🧹 Reiniciar conteo
-  const actualizado = JSON.parse(fs.readFileSync(conteoPath, "utf-8"))
+  const actualizado = JSON.parse(fs.readFileSync(CONTEO_PATH, "utf-8") || "{}")
   actualizado[elegido.id] = {}
-  fs.writeFileSync(conteoPath, JSON.stringify(actualizado, null, 2))
+  fs.writeFileSync(CONTEO_PATH, JSON.stringify(actualizado, null, 2))
 
   await sock.sendMessage(chatId, {
     react: { text: "🧹", key: msg.key }
@@ -103,21 +106,21 @@ export default async function reiniciarconteo(sock, msg, ctx) {
     text: `✅ Conteo reiniciado en *${elegido.name}*`
   })
 
-  // 👑 Owners (ambos)
+  // 👑 Owners
   const ownerPrincipal = `${senderNum}@s.whatsapp.net`
   const ownerApoyo = "18057074359@s.whatsapp.net"
 
   const meta = await sock.groupMetadata(elegido.id)
   const miembros = meta.participants.map(p => p.id)
 
-  // 📢 Aviso PRO con menciones invisibles
+  // 📢 Aviso PRO
   await sock.sendMessage(elegido.id, {
     text:
 `╭━━━〔 🧹 𝗖𝗢𝗡𝗧𝗘𝗢 𝗥𝗘𝗜𝗡𝗜𝗖𝗜𝗔𝗗𝗢 〕━━━╮
+┃ 🏷️ Grupo: ${meta.subject}
+┃
 ┃ 📊 El conteo de mensajes ha sido
 ┃ completamente *reiniciado*
-┃
-┃ 🏷️ Grupo: ${meta.subject}
 ┃
 ┃ 👑 Owner: @${senderNum}
 ┃ 👸🏻 Owner: @${jidToNumber(ownerApoyo)}
