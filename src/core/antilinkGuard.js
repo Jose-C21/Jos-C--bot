@@ -84,6 +84,22 @@ function getQuotedTextAndAuthor(msg) {
 // 🔎 Detectar links (incluye n9.cl/vl2z2)
 const ANY_LINK_RE =
   /(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi
+  
+  // 🔥 Detectar tipo de enlace (solo para el aviso)
+function detectLinkType(link = "") {
+  const l = String(link || "").toLowerCase()
+
+  if (l.includes("chat.whatsapp.com")) return "Enlace de grupo WhatsApp"
+  if (l.includes("wa.me")) return "Enlace directo WhatsApp"
+  if (l.includes("t.me") || l.includes("telegram.me")) return "Enlace de Telegram"
+  if (l.includes("discord.gg")) return "Enlace de Discord"
+  if (l.includes("facebook.com")) return "Enlace de Facebook"
+  if (l.includes("instagram.com")) return "Enlace de Instagram"
+  if (l.includes("youtube.com") || l.includes("youtu.be")) return "Enlace de YouTube"
+  if (l.includes("tiktok.com")) return "Enlace de TikTok"
+
+  return "Enlace externo no autorizado"
+}
 
 // 🟥 TikTok
 const linkTikTokVideo = /^https?:\/\/(?:www\.)?tiktok\.com\/\@[^\/]+\/video\/\d+/i
@@ -186,6 +202,9 @@ export async function antiLinkGuard(sock, msg) {
     .filter(Boolean)
 
   if (!links.length) return false
+  
+  // 🔥 Detectar tipo del primer link (solo para el mensaje final)
+const linkType = detectLinkType(links[0])
 
   // guardar mensaje en historial
   global.mensajesConLink[chatId] = global.mensajesConLink[chatId] || []
@@ -305,9 +324,22 @@ export async function antiLinkGuard(sock, msg) {
     global.avisados.add(idUsuario)
     const tag = `@${jidToNumber(idUsuario)}`
     await sock.sendMessage(chatId, {
-      text: `> ⚠ ${tag} fue expulsado por enviar un *enlace no permitido*.`,
-      mentions: [idUsuario]
-    }).catch(() => {})
+  text:
+`╭━━━〔🔗𝗔𝗡𝗧𝗜𝗟𝗜𝗡𝗞〕━━━╮
+┃ 👤 Usuario:
+┃    ${tag}
+┃
+┃ 🚫 Infracción:
+┃    ${linkType}
+┃
+┃ ⚖️ Acción:
+┃    Expulsado del grupo
+┃
+┃ 📛 Motivo:
+┃    Enlace no permitido
+╰━━━━━━━━━━━━━━━━━╯`,
+  mentions: [idUsuario]
+}).catch(() => {})
     setTimeout(() => global.avisados.delete(idUsuario), 180000)
   }
 
