@@ -107,13 +107,27 @@ export default async function kick(sock, msg, { args = [] } = {}) {
     await sock.groupParticipantsUpdate(chatId, [userToKick], "remove").catch(() => {})
 
     await sock.sendMessage(
-      chatId,
-      {
-        text: `🚫 *El usuario @${jidToNumber(userToKick)} ha sido expulsado del grupo.*` + SIGNATURE,
-        mentions: [userToKick]
-      },
-      { quoted: msg }
-    )
+  chatId,
+  {
+    text:
+`╭━🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
+┃ 👤 Usuario:
+┃    @${jidToNumber(userToKick)}
+┃
+┃ 🏷️ Grupo:
+┃    ${metadata.subject}
+┃
+┃ 👮 Moderador:
+┃    @${jidToNumber(decodedJid)}
+┃
+┃ ⚖️ Acción:
+┃    Expulsado del grupo
+┃
+╰━━━━━━━━━━━━━━` + SIGNATURE,
+    mentions: [userToKick, decodedJid]
+  },
+  { quoted: msg }
+)
 
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {})
   } catch (error) {
