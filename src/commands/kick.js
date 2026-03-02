@@ -111,19 +111,16 @@ export default async function kick(sock, msg, { args = [] } = {}) {
   {
     text:
 `╭━🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
-┃ 👤 Usuario:
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
 ┃    @${jidToNumber(userToKick)}
 ┃
-┃ 🏷️ Grupo:
+┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
 ┃    ${metadata.subject}
 ┃
-┃ 👮 Moderador:
+┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
 ┃    @${jidToNumber(decodedJid)}
 ┃
-┃ ⚖️ Acción:
-┃    Expulsado del grupo
-┃
-╰━━━━━━━━━━━━━━` + SIGNATURE,
+╰━━━━━━━━━━━━` + SIGNATURE,
     mentions: [userToKick, decodedJid]
   },
   { quoted: msg }
