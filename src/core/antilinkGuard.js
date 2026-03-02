@@ -326,16 +326,16 @@ const linkType = detectLinkType(links[0])
     await sock.sendMessage(chatId, {
   text:
 `╭━━━〔🔗𝗔𝗡𝗧𝗜𝗟𝗜𝗡𝗞〕━━━╮
-┃ 👤 Usuario:
+┃ 👤 𝘂𝘀𝘂𝗮𝗿𝗶𝗼:
 ┃    ${tag}
 ┃
-┃ 🚫 Infracción:
+┃ 🚫 𝗜𝗻𝗳𝗿𝗮𝗰𝗰𝗶𝗼𝗻:
 ┃    ${linkType}
 ┃
-┃ ⚖️ Acción:
+┃ ⚖️ 𝗔𝗰𝗰𝗶𝗼𝗻:
 ┃    Expulsado del grupo
 ┃
-┃ 📛 Motivo:
+┃ 📛 𝗠𝗼𝘁𝗶𝘃𝗼:
 ┃    Enlace no permitido
 ╰━━━━━━━━━━━━━━━━━╯`,
   mentions: [idUsuario]
