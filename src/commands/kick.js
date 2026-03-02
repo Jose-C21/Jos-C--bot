@@ -119,7 +119,6 @@ export default async function kick(sock, msg, { args = [] } = {}) {
 ┃
 ┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
 ┃    @${jidToNumber(decodedJid)}
-┃
 ╰━━━━━━━━━━━━` + SIGNATURE,
     mentions: [userToKick, decodedJid]
   },
