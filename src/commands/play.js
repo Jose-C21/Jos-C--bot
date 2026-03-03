@@ -93,9 +93,9 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
 
 const finalCaption =
-      `🔘 ᴛɪᴛᴜʟᴏ: ${title}\n` +
-      `🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n` +
-      `🔘 ᴅᴜʀᴀᴄɪᴏɴ: ${timestamp}\n` +
+      `🔘 ᴛɪᴛᴜʟᴏ: ${title}\n\n` +
+      `🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n\n` +
+      `🔘 ᴅᴜʀᴀᴄɪᴏɴ: ${timestamp}\n\n` +
       `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
       signature()
 
