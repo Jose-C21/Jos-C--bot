@@ -93,12 +93,16 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     // 📝 Caption (firma nueva)
     const finalCaption =
-      `🔘 *Título:* ${title}\n` +
-      `🔘 *Artista:* ${allArtists}\n` +
-      `🔘 *Duración:* ${timestamp}\n` +
-      `🔘 *Vistas:* ${Number(views).toLocaleString()}\n` +
-      `🔘 *Subido:* ${subido}\n\n` +
-      signature()
+╭──── 🎧 𝗡𝗢𝗪 𝗣𝗟𝗔𝗬𝗜𝗡𝗚 ────╮
+│
+│  ▸ ${title}
+│    ${allArtists}
+│
+│  ▰▰▰▰▰▰▱▱▱▱  ${timestamp}
+│
+│  👁 ${Number(views).toLocaleString()}  •  📅 ${subido}
+╰──────────────────────────╯
+signature()
 
     // 🖼️ Miniatura (para fkontak)
     const thumb2 = await fetchBuffer(THUMB_URL)
