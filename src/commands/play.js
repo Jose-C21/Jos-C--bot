@@ -93,7 +93,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
 
 const finalCaption =
-  `╭──── 🎧 𝗡𝗢𝗪 𝗣𝗟𝗔𝗬𝗜𝗡𝗚 ────╮\n` +
+  `╭───🎧𝗡𝗢𝗪 𝗣𝗟𝗔𝗬𝗜𝗡𝗚───╮\n` +
   `│\n` +
   `│  ▸ ${title}\n` +
   `│    ${allArtists}\n` +
@@ -101,7 +101,7 @@ const finalCaption =
   `│  ▰▰▰▰▰▰▱▱▱▱  ${timestamp}\n` +
   `│\n` +
   `│  👁 ${Number(views).toLocaleString()}  •  📅 ${subido}\n` +
-  `╰──────────────────────────╯\n` +
+  `╰───────────────╯\n` +
   signature()
 
     // 🖼️ Miniatura (para fkontak)
