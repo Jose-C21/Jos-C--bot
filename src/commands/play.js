@@ -91,8 +91,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const clean = safeFileName(title)
     const filePath = path.join(cacheDir, `${clean}.mp3`)
 
-    // 📝 Caption (firma nueva)
-    const progressBar = buildProgressBar(durationSeconds)
 
 const finalCaption =
   `╭──── 🎧 𝗡𝗢𝗪 𝗣𝗟𝗔𝗬𝗜𝗡𝗚 ────╮\n` +
@@ -100,7 +98,7 @@ const finalCaption =
   `│  ▸ ${title}\n` +
   `│    ${allArtists}\n` +
   `│\n` +
-  `│  ${progressBar}  ${timestamp}\n` +
+  `│  ▰▰▰▰▰▰▱▱▱▱  ${timestamp}\n` +
   `│\n` +
   `│  👁 ${Number(views).toLocaleString()}  •  📅 ${subido}\n` +
   `╰──────────────────────────╯\n` +
