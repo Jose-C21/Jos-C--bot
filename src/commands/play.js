@@ -97,7 +97,7 @@ const finalCaption =
       `🔘 *Artista:* ${allArtists}\n` +
       `🔘 ▰▰▰▰▰▰▱▱▱  ⏱ ${timestamp}\n` +
       `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
-      `───────────────────\n` +
+      `────────────────\n` +
       signature()
 
     // 🖼️ Miniatura (para fkontak)
