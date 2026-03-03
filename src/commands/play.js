@@ -95,9 +95,8 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 const finalCaption =
       `🔘 ᴛɪᴛᴜʟᴏ: ${title}\n\n` +
       `🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n\n` +
-      `🔘 ▰▰▰▰▰▰▱▱▱  ⏱ ${timestamp}\n\n` +
+      `🔘 ᴅᴜʀᴀᴄɪᴏɴ: ▰▰▰▰▰▰▱▱▱  ⏱ ${timestamp}\n\n` +
       `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
-      `───────────────\n` +
       signature()
 
     // 🖼️ Miniatura (para fkontak)
