@@ -299,7 +299,7 @@ export async function antiLinkGuard(sock, msg) {
     const tag = `@${jidToNumber(idUsuario)}`
     await sock.sendMessage(chatId, {
   text:
-`╭━━━〔🔗𝗔𝗡𝗧𝗜𝗟𝗜𝗡𝗞〕━━━╮
+`╭━━〔🔗𝗔𝗡𝗧𝗜𝗟𝗜𝗡𝗞〕━━╮
 ┃ 👤 𝘂𝘀𝘂𝗮𝗿𝗶𝗼:
 ┃    ${tag}
 ┃
@@ -308,7 +308,7 @@ export async function antiLinkGuard(sock, msg) {
 ┃
 ┃ 📛 𝗠𝗼𝘁𝗶𝘃𝗼:
 ┃    Enlace no permitido
-╰━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━╯`,
   mentions: [idUsuario]
 }).catch(() => {})
     setTimeout(() => global.avisados.delete(idUsuario), 180000)
