@@ -92,17 +92,19 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const filePath = path.join(cacheDir, `${clean}.mp3`)
 
     // 📝 Caption (firma nueva)
-    const finalCaption =
-╭──── 🎧 𝗡𝗢𝗪 𝗣𝗟𝗔𝗬𝗜𝗡𝗚 ────╮
-│
-│  ▸ ${title}
-│    ${allArtists}
-│
-│  ▰▰▰▰▰▰▱▱▱▱  ${timestamp}
-│
-│  👁 ${Number(views).toLocaleString()}  •  📅 ${subido}
-╰──────────────────────────╯
-signature()
+    const progressBar = buildProgressBar(durationSeconds)
+
+const finalCaption =
+  `╭──── 🎧 𝗡𝗢𝗪 𝗣𝗟𝗔𝗬𝗜𝗡𝗚 ────╮\n` +
+  `│\n` +
+  `│  ▸ ${title}\n` +
+  `│    ${allArtists}\n` +
+  `│\n` +
+  `│  ${progressBar}  ${timestamp}\n` +
+  `│\n` +
+  `│  👁 ${Number(views).toLocaleString()}  •  📅 ${subido}\n` +
+  `╰──────────────────────────╯\n` +
+  signature()
 
     // 🖼️ Miniatura (para fkontak)
     const thumb2 = await fetchBuffer(THUMB_URL)
