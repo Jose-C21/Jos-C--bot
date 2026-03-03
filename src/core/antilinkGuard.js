@@ -127,13 +127,6 @@ async function esVideoFacebook(link) {
 
 function isAllowedLinkDirect(link) {
   if (linkTikTokVideo.test(link)) return true
-  if (
-    linkFacebookVideo.test(link) ||
-    linkFacebookWatch.test(link) ||
-    linkFacebookReel.test(link) ||
-    linkFacebookShareVideo.test(link) ||
-    linkFacebookShareReel.test(link)
-  ) return true
   if (linkInstagramReel.test(link)) return true
   return false
 }
