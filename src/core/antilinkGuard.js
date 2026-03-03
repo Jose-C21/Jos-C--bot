@@ -315,7 +315,7 @@ export async function antiLinkGuard(sock, msg) {
 ┃
 ┃ 📛 𝗠𝗼𝘁𝗶𝘃𝗼:
 ┃    Enlace no permitido
-╰━━━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━━━╯`,
   mentions: [idUsuario]
 }).catch(() => {})
     setTimeout(() => global.avisados.delete(idUsuario), 180000)
