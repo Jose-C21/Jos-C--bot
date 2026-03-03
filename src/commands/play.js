@@ -7,6 +7,7 @@ import config from "../config.js"
 const APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
 const API_RESOLVE = "https://api-sky.ultraplus.click/youtube/resolve"
 
+// miniaturas (las mismas que usabas)
 const CARD_IMAGE_URL = "https://i.postimg.cc/TwGh4vDP/IMG-1651.png"
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
@@ -39,12 +40,6 @@ function safeFileName(name = "") {
   return name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50) || "audio"
 }
 
-// 🔥 Limitar texto para que no rompa el cuadro
-function limitText(text = "", max = 38) {
-  if (text.length <= max) return text
-  return text.slice(0, max - 3) + "..."
-}
-
 async function fetchBuffer(url) {
   const r = await fetch(url)
   if (!r.ok) throw new Error(`fetch failed ${r.status}`)
@@ -52,6 +47,7 @@ async function fetchBuffer(url) {
   return Buffer.from(ab)
 }
 
+// firma nueva
 function signature() {
   return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
 }
@@ -62,6 +58,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
   const text = (args || []).join(" ").trim()
 
+  // === Carpeta de caché ===
   const cacheDir = path.join(process.cwd(), "cache", "play")
   if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true })
 
@@ -72,46 +69,43 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     return
   }
 
+  // reacción cargando
   try {
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
   } catch {}
 
   try {
+    // 🔍 Buscar en YouTube
     const res = await yts(text)
     if (!res?.videos?.length) throw "Sin resultados."
     const video = res.videos[0]
 
-    const title = limitText(video.title)
+    const title = video.title
     const ytUrl = video.url
     const timestamp = video.timestamp
     const views = video.views || 0
     const subido = trad(video.uploadedAt || video.ago || "")
-    const allArtists = limitText(video.author?.name || "Artista desconocido")
+    const allArtists = video.author?.name || "Artista desconocido"
 
-    const clean = safeFileName(video.title)
+    // 🧼 Nombre limpio + ruta
+    const clean = safeFileName(title)
     const filePath = path.join(cacheDir, `${clean}.mp3`)
 
-    // 🔥 DISEÑO PROFESIONAL
-    const finalCaption =
-      `╭────𝐏𝐋𝐀𝐘 𝐌𝐎𝐃𝐔𝐋𝐄─────╮\n` +
-      `│\n` +
-      `│  🎧  Título: ${title}\n` +
-      `│  👤  Artista: ${allArtists}\n` +
-      `│\n` +
-      `│  ─────────────────────────\n` +
-      `│  ▰▰▰▰▰▰▱▱▱▱  ⏱ ${timestamp}\n` +
-      `│\n` +
-      `│  👁 ${Number(views).toLocaleString()}  •  📅 ${subido}\n` +
-      `╰─────────────────────────╯\n` +
+
+const finalCaption =
+      `🔘 *Título:* ${title}\n` +
+      `🔘 *Artista:* ${allArtists}\n` +
+      `🔘 ▰▰▰▰▰▰▱▱▱▱  ${timestamp}\n` +
+      `🔘 👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
       signature()
 
+    // 🖼️ Miniatura (para fkontak)
     const thumb2 = await fetchBuffer(THUMB_URL)
 
-    const jidUsuario =
-      msg?.key?.participant ||
-      msg?.participant ||
-      msg?.key?.remoteJid
+    // jid usuario para mention (como en tu código viejo)
+    const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
+    // 🧾 Tarjeta visual
     await sock.sendMessage(chatId, {
       image: { url: CARD_IMAGE_URL },
       caption: finalCaption
@@ -128,7 +122,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
         },
         message: {
           locationMessage: {
-            name: video.title,
+            name: title,
             jpegThumbnail: thumb2,
             description: "🎵 Archivo desde caché"
           }
@@ -146,6 +140,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       return
     }
 
+    // 🌐 API UltraPlus Sky
     const apiRes = await axios.post(
       API_RESOLVE,
       { url: ytUrl, type: "audio", format: "mp3" },
@@ -161,10 +156,12 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     let audioUrl = result?.media?.dl_download || result?.media?.direct
     if (!audioUrl) throw "No se pudo obtener el audio."
 
+    // 🔧 Normalizar ruta relativa
     if (audioUrl.startsWith("/")) {
       audioUrl = "https://api-sky.ultraplus.click" + audioUrl
     }
 
+    // ⬇️ Descargar audio (con apikey)
     const bin = await axios.get(audioUrl, {
       responseType: "arraybuffer",
       headers: { apikey: APIKEY }
@@ -181,7 +178,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       },
       message: {
         locationMessage: {
-          name: video.title,
+          name: title,
           jpegThumbnail: thumb2,
           description: "⚡ Descargado y guardado en caché"
         }
