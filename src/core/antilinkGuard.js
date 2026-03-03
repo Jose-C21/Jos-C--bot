@@ -92,7 +92,7 @@ const linkTikTokAcortado = /(https?:\/\/)?(vm|vt)\.tiktok\.com\/[^\s]+/i
 // 🔵 Facebook
 const linkFacebookVideo = /^https?:\/\/(?:www\.)?facebook\.com\/.+\/videos\/\d+/i
 const linkFacebookWatch = /^https?:\/\/(?:www\.)?facebook\.com\/watch\/\?v=\d+/i
-const linkFacebookReel = /^https?:\/\/(?:www\.)?facebook\.com\/reel\/\d+/i
+const linkFacebookReel = /facebook\.com\/reel\/\d+/i
 const linkFacebookShareVideo = /^https?:\/\/(?:www\.)?facebook\.com\/share\/v\/[^\s\/]+/i
 const linkFacebookShareReel = /^https?:\/\/(?:www\.)?facebook\.com\/share\/r\/[^\s\/]+/i
 const linkFbShort = /^https?:\/\/fb\.watch\/[^\s]+/i
