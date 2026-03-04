@@ -9,7 +9,7 @@ const API_URL = "https://api.zonerai.com/zoner-ai/txt2img"
 const ALLOWED_SIZES = new Set(["512x512", "768x768", "1024x1024"])
 
 // 🛑 Imagen de censura
-const CENSOR_IMAGE = "https://i.postimg.cc/k56Ln5X5/IMG-1812.jpg"
+const CENSOR_IMAGE = "https://i.postimg.cc/PJ8wxW4v/3b8a19ca-dd98-4a06-897e-07608cb4788c.jpg"
 
 // 🔎 Palabras NSFW
 const NSFW_WORDS = [
