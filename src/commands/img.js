@@ -8,6 +8,29 @@ const agent = new https.Agent({ rejectUnauthorized: false })
 const API_URL = "https://api.zonerai.com/zoner-ai/txt2img"
 const ALLOWED_SIZES = new Set(["512x512", "768x768", "1024x1024"])
 
+// 🛑 Imagen de censura
+const CENSOR_IMAGE = "https://i.postimg.cc/k56Ln5X5/IMG-1812.jpg"
+
+// 🔎 Palabras NSFW
+const NSFW_WORDS = [
+  "desnuda","desnudo",semidesnudo",semidesnudos","semi desnudos","semi desnudo","nude","naked",
+  "bikini","lingerie","panty","panties",
+  "underwear","boxer","boxers",
+  "bra","bralette","tanga","thong",
+  "sexy","sensual","erotic","erotico",
+  "nsfw","onlyfans",
+  "topless","sin ropa","pito","pene","nalga",nalgas",
+  "pechos","breasts","boobs",
+  "culo","ass","butt",
+  "lenceria","lingerie"
+]
+
+// 🔍 detector
+function isNSFW(prompt = "") {
+  const text = prompt.toLowerCase()
+  return NSFW_WORDS.some(w => text.includes(w))
+}
+
 function parseArgs(args = []) {
   const first = (args[0] || "").trim()
   let size = "1024x1024"
@@ -39,7 +62,7 @@ async function generateImageBuffer({ prompt, size }) {
     },
     responseType: "arraybuffer",
     httpsAgent: agent,
-    timeout: 120_000,
+    timeout: 120000,
     maxBodyLength: Infinity,
     maxContentLength: Infinity
   })
@@ -62,6 +85,19 @@ export default async function img(sock, msg, { args = [], usedPrefix = "." }) {
           `*${usedPrefix}img* <prompt>\n` +
           `*${usedPrefix}img* 1024x1024 <prompt>\n\n` +
           `📐 Tamaños: 512x512 | 768x768 | 1024x1024`
+      },
+      { quoted: msg }
+    )
+    return
+  }
+
+  // 🚫 Detectar contenido NSFW
+  if (isNSFW(prompt)) {
+    await sock.sendMessage(
+      chatId,
+      {
+        image: { url: CENSOR_IMAGE },
+        caption: "🚫 Contenido censurado"
       },
       { quoted: msg }
     )
