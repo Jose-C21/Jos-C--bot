@@ -19,7 +19,7 @@ const NSFW_WORDS = [
   "bra","bralette","tanga","thong",
   "sexy","sensual","erotic","erotico",
   "nsfw","onlyfans",
-  "topless","sin ropa","pito","pene","nalga",nalgas",
+  "topless","sin ropa","pito","pene","nalga","nalgas",
   "pechos","breasts","boobs",
   "culo","ass","butt",
   "lenceria","lingerie"
