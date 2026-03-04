@@ -94,13 +94,12 @@ export default async function img(sock, msg, { args = [], usedPrefix = "." }) {
   // 🚫 Detectar contenido NSFW
   if (isNSFW(prompt)) {
     await sock.sendMessage(
-      chatId,
-      {
-        image: { url: CENSOR_IMAGE },
-        caption: "🚫 Contenido censurado"
-      },
-      { quoted: msg }
-    )
+  chatId,
+  {
+    image: { url: CENSOR_IMAGE }
+  },
+  { quoted: msg }
+)
     return
   }
 
