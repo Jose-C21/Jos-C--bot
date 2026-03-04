@@ -13,7 +13,7 @@ const CENSOR_IMAGE = "https://i.postimg.cc/k56Ln5X5/IMG-1812.jpg"
 
 // 🔎 Palabras NSFW
 const NSFW_WORDS = [
-  "desnuda","desnudo",semidesnudo",semidesnudos","semi desnudos","semi desnudo","nude","naked",
+  "desnuda","desnudo","semidesnudo","semidesnudos","semi desnudos","semi desnudo","nude","naked",
   "bikini","lingerie","panty","panties",
   "underwear","boxer","boxers",
   "bra","bralette","tanga","thong",
