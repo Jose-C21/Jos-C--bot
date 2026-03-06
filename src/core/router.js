@@ -52,7 +52,7 @@ import add from "../commands/add.js"
 import warnSystem from "../commands/warn.js"
 import reiniciarConteo from "../commands/reiniciarconteo.js"
 import minar from "../commands/minar.js"
-
+import pescar from "../commands/pescar.js"
 
 
 
@@ -114,6 +114,7 @@ const COMMANDS = {
   ban: kick,
   tag,
   minar,
+  pescar,
   antiarabe,
 
   fantasma,
