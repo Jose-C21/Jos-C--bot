@@ -54,13 +54,13 @@ export default async function minar(sock, msg) {
           chatId,
           {
             text:
-`╭━━━〔 ⏳ 𝗖𝗢𝗢𝗟𝗗𝗢𝗪𝗡 〕━━━╮
+`╭━ ⏳ 𝗖𝗢𝗢𝗟𝗗𝗢𝗪𝗡
 ┃ Debes esperar para volver
 ┃ a usar este comando
 ┃
 ┃ ⏱ Tiempo restante:
 ┃    ${sec} segundos
-╰━━━━━━━━━━━━━━━━━━╯`
+╰━━━━━━━━━━━━━━╯`
           },
           { quoted: msg }
         )
@@ -103,7 +103,7 @@ export default async function minar(sock, msg) {
     const mineral = minerales[random(0, minerales.length - 1)]
 
     const text =
-`╭━ ⛏️ 𝗠𝗜𝗡𝗘𝗥𝗜́𝗔 ━━━
+`╭━ ⛏️ 𝗠𝗜𝗡𝗘𝗥𝗜́𝗔 
 ┃ 🪨 Mineral encontrado:
 ┃    ${mineral}
 ┃
