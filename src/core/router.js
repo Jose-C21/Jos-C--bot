@@ -54,7 +54,7 @@ import reiniciarConteo from "../commands/reiniciarconteo.js"
 import minar from "../commands/minar.js"
 import pescar from "../commands/pescar.js"
 import tesoro from "../commands/tesoro.js"
-
+import cazar from "../commands/cazar.js"
 
 const COMMANDS = {
   resetsession,
@@ -116,6 +116,7 @@ const COMMANDS = {
   minar,
   pescar,
   tesoro,
+  cazar,
   antiarabe,
 
   fantasma,
