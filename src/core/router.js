@@ -51,6 +51,10 @@ import fankick from "../commands/fankick.js"
 import add from "../commands/add.js"
 import warnSystem from "../commands/warn.js"
 import reiniciarConteo from "../commands/reiniciarconteo.js"
+import minar from "../commands/minar.js"
+
+
+
 
 const COMMANDS = {
   resetsession,
@@ -109,6 +113,7 @@ const COMMANDS = {
   kick,
   ban: kick,
   tag,
+  minar,
   antiarabe,
 
   fantasma,
