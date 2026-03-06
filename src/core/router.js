@@ -53,7 +53,7 @@ import warnSystem from "../commands/warn.js"
 import reiniciarConteo from "../commands/reiniciarconteo.js"
 import minar from "../commands/minar.js"
 import pescar from "../commands/pescar.js"
-
+import tesoro from "../commands/tesoro.js"
 
 
 const COMMANDS = {
@@ -115,6 +115,7 @@ const COMMANDS = {
   tag,
   minar,
   pescar,
+  tesoro,
   antiarabe,
 
   fantasma,
