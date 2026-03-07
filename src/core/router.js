@@ -55,6 +55,9 @@ import minar from "../commands/minar.js"
 import pescar from "../commands/pescar.js"
 import tesoro from "../commands/tesoro.js"
 import cazar from "../commands/cazar.js"
+import panel from "../commands/panel.js"
+
+
 
 const COMMANDS = {
   resetsession,
@@ -112,6 +115,7 @@ const COMMANDS = {
   perfil,
   kick,
   ban: kick,
+  panel,
   tag,
   minar,
   pescar,
