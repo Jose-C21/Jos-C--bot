@@ -7,87 +7,106 @@ if (!chatId) return
 
 try {
 
-await sock.sendMessage(chatId, { react: { text: "🌴", key: msg.key } })
+await sock.sendMessage(chatId,{react:{text:"🌴",key:msg.key}})
 
-await sock.sendMessage(chatId, {
-
-viewOnceMessage: {
-message: {
-interactiveMessage: {
-
-body: {
+await sock.sendMessage(chatId,{
 text:
-`╭──〔 🌴 PANEL DEL BOT 〕──╮
+`╭━━〔 🌴 PANEL DEL BOT 〕━━╮
 │
 │ Bienvenido al sistema
 │ interactivo del bot
 │
 │ Selecciona una opción
-│ usando los botones
+│ en el menú de abajo
 │
-╰──────────────────╯`
-},
+╰━━━━━━━━━━━━━━╯`,
 
-footer: {
-text: "© Jose C - Kathy"
-},
+contextInfo:{
+externalAdReply:{
+title:"Panel del Bot",
+body:"Sistema interactivo",
+thumbnailUrl:"https://i.postimg.cc/TwGh4vDP/IMG-1651.png",
+sourceUrl:"https://whatsapp.com",
+mediaType:1,
+renderLargerThumbnail:true
+}
+}
 
-header: {
-title: "Sistema del Bot",
-hasMediaAttachment: false
-},
+})
 
-nativeFlowMessage: {
-buttons: [
+await sock.sendMessage(chatId,{
+text:"📋 Selecciona una categoría",
+footer:"Sistema del Bot",
+title:"MENÚ PRINCIPAL",
+buttonText:"ABRIR MENÚ",
+sections:[
 
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "📥 Descargas",
-id: ".descargas"
-})
+title:"DESCARGAS",
+rows:[
+{
+title:"🎧 Descargar música",
+description:"Usar comando play",
+rowId:".play"
+},
+{
+title:"📥 Descargar TikTok",
+description:"Video sin marca",
+rowId:".tiktok"
+},
+{
+title:"📘 Descargar Facebook",
+description:"Videos de Facebook",
+rowId:".facebook"
+}
+]
 },
 
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "🎮 Juegos",
-id: ".juegos"
-})
+title:"JUEGOS",
+rows:[
+{
+title:"⛏️ Minar",
+description:"Ganar coins",
+rowId:".minar"
+},
+{
+title:"🎣 Pescar",
+description:"Ganar recompensas",
+rowId:".pescar"
+},
+{
+title:"🏹 Cazar",
+description:"Explorar bosque",
+rowId:".cazar"
+}
+]
 },
 
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "⚙️ Configuración",
-id: ".config"
-})
-},
-
+title:"SISTEMA",
+rows:[
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "👑 Owner",
-id: ".owner"
-})
+title:"⚙️ Configuración",
+description:"Opciones del bot",
+rowId:".config"
+},
+{
+title:"👑 Owner",
+description:"Contacto del creador",
+rowId:".owner"
+}
+]
 }
 
 ]
 
-}
-
-}
-
-}
-
-}
-
 })
 
-await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
+await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
 
-} catch (err) {
-console.error("panel error:", err)
+}catch(err){
+console.error("panel error:",err)
 }
 
 }
