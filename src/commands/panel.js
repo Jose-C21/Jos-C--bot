@@ -1,4 +1,4 @@
-import { proto, generateWAMessageFromContent } from "@whiskeysockets/baileys"
+import { proto, generateWAMessageFromContent } from "baileys"
 
 export default async function panel(sock, msg) {
 
