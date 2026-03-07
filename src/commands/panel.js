@@ -1,79 +1,54 @@
-import { proto, generateWAMessageFromContent } from "baileys"
-
 export default async function panel(sock, msg) {
 
-const chatId = msg.key.remoteJid
+const chatId = msg?.key?.remoteJid
+if (!chatId) return
 
-await sock.sendMessage(chatId,{react:{text:"🌴",key:msg.key}})
+try {
 
-const message = generateWAMessageFromContent(chatId, proto.Message.fromObject({
+await sock.sendMessage(chatId, { react: { text: "🌴", key: msg.key } })
 
-viewOnceMessage: {
-message: {
+await sock.sendMessage(chatId, {
+text:
+`╭──〔 🌴 PANEL DEL BOT 〕──╮
 
-interactiveMessage: {
+Selecciona una opción usando
+los botones de abajo.
 
-body: {
-text: "🌴 PANEL DEL BOT\n\nSelecciona una opción"
-},
+╰──────────────────╯`,
 
-footer: {
-text: "Sistema del Bot"
-},
+footer: "Sistema del Bot",
 
-header: {
-title: "MENÚ PRINCIPAL",
-hasMediaAttachment: false
-},
-
-nativeFlowMessage: {
 buttons: [
-
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "🎧 Descargas",
-id: ".play"
-})
+buttonId: ".play",
+buttonText: { displayText: "🎧 Descargas" },
+type: 1
 },
-
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "🎮 Juegos",
-id: ".juegos"
-})
+buttonId: ".juegos",
+buttonText: { displayText: "🎮 Juegos" },
+type: 1
 },
-
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "⚙️ Config",
-id: ".config"
-})
+buttonId: ".config",
+buttonText: { displayText: "⚙️ Config" },
+type: 1
 },
-
 {
-name: "quick_reply",
-buttonParamsJson: JSON.stringify({
-display_text: "👑 Owner",
-id: ".owner"
-})
+buttonId: ".owner",
+buttonText: { displayText: "👑 Owner" },
+type: 1
 }
+],
 
-]
+headerType: 1
+
+}, { quoted: msg })
+
+await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
+
+} catch (err) {
+console.error("panel error:", err)
 }
-
-}
-
-}
-
-}
-
-}), {})
-
-await sock.relayMessage(chatId, message.message, { messageId: message.key.id })
-
-await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
 
 }
