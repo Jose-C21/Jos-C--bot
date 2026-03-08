@@ -1,14 +1,15 @@
-import { generateWAMessageContent, generateWAMessageFromContent, proto } from "baileys"
+import { generateWAMessageContent, proto } from "baileys"
 
-function generateMessageIDV2(id = "") {
+function generateMessageIDV2() {
 return "3EB0" + Math.floor(Math.random() * 999999999)
 }
 
 export default async function panel(sock, msg){
 
-const chat = msg.key.remoteJid
+try {
 
-const id = generateMessageIDV2(sock.user?.id)
+const chat = msg.key.remoteJid
+const id = generateMessageIDV2()
 
 const image = await generateWAMessageContent({
 image:{
@@ -16,7 +17,10 @@ url:"https://i.pinimg.com/736x/d4/8c/79/d48c79039d6f7b127f1a2eee4c78290c.jpg"
 }
 },{upload:sock.waUploadToServer})
 
-const message = {
+const message = proto.Message.fromObject({
+
+viewOnceMessage:{
+message:{
 interactiveMessage:{
 header:{
 title:"🌴 PANEL DEL BOT",
@@ -77,13 +81,14 @@ id:".config"
 
 }
 }
-
-await sock.relayMessage(chat,{
-viewOnceMessage:{
-message:message
 }
-},{
-messageId:id
+
 })
+
+await sock.relayMessage(chat, message, { messageId:id })
+
+}catch(e){
+console.log(e)
+}
 
 }
