@@ -1,20 +1,19 @@
-import { generateWAMessageContent, proto } from "baileys"
+import { proto, generateWAMessageContent } from "baileys"
 
-function generateMessageIDV2() {
-  return "3EB0" + Math.floor(Math.random() * 999999999)
+function genId(){
+  return "3EB0" + Math.floor(Math.random()*999999999)
 }
 
-export default async function panel(sock, msg) {
+export default async function panel(sock, msg){
 
-try {
+try{
 
 const chat = msg.key.remoteJid
-const messageId = generateMessageIDV2()
 
-// generar imagen correctamente
-const imageContent = await generateWAMessageContent({
+// imagen de la tarjeta
+const img = await generateWAMessageContent({
 image:{
-url:"https://i.pinimg.com/736x/d4/8c/79/d48c79039d6f7b127f1a2eee4c78290c.jpg"
+url:"https://i.postimg.cc/TwGh4vDP/IMG-1651.png"
 }
 },{upload:sock.waUploadToServer})
 
@@ -24,61 +23,92 @@ viewOnceMessage:{
 message:{
 interactiveMessage:{
 
-header:{
-title:"🌴 PANEL DEL BOT",
-hasMediaAttachment:true,
-
-productMessage:{
-product:{
-productImage:imageContent.imageMessage,
-productId:"panel001",
-title:"Panel del Bot",
-description:"Sistema interactivo",
-retailerId:"panel",
-url:`https://wa.me/${sock.user.id.split(":")[0]}`,
-productImageCount:1
-},
-businessOwnerJid:sock.user.id
-}
-
-},
-
 body:{
-text:"Selecciona una opción"
+text:"🌴 PANEL DEL BOT\nSelecciona una opción"
 },
 
 footer:{
 text:"Sistema del Bot"
 },
 
+carouselMessage:{
+
+cards:[
+
+{
+header:{
+title:"🎧 DESCARGAS",
+hasMediaAttachment:true,
+imageMessage:img.imageMessage
+},
+
+body:{
+text:"Descargar música y videos"
+},
+
 nativeFlowMessage:{
 buttons:[
-
 {
 name:"quick_reply",
 buttonParamsJson:JSON.stringify({
-display_text:"🎧 Descargas",
+display_text:"Abrir Descargas",
 id:".play"
 })
+}
+]
+}
 },
 
 {
+header:{
+title:"🎮 JUEGOS",
+hasMediaAttachment:true,
+imageMessage:img.imageMessage
+},
+
+body:{
+text:"Juegos RPG del bot"
+},
+
+nativeFlowMessage:{
+buttons:[
+{
 name:"quick_reply",
 buttonParamsJson:JSON.stringify({
-display_text:"🎮 Juegos",
+display_text:"Abrir Juegos",
 id:".juegos"
 })
+}
+]
+}
 },
 
 {
+header:{
+title:"⚙️ CONFIG",
+hasMediaAttachment:true,
+imageMessage:img.imageMessage
+},
+
+body:{
+text:"Configuraciones del bot"
+},
+
+nativeFlowMessage:{
+buttons:[
+{
 name:"quick_reply",
 buttonParamsJson:JSON.stringify({
-display_text:"⚙️ Config",
+display_text:"Abrir Config",
 id:".config"
 })
 }
+]
+}
+}
 
 ]
+
 }
 
 }
@@ -87,7 +117,7 @@ id:".config"
 
 })
 
-await sock.relayMessage(chat, message, { messageId })
+await sock.relayMessage(chat, message, { messageId: genId() })
 
 }catch(e){
 console.log("panel error:",e)
