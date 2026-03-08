@@ -1,78 +1,52 @@
-import { generateWAMessageContent, proto } from "baileys"
-
-function generateMessageIDV2() {
-return "3EB0" + Math.floor(Math.random() * 999999999)
-}
+import { proto } from "baileys"
 
 export default async function panel(sock, msg){
 
-try {
-
 const chat = msg.key.remoteJid
-const id = generateMessageIDV2()
-
-const image = await generateWAMessageContent({
-image:{
-url:"https://i.pinimg.com/736x/d4/8c/79/d48c79039d6f7b127f1a2eee4c78290c.jpg"
-}
-},{upload:sock.waUploadToServer})
 
 const message = proto.Message.fromObject({
 
 viewOnceMessage:{
 message:{
 interactiveMessage:{
-header:{
-title:"🌴 PANEL DEL BOT",
-hasMediaAttachment:true,
-
-productMessage:{
-product:{
-productImage:image.imageMessage,
-productId:"9999",
-title:"Panel del Bot",
-description:"Sistema interactivo",
-retailerId:"panel",
-url:`https://wa.me/${sock.user.id.split(":")[0]}`,
-productImageCount:1
-},
-businessOwnerJid:sock.user.id
-}
-
-},
 
 body:{
-text:"Selecciona una opción"
+text:"🌴 PANEL DEL BOT\n\nSelecciona una opción"
 },
 
 footer:{
 text:"Sistema del Bot"
 },
 
+header:{
+title:"MENÚ PRINCIPAL",
+hasMediaAttachment:false
+},
+
 nativeFlowMessage:{
 buttons:[
 
 {
-name:"quick_reply",
+name:"cta_url",
 buttonParamsJson:JSON.stringify({
 display_text:"🎧 Descargas",
-id:".play"
+url:"https://wa.me/"
 })
 },
 
 {
-name:"quick_reply",
+name:"cta_url",
 buttonParamsJson:JSON.stringify({
 display_text:"🎮 Juegos",
-id:".juegos"
+url:"https://wa.me/"
 })
 },
 
 {
-name:"quick_reply",
+name:"cta_url",
 buttonParamsJson:JSON.stringify({
 display_text:"⚙️ Config",
-id:".config"
+url:"https://wa.me/"
 })
 }
 
@@ -85,10 +59,6 @@ id:".config"
 
 })
 
-await sock.relayMessage(chat, message, { messageId:id })
-
-}catch(e){
-console.log(e)
-}
+await sock.relayMessage(chat,message,{messageId:msg.key.id})
 
 }
