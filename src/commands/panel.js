@@ -1,54 +1,89 @@
-export default async function panel(sock, msg) {
+import { generateWAMessageContent, generateWAMessageFromContent, proto } from "baileys"
 
-const chatId = msg?.key?.remoteJid
-if (!chatId) return
-
-try {
-
-await sock.sendMessage(chatId, { react: { text: "🌴", key: msg.key } })
-
-await sock.sendMessage(chatId, {
-text:
-`╭──〔 🌴 PANEL DEL BOT 〕──╮
-
-Selecciona una opción usando
-los botones de abajo.
-
-╰──────────────────╯`,
-
-footer: "Sistema del Bot",
-
-buttons: [
-{
-buttonId: ".play",
-buttonText: { displayText: "🎧 Descargas" },
-type: 1
-},
-{
-buttonId: ".juegos",
-buttonText: { displayText: "🎮 Juegos" },
-type: 1
-},
-{
-buttonId: ".config",
-buttonText: { displayText: "⚙️ Config" },
-type: 1
-},
-{
-buttonId: ".owner",
-buttonText: { displayText: "👑 Owner" },
-type: 1
+function generateMessageIDV2(id = "") {
+return "3EB0" + Math.floor(Math.random() * 999999999)
 }
-],
 
-headerType: 1
+export default async function panel(sock, msg){
 
-}, { quoted: msg })
+const chat = msg.key.remoteJid
 
-await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
+const id = generateMessageIDV2(sock.user?.id)
 
-} catch (err) {
-console.error("panel error:", err)
+const image = await generateWAMessageContent({
+image:{
+url:"https://i.pinimg.com/736x/d4/8c/79/d48c79039d6f7b127f1a2eee4c78290c.jpg"
 }
+},{upload:sock.waUploadToServer})
+
+const message = {
+interactiveMessage:{
+header:{
+title:"🌴 PANEL DEL BOT",
+hasMediaAttachment:true,
+
+productMessage:{
+product:{
+productImage:image.imageMessage,
+productId:"9999",
+title:"Panel del Bot",
+description:"Sistema interactivo",
+retailerId:"panel",
+url:`https://wa.me/${sock.user.id.split(":")[0]}`,
+productImageCount:1
+},
+businessOwnerJid:sock.user.id
+}
+
+},
+
+body:{
+text:"Selecciona una opción"
+},
+
+footer:{
+text:"Sistema del Bot"
+},
+
+nativeFlowMessage:{
+buttons:[
+
+{
+name:"quick_reply",
+buttonParamsJson:JSON.stringify({
+display_text:"🎧 Descargas",
+id:".play"
+})
+},
+
+{
+name:"quick_reply",
+buttonParamsJson:JSON.stringify({
+display_text:"🎮 Juegos",
+id:".juegos"
+})
+},
+
+{
+name:"quick_reply",
+buttonParamsJson:JSON.stringify({
+display_text:"⚙️ Config",
+id:".config"
+})
+}
+
+]
+}
+
+}
+}
+
+await sock.relayMessage(chat,{
+viewOnceMessage:{
+message:message
+}
+},{
+messageId:id
+})
 
 }
