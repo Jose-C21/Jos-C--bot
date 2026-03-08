@@ -1,31 +1,60 @@
-export default async function panel(sock, msg) {
+import { generateWAMessageFromContent, proto } from "baileys"
 
-const chatId = msg.key.remoteJid
+export default async function panel(sock, msg){
 
-await sock.sendMessage(chatId,{
-text:"🌴 PANEL DEL BOT\nSelecciona una opción",
-footer:"Sistema del Bot",
-title:"Menú",
-buttonText:"Abrir menú",
-sections:[
-{
-title:"Opciones",
-rows:[
-{
-title:"🎧 Descargas",
-rowId:".play"
+const chat = msg.key.remoteJid
+
+const message = generateWAMessageFromContent(chat,
+proto.Message.fromObject({
+
+viewOnceMessage:{
+message:{
+interactiveMessage:{
+
+body:{
+text:"🌴 PANEL DEL BOT\nSelecciona una opción"
 },
-{
-title:"🎮 Juegos",
-rowId:".juegos"
+
+footer:{
+text:"Sistema del Bot"
 },
+
+nativeFlowMessage:{
+buttons:[
+
 {
-title:"⚙️ Configuración",
-rowId:".config"
-}
-]
-}
-]
+name:"quick_reply",
+buttonParamsJson:JSON.stringify({
+display_text:"🎧 Descargas",
+id:".play"
 })
+},
+
+{
+name:"quick_reply",
+buttonParamsJson:JSON.stringify({
+display_text:"🎮 Juegos",
+id:".juegos"
+})
+},
+
+{
+name:"quick_reply",
+buttonParamsJson:JSON.stringify({
+display_text:"⚙️ Config",
+id:".config"
+})
+}
+
+]
+}
+
+}
+}
+}
+
+}),{})
+
+await sock.relayMessage(chat, message.message, { messageId: message.key.id })
 
 }
