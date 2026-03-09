@@ -45,6 +45,7 @@ import ver from "../commands/ver.js"
 import perfil from "../commands/perfil.js"
 import kick from "../commands/kick.js"
 import tag from "../commands/tag.js"
+import spotify from "../commands/spotify.js"
 import antiarabe from "../commands/antiarabe.js"
 import fantasma, { fantasmaPage } from "../commands/fantasma.js"
 import fankick from "../commands/fankick.js"
@@ -66,6 +67,7 @@ const COMMANDS = {
   mute,
   unmute,
   img,
+  spotify,
   addlista,
   ts: textsticker,
   playvideo,
