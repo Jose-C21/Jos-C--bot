@@ -80,12 +80,12 @@ const output = path.join(tmpDir,`audio_${Date.now()}.wav`)
 
 fs.writeFileSync(input,buffer)
 
-/* EXTRAER FRAGMENTO OPTIMIZADO */
+/* EXTRAER FRAGMENTO MEJOR PARA DETECCIÓN */
 
 await new Promise((resolve,reject)=>{
 
 exec(
-`ffmpeg -y -i "${input}" -ss 10 -t 15 -ac 2 -ar 44100 "${output}"`,
+`ffmpeg -y -i "${input}" -ss 20 -t 20 -ac 2 -ar 44100 "${output}"`,
 (err)=> err ? reject(err) : resolve()
 )
 
@@ -102,33 +102,50 @@ fs.unlinkSync(output)
 const track = result?.track
 if(!track) throw "No identificado"
 
-/* DATOS */
+/* DATOS BASE */
 
 const title = track.title || "Desconocido"
 const artist = track.subtitle || "Desconocido"
-const duration = track.hub?.actions?.[0]?.duration || "N/A"
 
-let album="N/A"
-let genre="N/A"
-let year="N/A"
+/* METADATOS */
 
-const section = track.sections?.find(x=>x.type==="SONG")
+let album = "N/A"
+let genre = "N/A"
+let year = "N/A"
+let duration = "N/A"
+
+const section = track.sections?.find(s => s.type === "SONG")
 
 if(section?.metadata){
 
-for(const m of section.metadata){
+for(const meta of section.metadata){
 
-if(m.title==="Album") album=m.text
-if(m.title==="Genre") genre=m.text
-if(m.title==="Released") year=m.text
+const key = meta.title?.toLowerCase()
+
+if(key === "album") album = meta.text
+if(key === "genre") genre = meta.text
+if(key === "released") year = meta.text
+if(key === "duration") duration = meta.text
 
 }
+
+}
+
+/* fallback duración */
+
+if(duration === "N/A" && track.duration){
+
+const min = Math.floor(track.duration/60)
+const sec = String(track.duration%60).padStart(2,"0")
+
+duration = `${min}:${sec}`
 
 }
 
 /* PORTADA */
 
 const cover =
+track.images?.coverarthq ||
 track.images?.coverart ||
 track.images?.background ||
 THUMB_URL
@@ -136,7 +153,7 @@ THUMB_URL
 /* CAPTION */
 
 const caption =
-`╭─ 🎧 𝗖𝗔𝗡𝗖𝗜𝗢́𝗡 𝗗𝗘𝗧𝗘𝗖𝗧𝗔𝗗𝗔 
+`╭─ 🎧 𝗖𝗔𝗡𝗖𝗜𝗢́𝗡 𝗗𝗘𝗧𝗘𝗖𝗧𝗔𝗗𝗔
 │
 │ 🎵 Título: ${title}
 │ 👤 Artista: ${artist}
@@ -161,7 +178,7 @@ if(!search.videos.length) throw "Audio no encontrado"
 
 const video = search.videos[0]
 
-/* CACHÉ */
+/* CACHE */
 
 const cacheDir = path.join(process.cwd(),"cache","play")
 if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
@@ -169,13 +186,11 @@ if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
 const clean = safeFileName(video.title)
 const filePath = path.join(cacheDir,`${clean}.mp3`)
 
-/* MINIATURA FKONTAK */
-
 const thumb2 = await fetchBuffer(THUMB_URL)
 
 const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-/* SI EXISTE */
+/* SI YA EXISTE */
 
 if(fs.existsSync(filePath)){
 
