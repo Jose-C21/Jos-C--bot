@@ -85,7 +85,7 @@ fs.writeFileSync(input,buffer)
 const stat = fs.statSync(input)
 const durationEst = Math.floor(stat.size / 16000)
 
-/* FRAGMENTOS PARA DETECTAR */
+/* FRAGMENTOS */
 
 const fragments = []
 
@@ -105,7 +105,7 @@ length: 12
 })
 }
 
-/* DETECCIÓN */
+/* DETECCIÓN SHAZAM */
 
 let track = null
 
@@ -134,17 +134,14 @@ fs.unlinkSync(output)
 
 if(!track) throw "No identificado"
 
-/* DATOS BASE */
+/* DATOS */
 
 const title = track.title || "Desconocido"
 const artist = track.subtitle || "Desconocido"
 
-/* METADATOS */
-
 let album = "N/A"
 let genre = track.genres?.primary || "N/A"
 let year = "N/A"
-let duration = "N/A"
 
 const section = track.sections?.find(x => x.type === "SONG")
 
@@ -156,20 +153,8 @@ const name = meta.title?.toLowerCase()
 
 if(name.includes("album")) album = meta.text
 if(name.includes("released")) year = meta.text
-if(name.includes("duration")) duration = meta.text
 
 }
-
-}
-
-/* duración alternativa */
-
-if(duration === "N/A" && track.duration){
-
-const min = Math.floor(track.duration/60)
-const sec = String(track.duration%60).padStart(2,"0")
-
-duration = `${min}:${sec}`
 
 }
 
@@ -181,6 +166,15 @@ track.images?.coverart ||
 track.images?.background ||
 THUMB_URL
 
+/* BUSCAR YOUTUBE */
+
+const search = await yts(`${artist} ${title}`)
+if(!search.videos.length) throw "Audio no encontrado"
+
+const video = search.videos[0]
+
+const duration = video.timestamp || "N/A"
+
 /* CAPTION */
 
 const caption =
@@ -190,8 +184,10 @@ const caption =
 │ 👤 Artista: ${artist}
 │ 💿 Álbum: ${album}
 │ 🎼 Género: ${genre}
-│ 📅 Año: ${year}
+│
 │ ⏱ Duración: ${duration}
+│ 👁 Vistas: ${Number(video.views).toLocaleString()}
+│ 📅 Subido: ${video.ago}
 │
 ╰────────────────╯
 
@@ -202,14 +198,7 @@ image:{url:cover},
 caption
 },{quoted:msg})
 
-/* BUSCAR EN YOUTUBE */
-
-const search = await yts(`${artist} ${title}`)
-if(!search.videos.length) throw "Audio no encontrado"
-
-const video = search.videos[0]
-
-/* CACHE */
+/* CACHE PLAY */
 
 const cacheDir = path.join(process.cwd(),"cache","play")
 if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
