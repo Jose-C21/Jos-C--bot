@@ -142,13 +142,12 @@ text:"❌ El archivo supera el límite de 30MB."
 }
 
 const caption =
-  `╭───〔 𝗦𝗣𝗢𝗧𝗜𝗙𝗬 〕───╮\n` +
+  `╭───〔🟢𝗦𝗣𝗢𝗧𝗜𝗙𝗬🟢〕───╮\n` +
   `│\n` +
   `│  🎶 ${song.title}\n` +
   `│  ───────────────\n` +
   `│  👤 ${song.artist}\n` +
   `│  ⏱ ${song.duration}\n` +
-  `│\n` +
   `╰──────────────╯\n` +
   signature()
 
