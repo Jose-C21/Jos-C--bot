@@ -85,7 +85,7 @@ fs.writeFileSync(input,buffer)
 await new Promise((resolve,reject)=>{
 
 exec(
-`ffmpeg -y -i "${input}" -ss 20 -t 20 -ac 2 -ar 44100 "${output}"`,
+`ffmpeg -y -i "${input}" -ss 3 -t 12 -ac 2 -ar 44100 "${output}"`,
 (err)=> err ? reject(err) : resolve()
 )
 
