@@ -147,10 +147,9 @@ const caption =
   `│  🎶 ${song.title}\n` +
   `│  ───────────────\n` +
   `│  👤 ${song.artist}\n` +
-  `│  💿 ${song.album}\n` +
   `│  ⏱ ${song.duration}\n` +
   `│\n` +
-  `╰───────────────╯\n` +
+  `╰──────────────╯\n` +
   signature()
 
 // enviar info
