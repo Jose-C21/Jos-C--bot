@@ -142,14 +142,15 @@ text:"❌ El archivo supera el límite de 30MB."
 }
 
 const caption =
-  `╭─〔 🎧 𝗦𝗣𝗢𝗧𝗜𝗙𝗬 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 〕─╮\n` +
+  `╭─〔 𝗦𝗣𝗢𝗧𝗜𝗙𝗬 〕─╮\n` +
   `│\n` +
-  `│  🎵 𝗧í𝘁𝘂𝗹𝗼: ${song.title}\n` +
-  `│  👤 𝗔𝗿𝘁𝗶𝘀𝘁𝗮: ${song.artist}\n` +
-  `│  💿 𝗔𝗹𝗯𝘂𝗺: ${song.album}\n` +
-  `│  ⏱ 𝗗𝘂𝗿𝗮𝗰𝗶ó𝗻: ${song.duration}\n` +
+  `│  🎶 ${song.title}\n` +
+  `│  ───────────────\n` +
+  `│  👤 ${song.artist}\n` +
+  `│  💿 ${song.album}\n` +
+  `│  ⏱ ${song.duration}\n` +
   `│\n` +
-  `╰────────────────╯\n` +
+  `╰──────────────────╯\n` +
   signature()
 
 // enviar info
