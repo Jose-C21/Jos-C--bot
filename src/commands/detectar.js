@@ -84,12 +84,31 @@ fs.writeFileSync(input,buffer)
 
 await new Promise((resolve,reject)=>{
 
+const stat = fs.statSync(input)
+const duration = Math.floor(stat.size / 16000)
+
+let start = 3
+let length = 12
+
+if(duration > 60){
+start = Math.floor(duration / 2)
+length = 15
+}
+
+if(duration > 180){
+start = Math.floor(duration / 3)
+length = 20
+}
+
+await new Promise((resolve,reject)=>{
+
 exec(
-`ffmpeg -y -i "${input}" -ss 3 -t 12 -ac 2 -ar 44100 "${output}"`,
+`ffmpeg -y -i "${input}" -ss ${start} -t ${length} -ac 2 -ar 44100 "${output}"`,
 (err)=> err ? reject(err) : resolve()
 )
 
 })
+
 
 fs.unlinkSync(input)
 
@@ -107,26 +126,37 @@ if(!track) throw "No identificado"
 const title = track.title || "Desconocido"
 const artist = track.subtitle || "Desconocido"
 
-/* METADATOS */
-
 let album = "N/A"
-let genre = "N/A"
+let genre = track.genres?.primary || "N/A"
 let year = "N/A"
 let duration = "N/A"
 
-const section = track.sections?.find(s => s.type === "SONG")
+const section = track.sections?.find(x => x.type === "SONG")
 
 if(section?.metadata){
 
 for(const meta of section.metadata){
 
-const key = meta.title?.toLowerCase()
+const name = meta.title?.toLowerCase()
 
-if(key === "album") album = meta.text
-if(key === "genre") genre = meta.text
-if(key === "released") year = meta.text
-if(key === "duration") duration = meta.text
+if(name.includes("album")) album = meta.text
+if(name.includes("released")) year = meta.text
+if(name.includes("duration")) duration = meta.text
 
+}
+
+}
+
+/* duración alternativa */
+
+if(duration === "N/A" && track.hub?.actions){
+
+const act = track.hub.actions.find(x => x.type === "uri")
+
+if(act?.duration){
+const min = Math.floor(act.duration/60)
+const sec = String(act.duration%60).padStart(2,"0")
+duration = `${min}:${sec}`
 }
 
 }
