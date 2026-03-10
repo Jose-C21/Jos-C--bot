@@ -45,6 +45,7 @@ import ver from "../commands/ver.js"
 import perfil from "../commands/perfil.js"
 import kick from "../commands/kick.js"
 import tag from "../commands/tag.js"
+import detectar from "../commands/detectar.js"
 import spotify from "../commands/spotify.js"
 import antiarabe from "../commands/antiarabe.js"
 import fantasma, { fantasmaPage } from "../commands/fantasma.js"
@@ -74,6 +75,7 @@ const COMMANDS = {
   golpear,
   reiniciarconteo: reiniciarConteo,
   kiss,
+  detectar,
   
   warn: warnSystem,
   warns: warnSystem,
