@@ -28,6 +28,33 @@ const ab = await r.arrayBuffer()
 return Buffer.from(ab)
 }
 
+/* TRADUCIR FECHA */
+
+function trad(en = "") {
+const map = {
+"years ago":"años",
+"year ago":"año",
+"months ago":"meses",
+"month ago":"mes",
+"weeks ago":"semanas",
+"week ago":"semana",
+"days ago":"días",
+"day ago":"día",
+"hours ago":"horas",
+"hour ago":"hora",
+"minutes ago":"minutos",
+"minute ago":"minuto",
+"seconds ago":"segundos",
+"second ago":"segundo"
+}
+
+const out = Object.entries(map).reduce((t,[e,es])=>{
+return t.replace(new RegExp(`\\b${e}\\b`,"g"),es)
+},en||"")
+
+return ("hace "+out).trim()
+}
+
 export default async function detectar(sock,msg){
 
 const chatId = msg?.key?.remoteJid
@@ -80,44 +107,34 @@ const output = path.join(tmpDir,`audio_${Date.now()}.wav`)
 
 fs.writeFileSync(input,buffer)
 
-/* DURACIÓN ESTIMADA */
+/* FRAGMENTOS PARA SHAZAM */
 
 const stat = fs.statSync(input)
 const durationEst = Math.floor(stat.size / 16000)
-
-/* FRAGMENTOS */
 
 const fragments = []
 
 fragments.push({start:3,length:12})
 
 if(durationEst > 20){
-fragments.push({
-start: Math.floor(durationEst/2),
-length: 12
-})
+fragments.push({start:Math.floor(durationEst/2),length:12})
 }
 
 if(durationEst > 60){
-fragments.push({
-start: Math.floor(durationEst*0.75),
-length: 12
-})
+fragments.push({start:Math.floor(durationEst*0.75),length:12})
 }
 
-/* DETECCIÓN SHAZAM */
+/* DETECCIÓN */
 
 let track = null
 
 for(const frag of fragments){
 
 await new Promise((resolve,reject)=>{
-
 exec(
 `ffmpeg -y -i "${input}" -ss ${frag.start} -t ${frag.length} -ac 2 -ar 44100 "${output}"`,
 (err)=> err ? reject(err) : resolve()
 )
-
 })
 
 const result = await shazam.recognise(output,"en-US")
@@ -139,23 +156,21 @@ if(!track) throw "No identificado"
 const title = track.title || "Desconocido"
 const artist = track.subtitle || "Desconocido"
 
-let album = "N/A"
-let genre = track.genres?.primary || "N/A"
-let year = "N/A"
+let album="N/A"
+let genre=track.genres?.primary || "N/A"
+let year="N/A"
 
-const section = track.sections?.find(x => x.type === "SONG")
+const section = track.sections?.find(x=>x.type==="SONG")
 
 if(section?.metadata){
-
 for(const meta of section.metadata){
 
 const name = meta.title?.toLowerCase()
 
-if(name.includes("album")) album = meta.text
-if(name.includes("released")) year = meta.text
+if(name.includes("album")) album=meta.text
+if(name.includes("released")) year=meta.text
 
 }
-
 }
 
 /* PORTADA */
@@ -174,6 +189,8 @@ if(!search.videos.length) throw "Audio no encontrado"
 const video = search.videos[0]
 
 const duration = video.timestamp || "N/A"
+const views = Number(video.views).toLocaleString()
+const subido = trad(video.ago || "")
 
 /* CAPTION */
 
@@ -184,10 +201,12 @@ const caption =
 │ 👤 Artista: ${artist}
 │ 💿 Álbum: ${album}
 │ 🎼 Género: ${genre}
-│
 │ ⏱ Duración: ${duration}
-│ 👁 Vistas: ${Number(video.views).toLocaleString()}
-│ 📅 Subido: ${video.ago}
+│ 👁 Vistas: ${views}
+│ 📅 Subido: ${subido}
+│
+│ 🔗 YouTube:
+│ ${video.url}
 │
 ╰────────────────╯
 
@@ -198,7 +217,7 @@ image:{url:cover},
 caption
 },{quoted:msg})
 
-/* CACHE PLAY */
+/* CACHE */
 
 const cacheDir = path.join(process.cwd(),"cache","play")
 if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
