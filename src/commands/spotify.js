@@ -148,7 +148,7 @@ const caption =
   `│  ───────────────\n` +
   `│  👤 ${song.artist}\n` +
   `│  ⏱ ${song.duration}\n` +
-  `╰──────────────╯\n` +
+  `╰──────────────╯\n\n` +
    
   signature()
 
