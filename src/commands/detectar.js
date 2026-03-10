@@ -80,51 +80,66 @@ const output = path.join(tmpDir,`audio_${Date.now()}.wav`)
 
 fs.writeFileSync(input,buffer)
 
-/* EXTRAER FRAGMENTO MEJOR PARA DETECCIÓN */
-
-await new Promise((resolve,reject)=>{
+/* DURACIÓN ESTIMADA */
 
 const stat = fs.statSync(input)
-const duration = Math.floor(stat.size / 16000)
+const durationEst = Math.floor(stat.size / 16000)
 
-let start = 3
-let length = 12
+/* FRAGMENTOS PARA DETECTAR */
 
-if(duration > 60){
-start = Math.floor(duration / 2)
-length = 15
+const fragments = []
+
+fragments.push({start:3,length:12})
+
+if(durationEst > 20){
+fragments.push({
+start: Math.floor(durationEst/2),
+length: 12
+})
 }
 
-if(duration > 180){
-start = Math.floor(duration / 3)
-length = 20
+if(durationEst > 60){
+fragments.push({
+start: Math.floor(durationEst*0.75),
+length: 12
+})
 }
+
+/* DETECCIÓN */
+
+let track = null
+
+for(const frag of fragments){
 
 await new Promise((resolve,reject)=>{
 
 exec(
-`ffmpeg -y -i "${input}" -ss ${start} -t ${length} -ac 2 -ar 44100 "${output}"`,
+`ffmpeg -y -i "${input}" -ss ${frag.start} -t ${frag.length} -ac 2 -ar 44100 "${output}"`,
 (err)=> err ? reject(err) : resolve()
 )
 
 })
 
-
-fs.unlinkSync(input)
-
-/* SHAZAM */
-
 const result = await shazam.recognise(output,"en-US")
 
+if(result?.track){
+track = result.track
+break
+}
+
+}
+
+fs.unlinkSync(input)
 fs.unlinkSync(output)
 
-const track = result?.track
 if(!track) throw "No identificado"
 
 /* DATOS BASE */
 
 const title = track.title || "Desconocido"
 const artist = track.subtitle || "Desconocido"
+
+/* METADATOS */
 
 let album = "N/A"
 let genre = track.genres?.primary || "N/A"
@@ -148,20 +163,6 @@ if(name.includes("duration")) duration = meta.text
 }
 
 /* duración alternativa */
-
-if(duration === "N/A" && track.hub?.actions){
-
-const act = track.hub.actions.find(x => x.type === "uri")
-
-if(act?.duration){
-const min = Math.floor(act.duration/60)
-const sec = String(act.duration%60).padStart(2,"0")
-duration = `${min}:${sec}`
-}
-
-}
-
-/* fallback duración */
 
 if(duration === "N/A" && track.duration){
 
@@ -220,7 +221,7 @@ const thumb2 = await fetchBuffer(THUMB_URL)
 
 const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-/* SI YA EXISTE */
+/* SI EXISTE */
 
 if(fs.existsSync(filePath)){
 
