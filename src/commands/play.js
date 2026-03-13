@@ -220,7 +220,7 @@ participant:"0@s.whatsapp.net"
 
 await sock.sendMessage(chatId,{
 audio:fs.readFileSync(filePath),
-mimetype:"audio/mp3",
+mimetype:"audio/mpeg",
 contextInfo:{mentionedJid: jidUsuario ? [jidUsuario] : []}
 },{quoted:fkontakAudio})
 
