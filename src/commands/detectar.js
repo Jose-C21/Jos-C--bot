@@ -107,7 +107,6 @@ const stat = fs.statSync(input)
 const durationEst = Math.floor(stat.size / 16000)
 
 const fragments = []
-
 fragments.push({start:3,length:12})
 
 if(durationEst > 20){
@@ -196,11 +195,63 @@ const thumb2 = await fetchBuffer(THUMB_URL)
 
 const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
+/* SI EXISTE EN CACHE */
+
+if(fs.existsSync(filePath)){
+
+const fkontak={
+key:{
+participants:"0@s.whatsapp.net",
+remoteJid:"0@s.whatsapp.net",
+fromMe:false,
+id:"DetectCache"
+},
+message:{
+locationMessage:{
+name:video.title,
+jpegThumbnail:thumb2,
+description:"🎵 Archivo desde caché"
+}
+},
+participant:"0@s.whatsapp.net"
+}
+
+await sock.sendMessage(chatId,{
+image:{url:cover},
+caption:
+`╭─ 🎧 𝗖𝗔𝗡𝗖𝗜𝗢́𝗡 𝗗𝗘𝗧𝗘𝗖𝗧𝗔𝗗𝗔
+│
+│ 🎵 Título: ${title}
+│ 👤 Artista: ${artist}
+│ 💿 Álbum: ${album}
+│ 🎼 Género: ${genre}
+│ ⏱ Duración: ${duration}
+│ 👁 Vistas: ${views}
+│ 📅 Subido: ${subido}
+│
+│ 🔗 YouTube:
+│ ${video.url}
+│
+╰────────────────╯
+
+${signature()}`
+},{quoted:msg})
+
+await sock.sendMessage(chatId,{
+audio:fs.readFileSync(filePath),
+mimetype:"audio/mpeg",
+contextInfo:{mentionedJid:[jidUsuario]}
+},{quoted:fkontak})
+
+await sock.sendMessage(chatId,{react:{text:"⚡",key:msg.key}})
+return
+}
+
 /* DESCARGA EN PARALELO */
 
-const downloadPromise = (async ()=>{
+const downloadPromise = (async()=>{
 
-let audioUrl = null
+let audioUrl=null
 
 try{
 
@@ -246,9 +297,11 @@ fs.writeFileSync(filePath,Buffer.from(audio.data))
 
 })()
 
-/* CAPTION */
+/* ENVIAR CAPTION RÁPIDO */
 
-const caption =
+await sock.sendMessage(chatId,{
+image:{url:cover},
+caption:
 `╭─ 🎧 𝗖𝗔𝗡𝗖𝗜𝗢́𝗡 𝗗𝗘𝗧𝗘𝗖𝗧𝗔𝗗𝗔
 │
 │ 🎵 Título: ${title}
@@ -265,17 +318,13 @@ const caption =
 ╰────────────────╯
 
 ${signature()}`
-
-await sock.sendMessage(chatId,{
-image:{url:cover},
-caption
 },{quoted:msg})
 
 /* ESPERAR AUDIO */
 
 await downloadPromise
 
-const fkontak = {
+const fkontak={
 key:{
 participants:"0@s.whatsapp.net",
 remoteJid:"0@s.whatsapp.net",
@@ -295,7 +344,7 @@ participant:"0@s.whatsapp.net"
 await sock.sendMessage(chatId,{
 audio:fs.readFileSync(filePath),
 mimetype:"audio/mpeg",
-contextInfo:{mentionedJid: jidUsuario ? [jidUsuario] : []}
+contextInfo:{mentionedJid:[jidUsuario]}
 },{quoted:fkontak})
 
 await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
