@@ -479,7 +479,7 @@ const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
 console.log("[antisGuard] whitelisted:", isWhitelisted)
 
 // ─────────────────────────────────────────────
-// ✅ STICKER ALERT PRIVADO
+// ✅ STICKER ALERT PRIVADO (3 avisos + cooldown)
 // ─────────────────────────────────────────────
 try {
 
@@ -487,13 +487,37 @@ if(isGroup && !fromMe && isStickerLike){
 
 if(normalizedUser === "19580839829625"){
 
+global.stickerAlert = global.stickerAlert || {}
+
+const key = normalizedUser
+const now = Date.now()
+
+const data = global.stickerAlert[key] || {
+count: 0,
+last: 0
+}
+
+// cooldown de 60 segundos
+if(now - data.last > 60000){
+data.count = 0
+}
+
+if(data.count >= 3){
+return
+}
+
+data.count++
+data.last = now
+
+global.stickerAlert[key] = data
+
 const myJid = "208272208490541@lid"
 
 await sock.sendMessage(myJid,{
-text:"‎",
-contextInfo:{
-mentionedJid:[myJid]
-}
+text:
+`📞 *Kathy te está llamando*\n\n`+
+`👥 Grupo: *${groupName || "Grupo"}*\n\n`+
+`⚠️ Está enviando stickers para llamarte.`
 })
 
 console.log("ALERTA PRIVADA ENVIADA")
