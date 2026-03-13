@@ -7,7 +7,6 @@ import config from "../config.js"
 const APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
 const API_RESOLVE = "https://api-sky.ultraplus.click/youtube/resolve"
 
-// miniaturas (las mismas que usabas)
 const CARD_IMAGE_URL = "https://i.postimg.cc/TwGh4vDP/IMG-1651.png"
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
@@ -29,173 +28,202 @@ function trad(en = "") {
     "second ago": "segundo"
   }
 
-  const out = Object.entries(map).reduce((t, [e, es]) => {
-    return t.replace(new RegExp(`\\b${e}\\b`, "g"), es)
-  }, en || "")
+  const out = Object.entries(map).reduce((t,[e,es])=>{
+    return t.replace(new RegExp(`\\b${e}\\b`,"g"),es)
+  },en||"")
 
   return ("hace " + out).trim()
 }
 
-function safeFileName(name = "") {
-  return name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50) || "audio"
+function safeFileName(name=""){
+return name.replace(/[^a-zA-Z0-9]/g,"_").slice(0,50) || "audio"
 }
 
-async function fetchBuffer(url) {
-  const r = await fetch(url)
-  if (!r.ok) throw new Error(`fetch failed ${r.status}`)
-  const ab = await r.arrayBuffer()
-  return Buffer.from(ab)
+async function fetchBuffer(url){
+const r = await fetch(url)
+if(!r.ok) throw new Error(`fetch failed ${r.status}`)
+const ab = await r.arrayBuffer()
+return Buffer.from(ab)
 }
 
-// firma nueva
-function signature() {
-  return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
+function signature(){
+return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
 }
 
-export default async function play(sock, msg, { args, usedPrefix = "." }) {
-  const chatId = msg?.key?.remoteJid
-  if (!chatId) return
+export default async function play(sock,msg,{args,usedPrefix="."}){
 
-  const text = (args || []).join(" ").trim()
+const chatId = msg?.key?.remoteJid
+if(!chatId) return
 
-  // === Carpeta de caché ===
-  const cacheDir = path.join(process.cwd(), "cache", "play")
-  if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true })
+const text = (args || []).join(" ").trim()
 
-  if (!text) {
-    await sock.sendMessage(chatId, {
-      text: `✳️ Uso:\n*${usedPrefix}play* <título o artista>\n\n${signature()}`
-    }, { quoted: msg })
-    return
-  }
+const cacheDir = path.join(process.cwd(),"cache","play")
+if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
 
-  // reacción cargando
-  try {
-    await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
-  } catch {}
+if(!text){
+await sock.sendMessage(chatId,{
+text:`✳️ Uso:\n*${usedPrefix}play* <título o artista>\n\n${signature()}`
+},{quoted:msg})
+return
+}
 
-  try {
-    // 🔍 Buscar en YouTube
-    const res = await yts(text)
-    if (!res?.videos?.length) throw "Sin resultados."
-    const video = res.videos[0]
+try{
 
-    const title = video.title
-    const ytUrl = video.url
-    const timestamp = video.timestamp
-    const views = video.views || 0
-    const subido = trad(video.uploadedAt || video.ago || "")
-    const allArtists = video.author?.name || "Artista desconocido"
+await sock.sendMessage(chatId,{react:{text:"⏳",key:msg.key}})
 
-    // 🧼 Nombre limpio + ruta
-    const clean = safeFileName(title)
-    const filePath = path.join(cacheDir, `${clean}.mp3`)
+/* BUSCAR YOUTUBE */
 
+const res = await yts(text)
+if(!res?.videos?.length) throw "Sin resultados"
+
+const video = res.videos[0]
+
+const title = video.title
+const ytUrl = video.url
+const timestamp = video.timestamp
+const views = video.views || 0
+const subido = trad(video.uploadedAt || video.ago || "")
+const allArtists = video.author?.name || "Artista desconocido"
+
+const clean = safeFileName(title)
+const filePath = path.join(cacheDir,`${clean}.mp3`)
 
 const finalCaption =
-      `🔘 ᴛɪᴛᴜʟᴏ: ${title}\n\n` +
-      `🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n\n` +
-      `🔘 ᴅᴜʀᴀᴄɪᴏɴ: ${timestamp}\n\n` +
-      `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
-      signature()
+`🔘 ᴛɪᴛᴜʟᴏ: ${title}\n\n`+
+`🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n\n`+
+`🔘 ᴅᴜʀᴀᴄɪᴏɴ: ${timestamp}\n\n`+
+`👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n`+
+signature()
 
-    // 🖼️ Miniatura (para fkontak)
-    const thumb2 = await fetchBuffer(THUMB_URL)
+const thumb2 = await fetchBuffer(THUMB_URL)
 
-    // jid usuario para mention (como en tu código viejo)
-    const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
+const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-    // 🧾 Tarjeta visual
-    await sock.sendMessage(chatId, {
-      image: { url: CARD_IMAGE_URL },
-      caption: finalCaption
-    }, { quoted: msg })
+await sock.sendMessage(chatId,{
+image:{url:CARD_IMAGE_URL},
+caption:finalCaption
+},{quoted:msg})
 
-    // ⚡ CACHÉ
-    if (fs.existsSync(filePath)) {
-      const fkontakAudio = {
-        key: {
-          participants: "0@s.whatsapp.net",
-          remoteJid: "0@s.whatsapp.net",
-          fromMe: false,
-          id: "PlayCache"
-        },
-        message: {
-          locationMessage: {
-            name: title,
-            jpegThumbnail: thumb2,
-            description: "🎵 Archivo desde caché"
-          }
-        },
-        participant: "0@s.whatsapp.net"
-      }
+/* CACHE */
 
-      await sock.sendMessage(chatId, {
-        audio: fs.readFileSync(filePath),
-        mimetype: "audio/mpeg",
-        contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
-      }, { quoted: fkontakAudio })
+if(fs.existsSync(filePath)){
 
-      try { await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } }) } catch {}
-      return
-    }
+console.log("\n⚡ AUDIO DESDE CACHE:",filePath)
 
-    // 🌐 API UltraPlus Sky
-    const apiRes = await axios.post(
-      API_RESOLVE,
-      { url: ytUrl, type: "audio", format: "mp3" },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          apikey: APIKEY
-        }
-      }
-    )
+const fkontakAudio={
+key:{
+participants:"0@s.whatsapp.net",
+remoteJid:"0@s.whatsapp.net",
+fromMe:false,
+id:"PlayCache"
+},
+message:{
+locationMessage:{
+name:title,
+jpegThumbnail:thumb2,
+description:"🎵 Archivo desde caché"
+}
+},
+participant:"0@s.whatsapp.net"
+}
 
-    const result = apiRes.data?.result || apiRes.data?.data
-    let audioUrl = result?.media?.dl_download || result?.media?.direct
-    if (!audioUrl) throw "No se pudo obtener el audio."
+await sock.sendMessage(chatId,{
+audio:fs.readFileSync(filePath),
+mimetype:"audio/mpeg",
+contextInfo:{mentionedJid: jidUsuario ? [jidUsuario] : []}
+},{quoted:fkontakAudio})
 
-    // 🔧 Normalizar ruta relativa
-    if (audioUrl.startsWith("/")) {
-      audioUrl = "https://api-sky.ultraplus.click" + audioUrl
-    }
+await sock.sendMessage(chatId,{react:{text:"⚡",key:msg.key}})
+return
+}
 
-    // ⬇️ Descargar audio (con apikey)
-    const bin = await axios.get(audioUrl, {
-      responseType: "arraybuffer",
-      headers: { apikey: APIKEY }
-    })
+/* API */
 
-    fs.writeFileSync(filePath, Buffer.from(bin.data))
+console.log("\n🌐 ENVIANDO A API:")
+console.log(ytUrl)
 
-    const fkontakAudio = {
-      key: {
-        participants: "0@s.whatsapp.net",
-        remoteJid: "0@s.whatsapp.net",
-        fromMe: false,
-        id: "PlayNuevo"
-      },
-      message: {
-        locationMessage: {
-          name: title,
-          jpegThumbnail: thumb2,
-          description: "⚡ Descargado y guardado en caché"
-        }
-      },
-      participant: "0@s.whatsapp.net"
-    }
+const apiRes = await axios.post(
+API_RESOLVE,
+{url:ytUrl,type:"audio",format:"mp3"},
+{
+headers:{
+"Content-Type":"application/json",
+apikey:APIKEY
+}
+}
+)
 
-    await sock.sendMessage(chatId, {
-      audio: fs.readFileSync(filePath),
-      mimetype: "audio/mpeg",
-      contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
-    }, { quoted: fkontakAudio })
+console.log("\n📡 RESPUESTA API:")
+console.log(JSON.stringify(apiRes.data,null,2))
 
-    try { await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }) } catch {}
-  } catch (e) {
-    console.error("[play]", e)
-    await sock.sendMessage(chatId, { text: `❌ *Error:* ${e}` }, { quoted: msg })
-    try { await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } }) } catch {}
-  }
+const result = apiRes.data?.result || apiRes.data?.data
+
+let audioUrl = result?.media?.dl_download || result?.media?.direct
+
+console.log("\n🎵 URL AUDIO:")
+console.log(audioUrl)
+
+if(!audioUrl) throw "No se pudo obtener el audio"
+
+if(audioUrl.startsWith("/")){
+audioUrl="https://api-sky.ultraplus.click"+audioUrl
+}
+
+/* DESCARGA */
+
+const bin = await axios.get(audioUrl,{
+responseType:"arraybuffer",
+headers:{apikey:APIKEY}
+})
+
+console.log("\n📦 HEADERS AUDIO:")
+console.log(bin.headers)
+
+console.log("\n📏 TAMAÑO AUDIO:")
+console.log(bin.data.length,"bytes")
+
+fs.writeFileSync(filePath,Buffer.from(bin.data))
+
+console.log("\n💾 AUDIO GUARDADO EN:")
+console.log(filePath)
+
+const fkontakAudio={
+key:{
+participants:"0@s.whatsapp.net",
+remoteJid:"0@s.whatsapp.net",
+fromMe:false,
+id:"PlayNuevo"
+},
+message:{
+locationMessage:{
+name:title,
+jpegThumbnail:thumb2,
+description:"⚡ Descargado y guardado en caché"
+}
+},
+participant:"0@s.whatsapp.net"
+}
+
+await sock.sendMessage(chatId,{
+audio:fs.readFileSync(filePath),
+mimetype:"audio/mpeg",
+contextInfo:{mentionedJid: jidUsuario ? [jidUsuario] : []}
+},{quoted:fkontakAudio})
+
+await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
+
+}catch(e){
+
+console.error("\n❌ ERROR PLAY:")
+console.error(e)
+
+await sock.sendMessage(chatId,{
+text:`❌ *Error:* ${e}`
+},{quoted:msg})
+
+await sock.sendMessage(chatId,{react:{text:"❌",key:msg.key}})
+
+}
+
 }
