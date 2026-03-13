@@ -4,9 +4,18 @@ import path from "path"
 const DB_DIR = path.join(process.cwd(), "database")
 const DB = path.join(DB_DIR, "stickerAlert.json")
 
-export default async function setstickeralert(sock, msg){
+export default async function setstickeralert(sock, msg, { isOwner }){
 
 const chat = msg.key.remoteJid
+
+/* SOLO OWNER */
+
+if(!isOwner){
+return sock.sendMessage(chat,{
+text:"❌ Este comando solo puede usarlo el *owner* del bot."
+},{quoted:msg})
+}
+
 const ctx = msg.message?.extendedTextMessage?.contextInfo
 
 if(!ctx?.quotedMessage?.stickerMessage){
