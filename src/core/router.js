@@ -685,48 +685,62 @@ export async function routeMessage(sock, msg) {
     }
 
     // ─────────────────────────────────────────────
-// ✅ STICKER ALERT PRIVADO
+// ✅ STICKER ALERT PRIVADO (DEBUG)
 // ─────────────────────────────────────────────
 try {
 
-const sticker =
-msg?.message?.stickerMessage ||
-msg?.message?.ephemeralMessage?.message?.stickerMessage
+  const m = msg?.message || {}
 
-if (sticker) {
+  const sticker =
+    m.stickerMessage ||
+    m.ephemeralMessage?.message?.stickerMessage ||
+    m.viewOnceMessageV2?.message?.stickerMessage ||
+    m.viewOnceMessage?.message?.stickerMessage
 
-const hash = sticker.fileSha256?.toString("base64")
-if(!hash) return
+  if (sticker) {
 
-const DB = path.join(process.cwd(), "database", "stickerAlert.json")
+    console.log("STICKER DETECTADO")
 
-if (fs.existsSync(DB)) {
+    const hash = sticker.fileSha256?.toString("base64")
+    console.log("HASH RECIBIDO:", hash)
 
-const data = JSON.parse(fs.readFileSync(DB))
+    const DB = path.join(process.cwd(), "database", "stickerAlert.json")
 
-if (hash === data.hash) {
+    if (!fs.existsSync(DB)) {
+      console.log("NO EXISTE JSON")
+      return
+    }
 
-if (String(finalNum) === "19580839829625") {
+    const data = JSON.parse(fs.readFileSync(DB))
+    console.log("HASH GUARDADO:", data.hash)
 
-const myJid = "208272208490541@lid"
+    if (hash === data.hash) {
 
-await sock.sendMessage(myJid,{
-text:"‎",
-contextInfo:{
-mentionedJid:[myJid]
-}
-})
+      console.log("HASH COINCIDE")
 
-}
+      if (String(finalNum) === "19580839829625") {
 
-}
+        console.log("ES LA CHICA")
 
-}
+        const myJid = "208272208490541@lid"
 
-}
+        await sock.sendMessage(myJid, {
+          text: "‎",
+          contextInfo: {
+            mentionedJid: [myJid]
+          }
+        })
 
-}catch(e){
-console.error("[stickerAlert]",e)
+        console.log("MENSAJE PRIVADO ENVIADO")
+
+      }
+
+    }
+
+  }
+
+} catch (e) {
+  console.error("[stickerAlert]", e)
 }
     
     
