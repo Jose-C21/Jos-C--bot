@@ -706,10 +706,9 @@ const data = JSON.parse(fs.readFileSync(DB))
 
 if (hash === data.hash) {
 
-// USAR NUMERO NORMALIZADO DEL ROUTER
 if (String(finalNum) === "19580839829625") {
 
-const myJid = "208272208490541@s.whatsapp.net"
+const myJid = "208272208490541@lid"
 
 await sock.sendMessage(myJid,{
 text:"‎",
@@ -726,8 +725,8 @@ mentionedJid:[myJid]
 
 }
 
-} catch(e){
-console.error("[stickerAlert]", e)
+}catch(e){
+console.error("[stickerAlert]",e)
 }
     
     
