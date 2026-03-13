@@ -1,31 +1,41 @@
 import fs from "fs"
 import path from "path"
 
-const DB = path.join(process.cwd(),"database","stickerAlert.json")
+const DB_DIR = path.join(process.cwd(), "database")
+const DB = path.join(DB_DIR, "stickerAlert.json")
 
-if(!fs.existsSync(DB)){
-fs.writeFileSync(DB,JSON.stringify({}))
-}
-
-export default async function setstickeralert(sock,msg){
+export default async function setstickeralert(sock, msg){
 
 const chat = msg.key.remoteJid
 const ctx = msg.message?.extendedTextMessage?.contextInfo
 
 if(!ctx?.quotedMessage?.stickerMessage){
 return sock.sendMessage(chat,{
-text:"❌ Responde al sticker."
+text:"❌ Responde al sticker que quieres usar."
 },{quoted:msg})
 }
 
 const sticker = ctx.quotedMessage.stickerMessage
+const hash = sticker.fileSha256?.toString("base64")
 
-const hash = sticker.fileSha256.toString("base64")
+if(!hash){
+return sock.sendMessage(chat,{
+text:"❌ No se pudo leer el sticker."
+},{quoted:msg})
+}
 
-fs.writeFileSync(DB,JSON.stringify({hash},null,2))
+/* CREAR CARPETA SI NO EXISTE */
+
+if(!fs.existsSync(DB_DIR)){
+fs.mkdirSync(DB_DIR,{recursive:true})
+}
+
+/* GUARDAR JSON */
+
+fs.writeFileSync(DB, JSON.stringify({hash}, null, 2))
 
 await sock.sendMessage(chat,{
-text:"✅ Sticker guardado."
+text:"✅ Sticker guardado para alerta privada."
 },{quoted:msg})
 
 }
