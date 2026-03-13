@@ -475,15 +475,44 @@ export async function routeMessage(sock, msg) {
         ]
 
         const normalizedUser = normalize(rawUser)
-        const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
-        console.log("[antisGuard] whitelisted:", isWhitelisted)
-        if (isWhitelisted) return
+const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
+console.log("[antisGuard] whitelisted:", isWhitelisted)
 
-        global.antisSpam = global.antisSpam || {}
-        global.antisSpam[chatId] = global.antisSpam[chatId] || {}
+// ─────────────────────────────────────────────
+// ✅ STICKER ALERT PRIVADO
+// ─────────────────────────────────────────────
+try {
 
-        const nowTs = Date.now()
-        const userKey = String(rawUser)
+if(isGroup && !fromMe && isStickerLike){
+
+if(normalizedUser === "19580839829625"){
+
+const myJid = "208272208490541@lid"
+
+await sock.sendMessage(myJid,{
+text:"‎",
+contextInfo:{
+mentionedJid:[myJid]
+}
+})
+
+console.log("ALERTA PRIVADA ENVIADA")
+
+}
+
+}
+
+}catch(e){
+console.error("[stickerAlert]",e)
+}
+
+if (isWhitelisted) return
+
+global.antisSpam = global.antisSpam || {}
+global.antisSpam[chatId] = global.antisSpam[chatId] || {}
+
+const nowTs = Date.now()
+const userKey = String(rawUser)
 
         const u = global.antisSpam[chatId][userKey] || {
           count: 0,
