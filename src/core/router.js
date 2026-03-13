@@ -689,45 +689,45 @@ export async function routeMessage(sock, msg) {
 // ─────────────────────────────────────────────
 try {
 
-  const sticker = msg?.message?.stickerMessage
+const sticker =
+msg?.message?.stickerMessage ||
+msg?.message?.ephemeralMessage?.message?.stickerMessage
 
-  if (sticker) {
+if (sticker) {
 
-    const hash = sticker.fileSha256?.toString("base64")
-    if(!hash) return
+const hash = sticker.fileSha256?.toString("base64")
+if(!hash) return
 
-    const DB = path.join(process.cwd(), "database", "stickerAlert.json")
+const DB = path.join(process.cwd(), "database", "stickerAlert.json")
 
-    if (fs.existsSync(DB)) {
+if (fs.existsSync(DB)) {
 
-      const data = JSON.parse(fs.readFileSync(DB))
+const data = JSON.parse(fs.readFileSync(DB))
 
-      if (hash === data.hash) {
+if (hash === data.hash) {
 
-        const sender = msg.key.participant || msg.key.remoteJid
+// USAR NUMERO NORMALIZADO DEL ROUTER
+if (String(finalNum) === "19580839829625") {
 
-        // SOLO LA CHICA
-        if (sender?.includes("19580839829625")) {
+const myJid = "208272208490541@s.whatsapp.net"
 
-          const myJid = "208272208490541@s.whatsapp.net"
+await sock.sendMessage(myJid,{
+text:"‎",
+contextInfo:{
+mentionedJid:[myJid]
+}
+})
 
-          await sock.sendMessage(myJid, {
-            text: "‎",
-            contextInfo: {
-              mentionedJid: [myJid]
-            }
-          })
+}
 
-        }
+}
 
-      }
+}
 
-    }
+}
 
-  }
-
-} catch (e) {
-  console.error("[stickerAlert]", e)
+} catch(e){
+console.error("[stickerAlert]", e)
 }
     
     
