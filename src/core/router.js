@@ -21,6 +21,7 @@ import textsticker from "../commands/textsticker.js"
 import playvideo from "../commands/playvideo.js"
 import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
+import setstickeralert from "../commands/setstickeralert.js"
 
 // ✅ ytsearch + hook (replies)
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
@@ -75,6 +76,7 @@ const COMMANDS = {
   golpear,
   reiniciarconteo: reiniciarConteo,
   kiss,
+  setstickeralert,
   detectar,
   
   warn: warnSystem,
@@ -682,6 +684,53 @@ export async function routeMessage(sock, msg) {
       return
     }
 
+    // ─────────────────────────────────────────────
+// ✅ STICKER ALERT PRIVADO
+// ─────────────────────────────────────────────
+try {
+
+  const sticker = msg?.message?.stickerMessage
+
+  if (sticker) {
+
+    const hash = sticker.fileSha256?.toString("base64")
+    if(!hash) return
+
+    const DB = path.join(process.cwd(), "database", "stickerAlert.json")
+
+    if (fs.existsSync(DB)) {
+
+      const data = JSON.parse(fs.readFileSync(DB))
+
+      if (hash === data.hash) {
+
+        const sender = msg.key.participant || msg.key.remoteJid
+
+        // SOLO LA CHICA
+        if (sender?.includes("19580839829625")) {
+
+          const myJid = "208272208490541@s.whatsapp.net"
+
+          await sock.sendMessage(myJid, {
+            text: "‎",
+            contextInfo: {
+              mentionedJid: [myJid]
+            }
+          })
+
+        }
+
+      }
+
+    }
+
+  }
+
+} catch (e) {
+  console.error("[stickerAlert]", e)
+}
+    
+    
     if (!text) {
       logRouter({
         isGroup,
