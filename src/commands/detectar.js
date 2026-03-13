@@ -8,8 +8,11 @@ import axios from "axios"
 
 const shazam = new Shazam()
 
-const APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
-const API_RESOLVE = "https://api-sky.ultraplus.click/youtube/resolve"
+const SKY_APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
+const SKY_API = "https://api-sky.ultraplus.click/youtube/resolve"
+
+const SYLPHY_APIKEY = "sylphy-MtyAgpx"
+const SYLPHY_API = "https://sylphy.xyz/download/v2/ytmp3"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
@@ -28,24 +31,15 @@ const ab = await r.arrayBuffer()
 return Buffer.from(ab)
 }
 
-/* TRADUCIR FECHA */
-
 function trad(en = "") {
 const map = {
-"years ago":"años",
-"year ago":"año",
-"months ago":"meses",
-"month ago":"mes",
-"weeks ago":"semanas",
-"week ago":"semana",
-"days ago":"días",
-"day ago":"día",
-"hours ago":"horas",
-"hour ago":"hora",
-"minutes ago":"minutos",
-"minute ago":"minuto",
-"seconds ago":"segundos",
-"second ago":"segundo"
+"years ago":"años","year ago":"año",
+"months ago":"meses","month ago":"mes",
+"weeks ago":"semanas","week ago":"semana",
+"days ago":"días","day ago":"día",
+"hours ago":"horas","hour ago":"hora",
+"minutes ago":"minutos","minute ago":"minuto",
+"seconds ago":"segundos","second ago":"segundo"
 }
 
 const out = Object.entries(map).reduce((t,[e,es])=>{
@@ -229,8 +223,6 @@ const thumb2 = await fetchBuffer(THUMB_URL)
 
 const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-/* SI EXISTE */
-
 if(fs.existsSync(filePath)){
 
 const fkontak = {
@@ -260,32 +252,58 @@ await sock.sendMessage(chatId,{react:{text:"⚡",key:msg.key}})
 return
 }
 
-/* DESCARGAR */
+/* DESCARGAR AUDIO */
+
+let audioUrl = null
+
+try{
+
+console.log("🌐 SYLPHY V2")
+
+const sylphy = await axios.get(
+`${SYLPHY_API}?url=${encodeURIComponent(video.url)}&api_key=${SYLPHY_APIKEY}`
+)
+
+audioUrl = sylphy.data?.result?.dl_url
+
+}catch(e){
+
+console.log("⚠️ SYLPHY FALLÓ")
+
+}
+
+if(!audioUrl){
+
+console.log("🌐 SKYULTRAPLUS")
 
 const apiRes = await axios.post(
-API_RESOLVE,
+SKY_API,
 {url:video.url,type:"audio",format:"mp3"},
 {
 headers:{
 "Content-Type":"application/json",
-apikey:APIKEY
+apikey:SKY_APIKEY
 }
 }
 )
 
 const resultApi = apiRes.data?.result || apiRes.data?.data
 
-let audioUrl =
+audioUrl =
 resultApi?.media?.dl_download ||
 resultApi?.media?.direct
 
-if(audioUrl.startsWith("/")){
+if(audioUrl?.startsWith("/")){
 audioUrl="https://api-sky.ultraplus.click"+audioUrl
 }
 
+}
+
+if(!audioUrl) throw "No se pudo obtener el audio"
+
 const audio = await axios.get(audioUrl,{
 responseType:"arraybuffer",
-headers:{apikey:APIKEY}
+timeout:60000
 })
 
 fs.writeFileSync(filePath,Buffer.from(audio.data))
