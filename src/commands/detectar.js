@@ -101,7 +101,7 @@ const output = path.join(tmpDir,`audio_${Date.now()}.wav`)
 
 fs.writeFileSync(input,buffer)
 
-/* FRAGMENTOS PARA SHAZAM */
+/* FRAGMENTOS SHAZAM */
 
 const stat = fs.statSync(input)
 const durationEst = Math.floor(stat.size / 16000)
@@ -117,8 +117,6 @@ fragments.push({start:Math.floor(durationEst/2),length:12})
 if(durationEst > 60){
 fragments.push({start:Math.floor(durationEst*0.75),length:12})
 }
-
-/* DETECCIÓN */
 
 let track = null
 
@@ -186,6 +184,68 @@ const duration = video.timestamp || "N/A"
 const views = Number(video.views).toLocaleString()
 const subido = trad(video.ago || "")
 
+/* CACHE */
+
+const cacheDir = path.join(process.cwd(),"cache","play")
+if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
+
+const clean = safeFileName(video.title)
+const filePath = path.join(cacheDir,`${clean}.mp3`)
+
+const thumb2 = await fetchBuffer(THUMB_URL)
+
+const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
+
+/* DESCARGA EN PARALELO */
+
+const downloadPromise = (async ()=>{
+
+let audioUrl = null
+
+try{
+
+const sylphy = await axios.get(
+`${SYLPHY_API}?url=${encodeURIComponent(video.url)}&api_key=${SYLPHY_APIKEY}`
+)
+
+audioUrl = sylphy.data?.result?.dl_url
+
+}catch{}
+
+if(!audioUrl){
+
+const apiRes = await axios.post(
+SKY_API,
+{url:video.url,type:"audio",format:"mp3"},
+{
+headers:{
+"Content-Type":"application/json",
+apikey:SKY_APIKEY
+}
+}
+)
+
+const resultApi = apiRes.data?.result || apiRes.data?.data
+
+audioUrl =
+resultApi?.media?.dl_download ||
+resultApi?.media?.direct
+
+if(audioUrl?.startsWith("/")){
+audioUrl="https://api-sky.ultraplus.click"+audioUrl
+}
+
+}
+
+const audio = await axios.get(audioUrl,{
+responseType:"arraybuffer",
+timeout:60000
+})
+
+fs.writeFileSync(filePath,Buffer.from(audio.data))
+
+})()
+
 /* CAPTION */
 
 const caption =
@@ -211,102 +271,9 @@ image:{url:cover},
 caption
 },{quoted:msg})
 
-/* CACHE */
+/* ESPERAR AUDIO */
 
-const cacheDir = path.join(process.cwd(),"cache","play")
-if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
-
-const clean = safeFileName(video.title)
-const filePath = path.join(cacheDir,`${clean}.mp3`)
-
-const thumb2 = await fetchBuffer(THUMB_URL)
-
-const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
-
-if(fs.existsSync(filePath)){
-
-const fkontak = {
-key:{
-participants:"0@s.whatsapp.net",
-remoteJid:"0@s.whatsapp.net",
-fromMe:false,
-id:"DetectCache"
-},
-message:{
-locationMessage:{
-name:video.title,
-jpegThumbnail:thumb2,
-description:"🎵 Archivo desde caché"
-}
-},
-participant:"0@s.whatsapp.net"
-}
-
-await sock.sendMessage(chatId,{
-audio:fs.readFileSync(filePath),
-mimetype:"audio/mpeg",
-contextInfo:{mentionedJid: jidUsuario ? [jidUsuario] : []}
-},{quoted:fkontak})
-
-await sock.sendMessage(chatId,{react:{text:"⚡",key:msg.key}})
-return
-}
-
-/* DESCARGAR AUDIO */
-
-let audioUrl = null
-
-try{
-
-console.log("🌐 SYLPHY V2")
-
-const sylphy = await axios.get(
-`${SYLPHY_API}?url=${encodeURIComponent(video.url)}&api_key=${SYLPHY_APIKEY}`
-)
-
-audioUrl = sylphy.data?.result?.dl_url
-
-}catch(e){
-
-console.log("⚠️ SYLPHY FALLÓ")
-
-}
-
-if(!audioUrl){
-
-console.log("🌐 SKYULTRAPLUS")
-
-const apiRes = await axios.post(
-SKY_API,
-{url:video.url,type:"audio",format:"mp3"},
-{
-headers:{
-"Content-Type":"application/json",
-apikey:SKY_APIKEY
-}
-}
-)
-
-const resultApi = apiRes.data?.result || apiRes.data?.data
-
-audioUrl =
-resultApi?.media?.dl_download ||
-resultApi?.media?.direct
-
-if(audioUrl?.startsWith("/")){
-audioUrl="https://api-sky.ultraplus.click"+audioUrl
-}
-
-}
-
-if(!audioUrl) throw "No se pudo obtener el audio"
-
-const audio = await axios.get(audioUrl,{
-responseType:"arraybuffer",
-timeout:60000
-})
-
-fs.writeFileSync(filePath,Buffer.from(audio.data))
+await downloadPromise
 
 const fkontak = {
 key:{
