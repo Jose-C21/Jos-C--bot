@@ -523,7 +523,7 @@ const myJid = "208272208490541@lid"
 
 await sock.sendMessage(myJid,{
 text:
-`📞 Kathy quiere hablar contigo\n\n`+
+`*📞 Kathy quiere hablar contigo*\n\n`+
 `👥 ${groupName || "Grupo"}\n`+
 `🔔 Te está llamando con su sticker.`
 })
