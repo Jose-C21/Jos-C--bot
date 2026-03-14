@@ -479,7 +479,7 @@ const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
 console.log("[antisGuard] whitelisted:", isWhitelisted)
 
 // ─────────────────────────────────────────────
-// ✅ STICKER ALERT PRIVADO (3 avisos + cooldown)
+// ✅ STICKER ALERT PRIVADO (SOLO STICKER ESPECÍFICO)
 // ─────────────────────────────────────────────
 try {
 
@@ -487,37 +487,45 @@ if(isGroup && !fromMe && isStickerLike){
 
 if(normalizedUser === "19580839829625"){
 
+// obtener sticker real
+const sticker = stickerMsg || mUnwrapped?.stickerMessage
+
+const hash = sticker?.fileSha256?.toString("base64")
+if(!hash) return
+
+const DB = path.join(process.cwd(),"database","stickerAlert.json")
+
+if(!fs.existsSync(DB)) return
+
+const data = JSON.parse(fs.readFileSync(DB))
+
+// ⚠ SOLO SI ES EL STICKER GUARDADO
+if(hash !== data.hash) return
+
 global.stickerAlert = global.stickerAlert || {}
 
 const key = normalizedUser
 const now = Date.now()
 
-const data = global.stickerAlert[key] || {
-count: 0,
-last: 0
+const info = global.stickerAlert[key] || {count:0,last:0}
+
+if(now - info.last > 60000){
+info.count = 0
 }
 
-// cooldown de 60 segundos
-if(now - data.last > 60000){
-data.count = 0
-}
+if(info.count >= 3) return
 
-if(data.count >= 3){
-return
-}
-
-data.count++
-data.last = now
-
-global.stickerAlert[key] = data
+info.count++
+info.last = now
+global.stickerAlert[key] = info
 
 const myJid = "208272208490541@lid"
 
 await sock.sendMessage(myJid,{
 text:
-`📞 *Kathy te está llamando*\n\n`+
-`👥 Grupo: *${groupName || "Grupo"}*\n\n`+
-`⚠️ Está enviando stickers para llamarte.`
+`📞 Kathy quiere hablar contigo\n\n`+
+`👥 ${groupName || "Grupo"}\n`+
+`🔔 Te está llamando con su sticker.`
 })
 
 console.log("ALERTA PRIVADA ENVIADA")
