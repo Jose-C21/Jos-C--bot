@@ -635,7 +635,7 @@ const userKey = String(rawUser)
 
         u.last = nowTs
 
-        if (!fromMe && u.count >= 3) {
+        if (!fromMe && u.count >= 2) {
           u.blockedUntil = nowTs + 12000
           console.log(`⚡ [ANTIFLOOD] Usuario ${senderId} activó bloqueo de conteo. (${u.count} mensajes rápidos)`)
         }
