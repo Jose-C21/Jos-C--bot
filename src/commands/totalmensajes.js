@@ -55,7 +55,7 @@ function formatoTiempo(totalSeg) {
 
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
 
-// números estilo bold
+// ✅ números en "negrita" sin usar *
 const toBoldDigits = (x) => {
   const map = { "0":"𝟬","1":"𝟭","2":"𝟮","3":"𝟯","4":"𝟰","5":"𝟱","6":"𝟲","7":"𝟳","8":"𝟴","9":"𝟵" }
   return String(x ?? "").replace(/[0-9]/g, (d) => map[d] || d)
@@ -93,6 +93,7 @@ async function buildRanking(sock, chatId) {
   return { list, subject }
 }
 
+// ✅ cache helpers
 function readPagesCache() {
   return readJsonSafe(PAGES_CACHE_PATH, {})
 }
@@ -115,27 +116,130 @@ function getGroupPagesCache(chatId) {
 export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
   const chatId = msg?.key?.remoteJid
   if (!chatId) return
-  await sock.sendMessage(chatId,{text:"⚙️ Comando en mantenimiento."},{quoted:msg})
+
+  const isGroup = String(chatId).endsWith("@g.us")
+  if (!isGroup) {
+    await sock.sendMessage(chatId, { text: "❌ Este comando solo puede usarse en grupos." }, { quoted: msg })
+    return
+  }
+
+  ensureFile(CONTEO_PATH, {})
+  ensureFile(COOLDOWN_PATH, {})
+  ensureFile(CONFIANZA_PATH, {
+    confianza: ["50432213256", "208272208490541", "18057074359", "19580839829625"]
+  })
+  ensureFile(PAGES_CACHE_PATH, {})
+
+  const wantPage = Math.max(1, Number(page) || 1)
+
+  // ✅ si piden página > 1, exigir que primero usen .totalmensajes
+  if (wantPage > 1) {
+    const cache = getGroupPagesCache(chatId)
+    if (!cache) {
+      await sock.sendMessage(chatId, {
+        text:
+          "📌 Para ver listas extra, primero genera la lista principal:\n" +
+          "• Usa: .totalmensajes\n\n" +
+          "Luego, si hay más páginas, podrás usar:\n" +
+          "• .totalmensajes2  .totalmensajes3 ..."
+      }, { quoted: msg })
+      return
+    }
+
+    if (wantPage > cache.totalPages) {
+      await sock.sendMessage(chatId, {
+        text:
+          `📭 No existe la lista ${wantPage}.\n` +
+          `En este grupo solo hay ${cache.totalPages} lista(s).\n\n` +
+          `Usa .totalmensajes para ver la principal.`
+      }, { quoted: msg })
+      return
+    }
+  }
+
+  // ✅ cooldown solo en página 1
+  if (wantPage === 1) {
+    const senderJid = getSenderJid(msg)
+    const senderNum = jidToNumber(senderJid)
+
+    const cooldownData = readJsonSafe(COOLDOWN_PATH, {})
+    const confianzaData = readJsonSafe(CONFIANZA_PATH, { confianza: [] })
+    const listaConfiables = confianzaData.confianza || []
+
+    const ahora = Date.now()
+    const ultimoUso = cooldownData[senderJid] || 0
+    const restanteSeg = Math.ceil((ultimoUso + COOLDOWN_SECONDS * 1000 - ahora) / 1000)
+
+    const esConfiable = listaConfiables.some(id => String(id).includes(String(senderNum)))
+
+    if (!esConfiable && restanteSeg > 0) {
+      const tiempoTexto = formatoTiempo(restanteSeg)
+      await sock.sendMessage(chatId, {
+        text: `⏳ @${senderNum}\nDebes esperar ${tiempoTexto} para volver a usar este comando.`,
+        mentions: [senderJid]
+      }, { quoted: msg })
+      return
+    }
+
+    cooldownData[senderJid] = ahora
+    writeJsonSafe(COOLDOWN_PATH, cooldownData)
+  }
+
+  // ✅ ranking
+  let ranking
+  try {
+    ranking = await buildRanking(sock, chatId)
+  } catch {
+    ranking = { list: [], subject: "" }
+  }
+
+  const list = ranking.list || []
+  const subject = ranking.subject || "este grupo"
+
+  if (!list.length) {
+    await sock.sendMessage(chatId, { text: "📭 No hay datos aún (todavía no se ha contado actividad)." }, { quoted: msg })
+    return
+  }
+
+  const totalPagesReal = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+  const totalPages = Math.min(totalPagesReal, MAX_PAGES)
+
+  // ✅ guardar cache SOLO cuando usan la lista principal
+  if (wantPage === 1) setGroupPagesCache(chatId, totalPages)
+
+  const safePage = Math.min(Math.max(1, wantPage), totalPages)
+
+  const start = (safePage - 1) * PAGE_SIZE
+  const slice = list.slice(start, start + PAGE_SIZE)
+
+  const mentions = []
+  const medals = ["🥇", "🥈", "🥉"]
+
+  let text = ""
+  text += "```TOP ACTIVOS\n"
+  text += `Grupo: ${subject}\n`
+  text += `Lista: ${toBoldDigits(safePage)}/${toBoldDigits(totalPages)} | Usuarios: ${toBoldDigits(list.length)}\n`
+  text += "────────────────────────\n"
+
+  // ✅ NUEVO: @Nombre: conteo (pegados, sin columnas raras)
+  slice.forEach((u, i) => {
+    const rank = start + i + 1
+    const badge = medals[rank - 1] || `#${rank}`
+    text += `${badge} @${u.num}: ${toBoldDigits(u.total)}\n`
+    if (u.jid) mentions.push(u.jid)
+  })
+
+  const nextPage = safePage + 1
+  if (nextPage <= totalPages) {
+    text += "────────────────────────\n"
+    text += `Siguiente: .totalmensajes${nextPage}\n`
+  }
+
+  text += "```"
+
+  await sock.sendMessage(chatId, { text: text.trim(), mentions }, { quoted: msg })
 }
 
-// ✅ COMANDO PRINCIPAL BLOQUEADO
 export default async function totalmensajes(sock, msg) {
-
-const chatId = msg?.key?.remoteJid
-if (!chatId) return
-
-await sock.sendMessage(chatId,{
-text:
-`╭─ ⚙️ 𝗦𝗜𝗦𝗧𝗘𝗠𝗔
-│
-│ 🚧 𝗖𝗢𝗠𝗔𝗡𝗗𝗢 𝗘𝗡 𝗠𝗔𝗡𝗧𝗘𝗡𝗜𝗠𝗜𝗘𝗡𝗧𝗢
-│
-│ La función *totalmensajes*
-│ se encuentra temporalmente
-│ en mantenimiento.
-│
-│ ⏳ Vuelve a intentarlo más tarde.
-╰────────────`
-},{quoted:msg})
-
+  return totalmensajesPage(sock, msg, { page: 1 })
 }
