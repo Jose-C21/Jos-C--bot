@@ -82,7 +82,6 @@ export default async function tiktok(sock, msg, { args = [], usedPrefix = "." })
   try {
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }).catch(() => {})
 
-    // Mensaje de progreso (edit)
     const steps = [
       "⏳ Descargando video tiktok...",
       "▰▱▱▱▱▱▱▱ 10%",
@@ -100,7 +99,6 @@ export default async function tiktok(sock, msg, { args = [], usedPrefix = "." })
       await sock.sendMessage(chatId, { edit: progreso.key, text: steps[i] }).catch(() => {})
     }
 
-    // Resolver URL (TikWM -> SnapTik)
     let videoUrl = null
     try {
       videoUrl = await resolveViaTikWM(url)
@@ -109,7 +107,6 @@ export default async function tiktok(sock, msg, { args = [], usedPrefix = "." })
       videoUrl = await resolveViaSnapTik(url)
     }
 
-    // Animación envío
     const envioAnim = ["📤 Enviando video..", "📤 Enviando video....", "📤 Enviando video......."]
     for (const paso of envioAnim) {
       await delay(700)
@@ -119,9 +116,19 @@ export default async function tiktok(sock, msg, { args = [], usedPrefix = "." })
     await sock.sendMessage(chatId, {
       video: { url: videoUrl },
       caption:
-        `📥 *Aquí esta tu video descargado con éxito, sin marca de agua.*\n\n` +
-        `${senderTag}\n\n` +
-        signature(),
+`╭━━〔🎬 DESCARGA COMPLETADA〕━━⬣
+┃ ✦ Tu video está listo
+┃ ✦ Sin marca de agua
+┃ ✦ Calidad original
+╰━━━━━━━━━━━━━⬣
+
+👤 Usuario: ${senderTag}
+
+┏━━━〔📥 VIDEO ENTREGADO〕━━━⬣
+┃ Disfrútalo 💫
+┗━━━━━━━━━━━━━━⬣
+
+${signature()}`,
       mentions: senderJid ? [senderJid] : []
     }, { quoted: msg })
 
