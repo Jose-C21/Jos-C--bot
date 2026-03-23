@@ -116,7 +116,7 @@ export default async function tiktok(sock, msg, { args = [], usedPrefix = "." })
     await sock.sendMessage(chatId, {
       video: { url: videoUrl },
       caption:
-`╭━━〔🎬 DESCARGA COMPLETADA〕━━⬣
+`╭━━ DESCARGA COMPLETADA
 ┃ ✦ Tu video está listo
 ┃ ✦ Sin marca de agua
 ┃ ✦ Calidad original
@@ -124,9 +124,9 @@ export default async function tiktok(sock, msg, { args = [], usedPrefix = "." })
 
 👤 Usuario: ${senderTag}
 
-┏━━━〔📥 VIDEO ENTREGADO〕━━━⬣
+┏━ VIDEO ENTREGADO
 ┃ Disfrútalo 💫
-┗━━━━━━━━━━━━━━⬣
+┗━━━━━━━━━━⬣
 
 ${signature()}`,
       mentions: senderJid ? [senderJid] : []
