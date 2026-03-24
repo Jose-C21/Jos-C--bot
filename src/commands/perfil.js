@@ -92,7 +92,7 @@ export default async function perfil(sock, msg, { args = [], usedPrefix = "." })
         `• Responde a un mensaje y escribe: *${usedPrefix}perfil*\n` +
         `• Menciona a alguien: *${usedPrefix}perfil @usuario*\n` +
         `• O escribe un número: *${usedPrefix}perfil 50499998888*\n\n` +
-        `⚠️ Si la foto es privada ok ok, te saldrá una imagen por defecto.`
+        `⚠️ Si la foto es privada, te saldrá una imagen por defecto.`
       await sock.sendMessage(chatId, { text: help }, { quoted: msg })
       return
     }
