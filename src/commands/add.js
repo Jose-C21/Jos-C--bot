@@ -195,7 +195,7 @@ export default async function add(sock, msg, ctx = {}) {
     // 1) ✅ MENSAJE PRO AL PRIVADO (con mención del que invitó)
     const dmText =
       `╭─ 𝗜𝗡𝗩𝗜𝗧𝗔𝗖𝗜𝗢́𝗡 𝗔 𝗚𝗥𝗨𝗣𝗢\n` +
-      `│ 👋 Hola como estas\n` +
+      `│ 👋 Hola\n` +
       `│ Te invitaron a unirte a:\n` +
       `│ 🏷️ ${groupName}\n` +
       `│ 🙋 Invitado por: ${inviterTag}\n` +
