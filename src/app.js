@@ -6,7 +6,7 @@ await startSock(routeMessage)
 
 
 setInterval(() => {
-  exec("git pull", (err, stdout) => {
+  exec("git pull", async (err, stdout) => {
     if (err) return
 
     if (
@@ -17,9 +17,16 @@ setInterval(() => {
       console.log(`
 🔄 ACTUALIZACIÓN DESDE GITHUB
 ${stdout}
-🚀 REINICIANDO BOT...
+♻️ RECARGANDO COMANDOS...
 `)
-      process.exit(0)
+
+      try {
+        if (global.reloadCommands) {
+          await global.reloadCommands()
+        }
+      } catch (e) {
+        console.error("❌ Error recargando comandos:", e)
+      }
     }
   })
 }, 15000)
