@@ -1,10 +1,17 @@
 import { startSock } from "./adapter/baileys.js"
-import { routeMessage } from "./core/router.js"
 import { exec } from "child_process"
 
-await startSock(routeMessage)
+let currentRoute
 
+const loadRouter = async () => {
+  const module = await import(`./core/router.js?update=${Date.now()}`)
+  currentRoute = module.routeMessage
+}
 
+await loadRouter()
+await startSock((...args) => currentRoute(...args))
+
+// 🔥 AUTO UPDATE + RECARGA REAL
 setInterval(() => {
   exec("git pull", async (err, stdout) => {
     if (err) return
@@ -17,15 +24,14 @@ setInterval(() => {
       console.log(`
 🔄 ACTUALIZACIÓN DESDE GITHUB
 ${stdout}
-♻️ RECARGANDO COMANDOS...
+♻️ RECARGANDO ROUTER...
 `)
 
       try {
-        if (global.reloadCommands) {
-          await global.reloadCommands()
-        }
+        await loadRouter()
+        console.log("✅ Router recargado correctamente")
       } catch (e) {
-        console.error("❌ Error recargando comandos:", e)
+        console.error("❌ Error recargando router:", e)
       }
     }
   })
