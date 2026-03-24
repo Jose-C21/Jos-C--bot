@@ -3,15 +3,24 @@ import { exec } from "child_process"
 
 let currentRoute
 
+
 const loadRouter = async () => {
   const module = await import(`./core/router.js?update=${Date.now()}`)
   currentRoute = module.routeMessage
 }
 
-await loadRouter()
-await startSock((...args) => currentRoute(...args))
 
-// 🔥 AUTO UPDATE + RECARGA REAL
+const dynamicRoute = (...args) => {
+  return currentRoute(...args)
+}
+
+
+await loadRouter()
+
+
+await startSock(dynamicRoute)
+
+
 setInterval(() => {
   exec("git pull", async (err, stdout) => {
     if (err) return
@@ -24,14 +33,14 @@ setInterval(() => {
       console.log(`
 🔄 ACTUALIZACIÓN DESDE GITHUB
 ${stdout}
-♻️ RECARGANDO ROUTER...
+♻️ RECARGANDO ROUTER REAL...
 `)
 
       try {
         await loadRouter()
-        console.log("✅ Router recargado correctamente")
+        console.log("✅ Router actualizado sin reiniciar")
       } catch (e) {
-        console.error("❌ Error recargando router:", e)
+        console.error("❌ Error recargando:", e)
       }
     }
   })
