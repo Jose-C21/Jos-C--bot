@@ -22,6 +22,8 @@ import playvideo from "../commands/playvideo.js"
 import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
 import setstickeralert from "../commands/setstickeralert.js"
+import testestado from "../commands/testestado.js"
+
 
 // ✅ ytsearch + hook (replies)
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
@@ -71,6 +73,7 @@ const COMMANDS = {
   img,
   spotify,
   addlista,
+  testestado,
   ts: textsticker,
   playvideo,
   golpear,
