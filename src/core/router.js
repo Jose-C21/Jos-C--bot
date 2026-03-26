@@ -23,7 +23,7 @@ import golpear from "../commands/golpear.js"
 import kiss from "../commands/kiss.js"
 import setstickeralert from "../commands/setstickeralert.js"
 import testestado from "../commands/testestado.js"
-
+import antiestado from "../commands/antiestado.js"
 
 // ✅ ytsearch + hook (replies)
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
@@ -74,6 +74,7 @@ const COMMANDS = {
   spotify,
   addlista,
   testestado,
+  antiestado,
   ts: textsticker,
   playvideo,
   golpear,
@@ -175,6 +176,20 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 // ─────────────────────────────────────────────
+// 🔴 DETECTOR DE ESTADOS
+// ─────────────────────────────────────────────
+function isStatusMessage(msg) {
+  const m = msg?.message || {}
+
+  return (
+    m?.groupStatusMentionMessage ||
+    m?.extendedTextMessage?.contextInfo?.quotedMessage?.groupStatusMentionMessage ||
+    m?.ephemeralMessage?.message?.groupStatusMentionMessage ||
+    m?.viewOnceMessageV2?.message?.groupStatusMentionMessage
+  )
+}
+
+// ─────────────────────────────────────────────
 // ✅ DATA DIR
 // ─────────────────────────────────────────────
 const DATA_DIR = path.join(process.cwd(), "data")
@@ -189,7 +204,7 @@ function ensureActivosDB() {
   if (!fs.existsSync(ACTIVOS_PATH)) {
     fs.writeFileSync(
       ACTIVOS_PATH,
-      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {} }, null, 2)
+      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {}, antiestado: {} }, null, 2)
     )
     return
   }
@@ -199,12 +214,13 @@ function ensureActivosDB() {
     if (!j.despedidas) j.despedidas = {}
     if (!j.antilink) j.antilink = {}
     if (!j.antis) j.antis = {}
-    if (!j.antipersona) j.antipersona = {} // ✅ NUEVO
+    if (!j.antipersona) j.antipersona = {}
+    if (!j.antiestado) j.antiestado = {} // 🔴 NUEVO
     fs.writeFileSync(ACTIVOS_PATH, JSON.stringify(j, null, 2))
   } catch {
     fs.writeFileSync(
       ACTIVOS_PATH,
-      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {} }, null, 2)
+      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {}, antiestado: {} }, null, 2)
     )
   }
 }
@@ -217,10 +233,47 @@ function readActivosSafe() {
     if (!j.despedidas) j.despedidas = {}
     if (!j.antilink) j.antilink = {}
     if (!j.antis) j.antis = {}
-    if (!j.antipersona) j.antipersona = {} // ✅ NUEVO
+    if (!j.antipersona) j.antipersona = {}
+    if (!j.antiestado) j.antiestado = {} // 🔴 NUEVO
     return j
   } catch {
-    return { bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {} }
+    return { bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {}, antiestado: {} }
+  }
+}
+
+// ─────────────────────────────────────────────
+// 🔴 FUNCIÓN ANTI-ESTADO (LISTA PARA USAR EN ROUTER)
+// ─────────────────────────────────────────────
+export async function antiEstadoHandler(sock, msg, chatId, isGroup, fromMe) {
+  try {
+    const activos = readActivosSafe()
+    const antiestadoOn = !!activos?.antiestado?.[chatId]
+
+    if (isGroup && antiestadoOn && !fromMe && isStatusMessage(msg)) {
+      const user = msg.key.participant || msg.key.remoteJid
+      const tag = `@${user.split("@")[0]}`
+
+      await sock.sendMessage(chatId, {
+        delete: {
+          remoteJid: chatId,
+          fromMe: false,
+          id: msg.key.id,
+          participant: user
+        }
+      }).catch(() => {})
+
+      await sock.sendMessage(chatId, {
+        text: `> ╰❒ ${tag}, ɴᴏ ꜱᴇ ᴘᴇʀᴍɪᴛᴇɴ ᴍᴇɴᴄɪᴏɴᴇꜱ ᴅᴇ ᴇꜱᴛᴀᴅᴏꜱ ᴇɴ ᴇꜱᴛᴇ ɢʀᴜᴘᴏ.`,
+        mentions: [user]
+      }).catch(() => {})
+
+      return true
+    }
+
+    return false
+  } catch (e) {
+    console.error("[antiestado]", e)
+    return false
   }
 }
 
@@ -391,6 +444,10 @@ export async function routeMessage(sock, msg) {
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
     const fromMe = !!msg.key?.fromMe
+    
+    const blockedEstado = await antiEstadoHandler(sock, msg, chatId, isGroup, fromMe)
+    if (blockedEstado) return
+    
     const prefix = config.prefix || "."
     if (fromMe && (!text || !text.startsWith(prefix))) return
 
