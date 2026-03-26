@@ -1,73 +1,57 @@
-// src/commands/antiestado.js
+export default async function antiestado(sock, msg, { args, isGroup, isAdmin, isOwner }) {
+  const chatId = msg.key.remoteJid
 
-let enabled = false
+  if (!isGroup) {
+    return sock.sendMessage(chatId, { text: "❗ Este comando solo funciona en grupos." }, { quoted: msg })
+  }
 
-export default async function antiestado(sock, msg, { args = [] }) {
-  const chatId = msg?.key?.remoteJid
-  if (!chatId) return
+  if (!isAdmin && !isOwner) {
+    return sock.sendMessage(chatId, { text: "❌ Solo administradores pueden usar este comando." }, { quoted: msg })
+  }
 
-  const body =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    ""
+  const fs = await import("fs")
+  const path = await import("path")
 
-  // 🔘 COMANDO ON/OFF
-  if (body.startsWith(".antiestado")) {
-    const option = args?.[0]
+  const dbPath = path.join(process.cwd(), "data", "activos.json")
 
-    if (option === "on") {
-      enabled = true
-      return sock.sendMessage(chatId, {
-        text: "✅ Anti-estado activado."
-      }, { quoted: msg })
-    }
+  let db = {}
+  try {
+    db = JSON.parse(fs.readFileSync(dbPath))
+  } catch {
+    db = {}
+  }
 
-    if (option === "off") {
-      enabled = false
-      return sock.sendMessage(chatId, {
-        text: "❌ Anti-estado desactivado."
-      }, { quoted: msg })
-    }
+  if (!db.antiestado) db.antiestado = {}
+
+  const option = (args[0] || "").toLowerCase()
+
+  if (option === "on") {
+    db.antiestado[chatId] = true
+
+    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2))
 
     return sock.sendMessage(chatId, {
-      text: "Usa:\n.antiestado on\n.antiestado off"
+      text: "✅ Anti-estado activado.\nSe eliminarán menciones de estados."
     }, { quoted: msg })
   }
 
-  if (!enabled) return
+  if (option === "off") {
+    delete db.antiestado[chatId]
 
-  const m = msg.message || {}
+    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2))
 
-  const isStatus =
-    m?.extendedTextMessage?.contextInfo?.quotedMessage?.groupStatusMentionMessage ||
-    m?.groupStatusMentionMessage
-
-  if (!isStatus) return
-
-  const sender =
-    msg.key.participant ||
-    m?.extendedTextMessage?.contextInfo?.participant ||
-    msg.key.remoteJid
-
-  const tag = `@${sender.split("@")[0]}`
-
-  // 🗑️ BORRAR MENSAJE
-  try {
-    await sock.sendMessage(chatId, {
-      delete: {
-        remoteJid: chatId,
-        fromMe: false,
-        id: msg.key.id,
-        participant: msg.key.participant || sender
-      }
-    })
-  } catch (e) {
-    console.log("❌ Error borrando estado:", e)
+    return sock.sendMessage(chatId, {
+      text: "❌ Anti-estado desactivado."
+    }, { quoted: msg })
   }
 
-  // ⚠️ AVISO
   await sock.sendMessage(chatId, {
-    text: `> ╰❒ ${tag}, ɴᴏ ꜱᴇ ᴘᴇʀᴍɪᴛᴇɴ ᴍᴇɴᴄɪᴏɴᴇꜱ ᴅᴇ ᴇꜱᴛᴀᴅᴏꜱ ᴇɴ ᴇꜱᴛᴇ ɢʀᴜᴘᴏ.`,
-    mentions: [sender]
-  })
+    text:
+`╭───〔 ANTI-ESTADO 〕───╮
+│
+│  .antiestado on
+│  .antiestado off
+│
+╰──────────────────────╯`
+  }, { quoted: msg })
 }
