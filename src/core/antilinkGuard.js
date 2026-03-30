@@ -28,7 +28,9 @@ function ensureActivosAntilink() {
 function readActivosSafe() {
   try {
     ensureActivosAntilink()
-    return JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+    const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+    if (!j.antilink) j.antilink = {}
+    return j
   } catch {
     return { antilink: {} }
   }
@@ -37,19 +39,13 @@ function readActivosSafe() {
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
+
   return (
     owners.includes(String(senderNum)) ||
     owners.includes(String(senderNumDecoded)) ||
     ownersLid.includes(String(senderNum)) ||
     ownersLid.includes(String(senderNumDecoded))
   )
-}
-
-// ✅ Normalizar JID de participantes (a veces viene object con {id, phoneNumber})
-function normalizeParticipant(p) {
-  if (!p) return { jid: "", phoneJid: "" }
-  if (typeof p === "string") return { jid: p, phoneJid: "" }
-  return { jid: String(p.id || ""), phoneJid: String(p.phoneNumber || "") }
 }
 
 function extractText(msg) {
@@ -68,6 +64,7 @@ function getQuotedTextAndAuthor(msg) {
   const ctx = msg?.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
   const author = ctx?.participant
+
   if (!quoted) return { text: "", authorJid: "" }
 
   const text =
@@ -78,10 +75,13 @@ function getQuotedTextAndAuthor(msg) {
     quoted?.documentMessage?.caption ||
     ""
 
-  return { text: String(text || "").trim(), authorJid: String(author || "") }
+  return {
+    text: String(text || "").trim(),
+    authorJid: String(author || "")
+  }
 }
 
-// 🔎 Detectar links (incluye n9.cl/vl2z2)
+// 🔎 Detectar links
 const ANY_LINK_RE =
   /(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi
 
@@ -97,12 +97,15 @@ const linkFacebookShareVideo = /^https?:\/\/(?:www\.)?facebook\.com\/share\/v\/[
 const linkFacebookShareReel = /^https?:\/\/(?:www\.)?facebook\.com\/share\/r\/[^\s\/]+/i
 const linkFbShort = /^https?:\/\/fb\.watch\/[^\s]+/i
 
-// 🟣 Instagram (SOLO REELS)
+// 🟣 Instagram
 const linkInstagramReel = /^https?:\/\/(?:www\.)?instagram\.com\/reels?\/[A-Za-z0-9_-]+/i
 
 async function headResolve(url) {
   try {
-    const res = await axios.head(url, { maxRedirects: 5, validateStatus: null })
+    const res = await axios.head(url, {
+      maxRedirects: 5,
+      validateStatus: null
+    })
     return res?.request?.res?.responseUrl || ""
   } catch {
     return ""
@@ -132,173 +135,182 @@ function isAllowedLinkDirect(link) {
 }
 
 function isCommandAllowed(name) {
-  return ["tiktok", "facebook", "instagram"].includes(String(name || "").toLowerCase())
+  return ["tiktok", "facebook", "instagram"].includes(
+    String(name || "").toLowerCase()
+  )
 }
 
-// globals
 global.avisados = global.avisados || new Set()
 global.mensajesConLink = global.mensajesConLink || {}
 
 export async function antiLinkGuard(sock, msg) {
-  const chatId = msg?.key?.remoteJid || ""
-  const isGroup = String(chatId).endsWith("@g.us")
-  if (!isGroup) return false
-
-  const activos = readActivosSafe()
-  if (!activos?.antilink?.[chatId]) return false
-
-  const prefix = config.prefix || "."
-  const fromMe = !!msg?.key?.fromMe
-
-  // sender real
-  const senderJid = getSenderJid(msg)
-  const senderNum = jidToNumber(senderJid)
-  let decodedJid = senderJid
-  try { if (sock?.decodeJid) decodedJid = sock.decodeJid(senderJid) } catch {}
-  const senderNumDecoded = jidToNumber(decodedJid)
-
-  const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
-
-  // texto actual
-  const messageText = extractText(msg)
-
-  // quoted/caption
-  const { text: quotedText, authorJid: quotedAuthor } = getQuotedTextAndAuthor(msg)
-
-  // texto a analizar + autor real del link
-  let textoAnalizado = messageText
-  let autorAnalizado = senderJid
-
-  if (quotedText) {
-    textoAnalizado = quotedText
-    if (quotedAuthor) autorAnalizado = quotedAuthor
-  }
-
-  const links = (textoAnalizado.match(ANY_LINK_RE) || [])
-    .map(s => String(s).trim())
-    .filter(Boolean)
-
-  if (!links.length) return false
-
-  // guardar mensaje en historial
-  global.mensajesConLink[chatId] = global.mensajesConLink[chatId] || []
-  global.mensajesConLink[chatId].push(msg)
-  if (global.mensajesConLink[chatId].length > 150) global.mensajesConLink[chatId].shift()
-
-  // comando permitido?
-  const esComando = messageText.startsWith(prefix)
-  const nombreComando = esComando ? messageText.slice(prefix.length).trim().split(/\s+/)[0]?.toLowerCase() : ""
-  let esComandoPermitido = esComando && isCommandAllowed(nombreComando)
-
-  // validar link del comando
-  if (esComandoPermitido) {
-    const linkCmd = messageText.split(/\s+/)[1] || ""
-
-    if (nombreComando === "tiktok") {
-      let ok = false
-      if (linkTikTokVideo.test(linkCmd)) ok = true
-      else if (linkTikTokAcortado.test(linkCmd)) ok = await esVideoTikTok(linkCmd)
-      esComandoPermitido = ok
-    }
-
-    if (nombreComando === "facebook") {
-      let ok = false
-      if (
-        linkFacebookVideo.test(linkCmd) ||
-        linkFacebookWatch.test(linkCmd) ||
-        linkFacebookReel.test(linkCmd) ||
-        linkFacebookShareVideo.test(linkCmd) ||
-        linkFacebookShareReel.test(linkCmd)
-      ) ok = true
-      else if (linkFbShort.test(linkCmd)) ok = await esVideoFacebook(linkCmd)
-      esComandoPermitido = ok
-    }
-
-    if (nombreComando === "instagram") {
-      esComandoPermitido = linkInstagramReel.test(linkCmd)
-    }
-  }
-
-  // si es comando permitido -> ok
-  if (esComandoPermitido) return false
-
-  // validar TODOS los links del texto
-  let todoValido = true
-  for (const link of links) {
-    if (isAllowedLinkDirect(link)) continue
-
-    if (linkTikTokAcortado.test(link)) {
-      const ok = await esVideoTikTok(link)
-      if (!ok) { todoValido = false; break }
-      continue
-    }
-
-    if (linkFbShort.test(link)) {
-      const ok = await esVideoFacebook(link)
-      if (!ok) { todoValido = false; break }
-      continue
-    }
-
-    todoValido = false
-    break
-  }
-
-  if (todoValido) return false
-
-  // bypass: fromMe/owner/admin y si el autor del link es admin no castigar
-  let canBypass = fromMe || isOwner
-  let autorEsAdmin = false
-
   try {
-    const meta = await sock.groupMetadata(chatId)
-    const limpiar = j => String(j || "").replace(/\D/g, "")
+    const chatId = msg?.key?.remoteJid || ""
+    const isGroup = String(chatId).endsWith("@g.us")
+    if (!isGroup) return { blocked: false }
 
-    const adminNums = new Set(
-      (meta.participants || [])
-        .filter(p => p.admin)
-        .map(p => limpiar(p.id))
-    )
+    const activos = readActivosSafe()
+    if (!activos?.antilink?.[chatId]) return { blocked: false }
 
-    if (adminNums.has(limpiar(senderJid))) canBypass = true
-    if (adminNums.has(limpiar(autorAnalizado))) autorEsAdmin = true
-  } catch {}
+    const prefix = config.prefix || "."
+    const fromMe = !!msg?.key?.fromMe
 
-  if (autorEsAdmin) return false
-  if (canBypass) return false
+    const senderJid = getSenderJid(msg)
+    const senderNum = jidToNumber(senderJid)
 
-  // ✅ ORDEN ORIGINAL:
-  // 1) EXPULSAR
-  // 2) BORRAR MENSAJE
-  // 3) AVISO AL FINAL
+    let decodedJid = senderJid
+    try {
+      if (sock?.decodeJid) decodedJid = sock.decodeJid(senderJid)
+    } catch {}
 
-  const idUsuario = autorAnalizado
+    const senderNumDecoded = jidToNumber(decodedJid)
+    const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
 
-  // 1) expulsar rápido
-  await sock.groupParticipantsUpdate(chatId, [idUsuario], "remove").catch(() => {})
+    const messageText = extractText(msg)
+    const { text: quotedText, authorJid: quotedAuthor } =
+      getQuotedTextAndAuthor(msg)
 
-  // 2) borrar mensaje rápido (key completa)
-  await sock.sendMessage(chatId, { delete: msg.key }).catch(() => {})
+    let textoAnalizado = messageText
+    let autorAnalizado = senderJid
 
-  // borrar historial links de ese usuario
-  try {
-    const limpiar = j => String(j || "").replace(/\D/g, "")
-    const list = global.mensajesConLink[chatId] || []
-    for (const m of list) {
-      try {
-        const who = m?.key?.participant || m?.key?.remoteJid
-        if (limpiar(who) === limpiar(idUsuario)) {
-          await sock.sendMessage(chatId, { delete: m.key }).catch(() => {})
+    if (quotedText) {
+      textoAnalizado = quotedText
+      if (quotedAuthor) autorAnalizado = quotedAuthor
+    }
+
+    const links = (textoAnalizado.match(ANY_LINK_RE) || [])
+      .map(s => String(s).trim())
+      .filter(Boolean)
+
+    if (!links.length) return { blocked: false }
+
+    global.mensajesConLink[chatId] =
+      global.mensajesConLink[chatId] || []
+
+    global.mensajesConLink[chatId].push(msg)
+
+    if (global.mensajesConLink[chatId].length > 150) {
+      global.mensajesConLink[chatId].shift()
+    }
+
+    const esComando = messageText.startsWith(prefix)
+    const nombreComando = esComando
+      ? messageText.slice(prefix.length).trim().split(/\s+/)[0]?.toLowerCase()
+      : ""
+
+    let esComandoPermitido =
+      esComando && isCommandAllowed(nombreComando)
+
+    if (esComandoPermitido) {
+      const linkCmd = messageText.split(/\s+/)[1] || ""
+
+      if (nombreComando === "tiktok") {
+        let ok = false
+        if (linkTikTokVideo.test(linkCmd)) ok = true
+        else if (linkTikTokAcortado.test(linkCmd)) {
+          ok = await esVideoTikTok(linkCmd)
         }
-      } catch {}
-    }
-  } catch {}
+        esComandoPermitido = ok
+      }
 
-  // 3) aviso al final
-  if (!global.avisados.has(idUsuario)) {
-    global.avisados.add(idUsuario)
-    const tag = `@${jidToNumber(idUsuario)}`
-    await sock.sendMessage(chatId, {
-  text:
+      if (nombreComando === "facebook") {
+        let ok = false
+        if (
+          linkFacebookVideo.test(linkCmd) ||
+          linkFacebookWatch.test(linkCmd) ||
+          linkFacebookReel.test(linkCmd) ||
+          linkFacebookShareVideo.test(linkCmd) ||
+          linkFacebookShareReel.test(linkCmd)
+        ) {
+          ok = true
+        } else if (linkFbShort.test(linkCmd)) {
+          ok = await esVideoFacebook(linkCmd)
+        }
+        esComandoPermitido = ok
+      }
+
+      if (nombreComando === "instagram") {
+        esComandoPermitido = linkInstagramReel.test(linkCmd)
+      }
+    }
+
+    if (esComandoPermitido) return { blocked: false }
+
+    let todoValido = true
+
+    for (const link of links) {
+      if (isAllowedLinkDirect(link)) continue
+
+      if (linkTikTokAcortado.test(link)) {
+        const ok = await esVideoTikTok(link)
+        if (!ok) {
+          todoValido = false
+          break
+        }
+        continue
+      }
+
+      if (linkFbShort.test(link)) {
+        const ok = await esVideoFacebook(link)
+        if (!ok) {
+          todoValido = false
+          break
+        }
+        continue
+      }
+
+      todoValido = false
+      break
+    }
+
+    if (todoValido) return { blocked: false }
+
+    let canBypass = fromMe || isOwner
+    let autorEsAdmin = false
+
+    try {
+      const meta = await sock.groupMetadata(chatId)
+      const limpiar = j => String(j || "").replace(/\D/g, "")
+
+      const adminNums = new Set(
+        (meta.participants || [])
+          .filter(p => p.admin)
+          .map(p => limpiar(p.id))
+      )
+
+      if (adminNums.has(limpiar(senderJid))) canBypass = true
+      if (adminNums.has(limpiar(autorAnalizado))) autorEsAdmin = true
+    } catch {}
+
+    if (autorEsAdmin) return { blocked: false }
+    if (canBypass) return { blocked: false }
+
+    const idUsuario = autorAnalizado
+
+    await sock.groupParticipantsUpdate(chatId, [idUsuario], "remove").catch(() => {})
+    await sock.sendMessage(chatId, { delete: msg.key }).catch(() => {})
+
+    try {
+      const limpiar = j => String(j || "").replace(/\D/g, "")
+      const list = global.mensajesConLink[chatId] || []
+
+      for (const m of list) {
+        try {
+          const who = m?.key?.participant || m?.key?.remoteJid
+          if (limpiar(who) === limpiar(idUsuario)) {
+            await sock.sendMessage(chatId, { delete: m.key }).catch(() => {})
+          }
+        } catch {}
+      }
+    } catch {}
+
+    if (!global.avisados.has(idUsuario)) {
+      global.avisados.add(idUsuario)
+
+      const tag = `@${jidToNumber(idUsuario)}`
+
+      await sock.sendMessage(chatId, {
+        text:
 `╭━━〔🔗𝗔𝗡𝗧𝗜𝗟𝗜𝗡𝗞〕━━╮
 ┃ 👤 𝘂𝘀𝘂𝗮𝗿𝗶𝗼:
 ┃    ${tag}
@@ -309,10 +321,18 @@ export async function antiLinkGuard(sock, msg) {
 ┃ 📛 𝗠𝗼𝘁𝗶𝘃𝗼:
 ┃    Enlace no permitido
 ╰━━━━━━━━━━━━━╯`,
-  mentions: [idUsuario]
-}).catch(() => {})
-    setTimeout(() => global.avisados.delete(idUsuario), 180000)
-  }
+        mentions: [idUsuario]
+      }).catch(() => {})
 
-  return true
+      setTimeout(() => global.avisados.delete(idUsuario), 180000)
+    }
+
+    return {
+      blocked: true,
+      reason: `antilink(user=${jidToNumber(idUsuario)}, link="${links[0]}")`
+    }
+  } catch (e) {
+    console.error("[antiLinkGuard]", e)
+    return { blocked: false }
+  }
 }
