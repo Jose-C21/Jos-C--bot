@@ -453,13 +453,33 @@ export async function routeMessage(sock, msg) {
 
     // ─────────────────────────────────────────────
     // ✅ ANTILINK GUARD
-    // ─────────────────────────────────────────────
-    try {
-      const blocked = await antiLinkGuard(sock, msg)
-      if (blocked) return
-    } catch (e) {
-      console.error("[antilinkGuard] error:", e)
-    }
+// ─────────────────────────────────────────────
+try {
+  const blocked = await antiLinkGuard(sock, msg)
+
+  if (blocked) {
+    const rawText = getText(msg)
+
+    const linkMatch =
+      rawText.match(/(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/i)
+
+    logRouter({
+      isGroup,
+      isOwner,
+      allowed: true,
+      senderNum: finalNum,
+      senderName,
+      groupName,
+      text: rawText,
+      action: "BLOCK",
+      reason: `antilink(link="${linkMatch?.[0] || "no-detectado"}")`
+    })
+
+    return
+  }
+} catch (e) {
+  console.error("[antilinkGuard] error:", e)
+}
 
     // ─────────────────────────────────────────────
     // ✅ ANTIPERSONA WATCH (solo cambio de nombre)
