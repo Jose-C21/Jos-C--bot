@@ -24,8 +24,11 @@ export default async function sumar(sock, msg, { args, isOwner }) {
   const chatId = msg.key.remoteJid
   const isGroup = String(chatId).endsWith("@g.us")
 
+  // ❌ solo grupos
   if (!isGroup) {
-    await sock.sendMessage(chatId, { text: "❌ Solo en grupos." }, { quoted: msg })
+    await sock.sendMessage(chatId, {
+      text: "❌ Este comando solo funciona en grupos."
+    }, { quoted: msg })
     return
   }
 
@@ -37,92 +40,41 @@ export default async function sumar(sock, msg, { args, isOwner }) {
     return
   }
 
+  // ❌ requiere mención
   const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || []
 
-  let targetJid = ""
-  let cantidad = 0
-
-  // ─────────────────────────────
-  // ✅ CASO 1: CON MENCIÓN
-  // ─────────────────────────────
-  if (mentioned.length) {
-    targetJid = mentioned[0]
-    cantidad = Number(args[1])
-  } else {
-    // ─────────────────────────────
-    // ✅ CASO 2: CON NÚMERO (FIX LID)
-    // ─────────────────────────────
-    const num = String(args[0] || "").replace(/\D/g, "")
-
-    if (!num) {
-      await sock.sendMessage(chatId, {
-        text: "❌ Usa:\n.sumar @usuario 100\n.sumar 504XXXXXXXX 100"
-      }, { quoted: msg })
-      return
-    }
-
-    const db = readDB()
-    const groupData = db[chatId] || {}
-
-    // 🔥 1) buscar en conteo.json (MEJOR OPCIÓN)
-    let encontrado = Object.keys(groupData).find(jid => {
-      const clean = String(jid).replace(/\D/g, "")
-      return clean.endsWith(num)
-    })
-
-    // 🟡 2) fallback: buscar en participantes
-    if (!encontrado) {
-      try {
-        const metadata = await sock.groupMetadata(chatId)
-
-        const participante = metadata.participants.find(p => {
-          const clean = String(p.id || "").replace(/\D/g, "")
-          return clean.endsWith(num)
-        })
-
-        if (participante) encontrado = participante.id
-      } catch {}
-    }
-
-    // ❌ no encontrado
-    if (!encontrado) {
-      await sock.sendMessage(chatId, {
-        text: "❌ Usuario no encontrado ni en conteo ni en grupo."
-      }, { quoted: msg })
-      return
-    }
-
-    targetJid = encontrado
-    cantidad = Number(args[1])
+  if (!mentioned.length) {
+    await sock.sendMessage(chatId, {
+      text: "❌ Debes mencionar al usuario.\nEjemplo:\n.sumar @usuario 100"
+    }, { quoted: msg })
+    return
   }
 
-  // ─────────────────────────────
-  // ❌ VALIDACIÓN
-  // ─────────────────────────────
+  const targetJid = mentioned[0]
+  const cantidad = Number(args[1])
+
+  // ❌ validar cantidad
   if (!cantidad || cantidad <= 0) {
     await sock.sendMessage(chatId, {
       text: "❌ Cantidad inválida."
     }, { quoted: msg })
-      return
+    return
   }
 
-  // ─────────────────────────────
-  // ✅ GUARDAR
-  // ─────────────────────────────
+  // ✅ guardar
   const db = readDB()
 
   if (!db[chatId]) db[chatId] = {}
-
   if (!db[chatId][targetJid]) db[chatId][targetJid] = 0
 
   db[chatId][targetJid] += cantidad
 
   writeDB(db)
 
-  const numFinal = jidToNumber(targetJid)
+  const num = jidToNumber(targetJid)
 
   await sock.sendMessage(chatId, {
-    text: `✅ Se agregaron *${cantidad}* mensajes a @${numFinal}`,
+    text: `✅ Se agregaron *${cantidad}* mensajes a @${num}`,
     mentions: [targetJid]
   }, { quoted: msg })
 }
