@@ -60,7 +60,7 @@ import minar from "../commands/minar.js"
 import pescar from "../commands/pescar.js"
 import tesoro from "../commands/tesoro.js"
 import cazar from "../commands/cazar.js"
-
+import sumar from "../commands/sumar.js"
 
 
 
@@ -71,6 +71,7 @@ const COMMANDS = {
   mute,
   unmute,
   img,
+  sumar,
   spotify,
   addlista,
   testestado,
