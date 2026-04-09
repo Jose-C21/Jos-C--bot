@@ -74,7 +74,7 @@ export default async function sumar(sock, msg, { args, isOwner }) {
   const num = jidToNumber(targetJid)
 
   await sock.sendMessage(chatId, {
-    text: `✅ Se agregaron *${cantidad}* mensajes a @${num}`,
+    text: `> ✅ Se agregaron *${cantidad}* mensajes a @${num}`,
     mentions: [targetJid]
   }, { quoted: msg })
 }
