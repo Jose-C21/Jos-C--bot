@@ -50,7 +50,7 @@ export default async function sumar(sock, msg, { args, isOwner }) {
     cantidad = Number(args[1])
   } else {
     // ─────────────────────────────
-    // ✅ CASO 2: CON NÚMERO
+    // ✅ CASO 2: CON NÚMERO (FIX LID)
     // ─────────────────────────────
     const num = String(args[0] || "").replace(/\D/g, "")
 
@@ -61,30 +61,38 @@ export default async function sumar(sock, msg, { args, isOwner }) {
       return
     }
 
-    // 🔍 buscar en participantes del grupo
-    let metadata
-    try {
-      metadata = await sock.groupMetadata(chatId)
-    } catch {
-      await sock.sendMessage(chatId, {
-        text: "❌ Error obteniendo participantes del grupo."
-      }, { quoted: msg })
-      return
-    }
+    const db = readDB()
+    const groupData = db[chatId] || {}
 
-    const participante = metadata.participants.find(p => {
-      const clean = String(p.id || "").replace(/\D/g, "")
+    // 🔥 1) buscar en conteo.json (MEJOR OPCIÓN)
+    let encontrado = Object.keys(groupData).find(jid => {
+      const clean = String(jid).replace(/\D/g, "")
       return clean.endsWith(num)
     })
 
-    if (!participante) {
+    // 🟡 2) fallback: buscar en participantes
+    if (!encontrado) {
+      try {
+        const metadata = await sock.groupMetadata(chatId)
+
+        const participante = metadata.participants.find(p => {
+          const clean = String(p.id || "").replace(/\D/g, "")
+          return clean.endsWith(num)
+        })
+
+        if (participante) encontrado = participante.id
+      } catch {}
+    }
+
+    // ❌ no encontrado
+    if (!encontrado) {
       await sock.sendMessage(chatId, {
-        text: "❌ Usuario no encontrado en el grupo."
+        text: "❌ Usuario no encontrado ni en conteo ni en grupo."
       }, { quoted: msg })
       return
     }
 
-    targetJid = participante.id
+    targetJid = encontrado
     cantidad = Number(args[1])
   }
 
@@ -95,7 +103,7 @@ export default async function sumar(sock, msg, { args, isOwner }) {
     await sock.sendMessage(chatId, {
       text: "❌ Cantidad inválida."
     }, { quoted: msg })
-    return
+      return
   }
 
   // ─────────────────────────────
