@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import { getSenderJid, jidToNumber } from "../utils/jid.js"
+import { jidToNumber } from "../utils/jid.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const CONTEO_PATH = path.join(DATA_DIR, "conteo.json")
@@ -29,9 +29,11 @@ export default async function sumar(sock, msg, { args, isOwner }) {
     return
   }
 
-  // 🔒 Solo owners (recomendado)
+  // 🔒 solo owner
   if (!isOwner) {
-    await sock.sendMessage(chatId, { text: "❌ Solo el owner puede usar este comando." }, { quoted: msg })
+    await sock.sendMessage(chatId, {
+      text: "❌ Solo el owner puede usar este comando."
+    }, { quoted: msg })
     return
   }
 
@@ -40,29 +42,65 @@ export default async function sumar(sock, msg, { args, isOwner }) {
   let targetJid = ""
   let cantidad = 0
 
-  // ✅ caso 1: con mención
+  // ─────────────────────────────
+  // ✅ CASO 1: CON MENCIÓN
+  // ─────────────────────────────
   if (mentioned.length) {
     targetJid = mentioned[0]
     cantidad = Number(args[1])
   } else {
-    // ✅ caso 2: con número
+    // ─────────────────────────────
+    // ✅ CASO 2: CON NÚMERO
+    // ─────────────────────────────
     const num = String(args[0] || "").replace(/\D/g, "")
+
     if (!num) {
       await sock.sendMessage(chatId, {
-        text: "❌ Usa: .sumar @usuario 100\n o .sumar 504XXXXXXXX 100"
+        text: "❌ Usa:\n.sumar @usuario 100\n.sumar 504XXXXXXXX 100"
       }, { quoted: msg })
       return
     }
 
-    targetJid = num + "@lid"
+    // 🔍 buscar en participantes del grupo
+    let metadata
+    try {
+      metadata = await sock.groupMetadata(chatId)
+    } catch {
+      await sock.sendMessage(chatId, {
+        text: "❌ Error obteniendo participantes del grupo."
+      }, { quoted: msg })
+      return
+    }
+
+    const participante = metadata.participants.find(p => {
+      const clean = String(p.id || "").replace(/\D/g, "")
+      return clean.endsWith(num)
+    })
+
+    if (!participante) {
+      await sock.sendMessage(chatId, {
+        text: "❌ Usuario no encontrado en el grupo."
+      }, { quoted: msg })
+      return
+    }
+
+    targetJid = participante.id
     cantidad = Number(args[1])
   }
 
+  // ─────────────────────────────
+  // ❌ VALIDACIÓN
+  // ─────────────────────────────
   if (!cantidad || cantidad <= 0) {
-    await sock.sendMessage(chatId, { text: "❌ Cantidad inválida." }, { quoted: msg })
+    await sock.sendMessage(chatId, {
+      text: "❌ Cantidad inválida."
+    }, { quoted: msg })
     return
   }
 
+  // ─────────────────────────────
+  // ✅ GUARDAR
+  // ─────────────────────────────
   const db = readDB()
 
   if (!db[chatId]) db[chatId] = {}
@@ -73,10 +111,10 @@ export default async function sumar(sock, msg, { args, isOwner }) {
 
   writeDB(db)
 
-  const num = jidToNumber(targetJid)
+  const numFinal = jidToNumber(targetJid)
 
   await sock.sendMessage(chatId, {
-    text: `✅ Se agregaron *${cantidad}* mensajes a @${num}`,
+    text: `✅ Se agregaron *${cantidad}* mensajes a @${numFinal}`,
     mentions: [targetJid]
   }, { quoted: msg })
 }
