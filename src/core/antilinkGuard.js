@@ -45,7 +45,7 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   )
 }
 
-// ✅ Normalizar JID de participantes (a veces viene object con {id, phoneNumber})
+// extra por si baileys manda objetos raros
 function normalizeParticipant(p) {
   if (!p) return { jid: "", phoneJid: "" }
   if (typeof p === "string") return { jid: p, phoneJid: "" }
@@ -81,24 +81,29 @@ function getQuotedTextAndAuthor(msg) {
   return { text: String(text || "").trim(), authorJid: String(author || "") }
 }
 
-// 🔎 Detectar links (incluye n9.cl/vl2z2)
+// detectar links
 const ANY_LINK_RE =
   /(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi
 
-// 🟥 TikTok
-const linkTikTokVideo = /^https?:\/\/(?:www\.)?tiktok\.com\/\@[^\/]+\/video\/\d+/i
-const linkTikTokAcortado = /(https?:\/\/)?(vm|vt)\.tiktok\.com\/[^\s]+/i
+// limpiar ?parametros
+function cleanLink(link) {
+  return link.split("?")[0]
+}
 
-// 🔵 Facebook
-const linkFacebookVideo = /^https?:\/\/(?:www\.)?facebook\.com\/.+\/videos\/\d+/i
-const linkFacebookWatch = /^https?:\/\/(?:www\.)?facebook\.com\/watch\/\?v=\d+/i
+// TikTok
+const linkTikTokVideo = /tiktok\.com\/\@[^\/]+\/video\/\d+/i
+const linkTikTokAcortado = /(vm|vt)\.tiktok\.com\/[^\s]+/i
+
+// Facebook
+const linkFacebookVideo = /facebook\.com\/.+\/videos\/\d+/i
+const linkFacebookWatch = /facebook\.com\/watch\/\?v=\d+/i
 const linkFacebookReel = /facebook\.com\/reel\/\d+/i
-const linkFacebookShareVideo = /^https?:\/\/(?:www\.)?facebook\.com\/share\/v\/[^\s\/]+/i
-const linkFacebookShareReel = /^https?:\/\/(?:www\.)?facebook\.com\/share\/r\/[^\s\/]+/i
-const linkFbShort = /^https?:\/\/fb\.watch\/[^\s]+/i
+const linkFacebookShareVideo = /facebook\.com\/share\/v\//i
+const linkFacebookShareReel = /facebook\.com\/share\/r\//i
+const linkFbShort = /fb\.watch\/[^\s]+/i
 
-// 🟣 Instagram (SOLO REELS)
-const linkInstagramReel = /^https?:\/\/(?:www\.)?instagram\.com\/reels?\/[A-Za-z0-9_-]+/i
+// Instagram FIX
+const linkInstagramReel = /instagram\.com\/reels?\/[A-Za-z0-9_-]+/i
 
 async function headResolve(url) {
   try {
@@ -119,9 +124,7 @@ async function esVideoFacebook(link) {
   return (
     linkFacebookVideo.test(redir) ||
     linkFacebookWatch.test(redir) ||
-    linkFacebookReel.test(redir) ||
-    linkFacebookShareVideo.test(redir) ||
-    linkFacebookShareReel.test(redir)
+    linkFacebookReel.test(redir)
   )
 }
 
@@ -150,81 +153,54 @@ export async function antiLinkGuard(sock, msg) {
   const prefix = config.prefix || "."
   const fromMe = !!msg?.key?.fromMe
 
-  // sender real
   const senderJid = getSenderJid(msg)
   const senderNum = jidToNumber(senderJid)
+
   let decodedJid = senderJid
   try { if (sock?.decodeJid) decodedJid = sock.decodeJid(senderJid) } catch {}
   const senderNumDecoded = jidToNumber(decodedJid)
 
   const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
 
-  // texto actual
   const messageText = extractText(msg)
-
-  // quoted/caption
   const { text: quotedText, authorJid: quotedAuthor } = getQuotedTextAndAuthor(msg)
 
-  // texto a analizar + autor real del link
-  let textoAnalizado = messageText
-  let autorAnalizado = senderJid
-
-  if (quotedText) {
-    textoAnalizado = quotedText
-    if (quotedAuthor) autorAnalizado = quotedAuthor
-  }
+  let textoAnalizado = quotedText || messageText
+  let autorAnalizado = quotedAuthor || senderJid
 
   const links = (textoAnalizado.match(ANY_LINK_RE) || [])
-    .map(s => String(s).trim())
+    .map(s => cleanLink(String(s).trim()))
     .filter(Boolean)
 
   if (!links.length) return false
 
-  // guardar mensaje en historial
+  // guardar historial
   global.mensajesConLink[chatId] = global.mensajesConLink[chatId] || []
   global.mensajesConLink[chatId].push(msg)
   if (global.mensajesConLink[chatId].length > 150) global.mensajesConLink[chatId].shift()
 
-  // comando permitido?
+  // comando permitido
   const esComando = messageText.startsWith(prefix)
-  const nombreComando = esComando ? messageText.slice(prefix.length).trim().split(/\s+/)[0]?.toLowerCase() : ""
+  const nombreComando = esComando
+    ? messageText.slice(prefix.length).trim().split(/\s+/)[0]?.toLowerCase()
+    : ""
+
   let esComandoPermitido = esComando && isCommandAllowed(nombreComando)
 
-  // validar link del comando
   if (esComandoPermitido) {
-    const linkCmd = messageText.split(/\s+/)[1] || ""
-
-    if (nombreComando === "tiktok") {
-      let ok = false
-      if (linkTikTokVideo.test(linkCmd)) ok = true
-      else if (linkTikTokAcortado.test(linkCmd)) ok = await esVideoTikTok(linkCmd)
-      esComandoPermitido = ok
-    }
-
-    if (nombreComando === "facebook") {
-      let ok = false
-      if (
-        linkFacebookVideo.test(linkCmd) ||
-        linkFacebookWatch.test(linkCmd) ||
-        linkFacebookReel.test(linkCmd) ||
-        linkFacebookShareVideo.test(linkCmd) ||
-        linkFacebookShareReel.test(linkCmd)
-      ) ok = true
-      else if (linkFbShort.test(linkCmd)) ok = await esVideoFacebook(linkCmd)
-      esComandoPermitido = ok
-    }
+    const linkCmd = cleanLink(messageText.split(/\s+/)[1] || "")
 
     if (nombreComando === "instagram") {
       esComandoPermitido = linkInstagramReel.test(linkCmd)
     }
   }
 
-  // si es comando permitido -> ok
   if (esComandoPermitido) return false
 
-  // validar TODOS los links del texto
+  // validar links
   let todoValido = true
-  for (const link of links) {
+
+  for (let link of links) {
     if (isAllowedLinkDirect(link)) continue
 
     if (linkTikTokAcortado.test(link)) {
@@ -245,7 +221,7 @@ export async function antiLinkGuard(sock, msg) {
 
   if (todoValido) return false
 
-  // bypass: fromMe/owner/admin y si el autor del link es admin no castigar
+  // bypass
   let canBypass = fromMe || isOwner
   let autorEsAdmin = false
 
@@ -266,51 +242,46 @@ export async function antiLinkGuard(sock, msg) {
   if (autorEsAdmin) return false
   if (canBypass) return false
 
-  // ✅ ORDEN ORIGINAL:
-  // 1) EXPULSAR
-  // 2) BORRAR MENSAJE
-  // 3) AVISO AL FINAL
-
   const idUsuario = autorAnalizado
 
-  // 1) expulsar rápido
+  // 1 expulsar
   await sock.groupParticipantsUpdate(chatId, [idUsuario], "remove").catch(() => {})
 
-  // 2) borrar mensaje rápido (key completa)
+  // 2 borrar msg
   await sock.sendMessage(chatId, { delete: msg.key }).catch(() => {})
 
-  // borrar historial links de ese usuario
+  // borrar historial
   try {
     const limpiar = j => String(j || "").replace(/\D/g, "")
     const list = global.mensajesConLink[chatId] || []
     for (const m of list) {
-      try {
-        const who = m?.key?.participant || m?.key?.remoteJid
-        if (limpiar(who) === limpiar(idUsuario)) {
-          await sock.sendMessage(chatId, { delete: m.key }).catch(() => {})
-        }
-      } catch {}
+      const who = m?.key?.participant || m?.key?.remoteJid
+      if (limpiar(who) === limpiar(idUsuario)) {
+        await sock.sendMessage(chatId, { delete: m.key }).catch(() => {})
+      }
     }
   } catch {}
 
-  // 3) aviso al final
+  // 3 aviso
   if (!global.avisados.has(idUsuario)) {
     global.avisados.add(idUsuario)
     const tag = `@${jidToNumber(idUsuario)}`
+
     await sock.sendMessage(chatId, {
-  text:
+      text:
 `╭━━〔🔗𝗔𝗡𝗧𝗜𝗟𝗜𝗡𝗞〕━━╮
-┃ 👤 𝘂𝘀𝘂𝗮𝗿𝗶𝗼:
+┃ 👤 Usuario:
 ┃    ${tag}
 ┃
-┃ ⚖️ 𝗔𝗰𝗰𝗶𝗼𝗻:
-┃    Expulsado del grupo
+┃ ⚖️ Acción:
+┃    Expulsado
 ┃
-┃ 📛 𝗠𝗼𝘁𝗶𝘃𝗼:
+┃ 📛 Motivo:
 ┃    Enlace no permitido
 ╰━━━━━━━━━━━━━╯`,
-  mentions: [idUsuario]
-}).catch(() => {})
+      mentions: [idUsuario]
+    }).catch(() => {})
+
     setTimeout(() => global.avisados.delete(idUsuario), 180000)
   }
 
