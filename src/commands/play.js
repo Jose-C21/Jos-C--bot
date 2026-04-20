@@ -8,7 +8,7 @@ const SKY_APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
 const SKY_API = "https://api-sky.ultraplus.click/youtube/resolve"
 
 const SYLPHY_APIKEY = "sylphy-MtyAgpx"
-const SYLPHY_API = "https://sylphy.xyz/download/v2/ytmp3"
+const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
 
 const CARD_IMAGE_URL = "https://i.postimg.cc/TwGh4vDP/IMG-1651.png"
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
@@ -137,27 +137,24 @@ let audioUrl=null
 
 try{
 
-console.log("🌐 SYLPHY V2")
-
 const sylphy=await axios.get(
-`${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`
-)
+`${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
+{
+headers:{Accept:"application/json"},
+timeout:30000
+})
 
-audioUrl=sylphy.data?.result?.dl_url
-
-console.log("SYLPHY URL:",audioUrl)
+if(sylphy.data?.status && sylphy.data?.result?.dl_url){
+audioUrl=sylphy.data.result.dl_url
+}
 
 }catch(e){
-
-console.log("⚠️ SYLPHY FALLÓ")
-
+/* silencio total */
 }
 
 /* FALLBACK SKY */
 
 if(!audioUrl){
-
-console.log("🌐 SKYULTRAPLUS")
 
 const sky=await axios.post(
 SKY_API,
