@@ -14,9 +14,11 @@ const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
 
-// 🔥 recorte inteligente
+/* ========================= */
+/* ✂️ RECORTE INTELIGENTE */
+/* ========================= */
 function cortarTexto(ctx, texto, maxWidth) {
-  let words = texto.split(" ")
+  let words = (texto || "").split(" ")
   let line = ""
 
   for (let i = 0; i < words.length; i++) {
@@ -30,15 +32,18 @@ function cortarTexto(ctx, texto, maxWidth) {
 }
 
 
-/* 🎧 GENERADOR PRO */
+/* ========================= */
+/* 🎧 GENERADOR PERFECTO */
+/* ========================= */
 async function generarCard({ title, artist, duration, thumbnail }) {
   const canvas = createCanvas(1024, 1024)
   const ctx = canvas.getContext("2d")
 
+  // fondo (ruta segura)
   const bg = await loadImage(path.join(process.cwd(), "assets", "player.png"))
   ctx.drawImage(bg, 0, 0, 1024, 1024)
 
-  // fallback thumbnail
+  // portada (con fallback)
   let portada
   try {
     portada = await loadImage(thumbnail)
@@ -46,29 +51,34 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-  // 🎯 PORTADA PERFECTA (AJUSTADA A TU TEMPLATE)
-  ctx.drawImage(portada, 155, 515, 200, 200)
+  // 🎯 PORTADA (cuadro exacto de tu plantilla)
+  ctx.drawImage(portada, 150, 520, 200, 200)
+
+  // 🧼 limpiar zona texto (evita ver restos del diseño)
+  ctx.fillStyle = "#0a0a0a"
+  ctx.fillRect(370, 550, 600, 150)
 
   // 🎯 ARTISTA
   ctx.fillStyle = "#ffffff"
   ctx.font = "bold 34px Sans"
-
-  const artistFix = cortarTexto(ctx, artist, 420)
+  const artistFix = cortarTexto(ctx, artist, 520)
   ctx.fillText(artistFix, 400, 585)
 
   // 🎯 TITULO
   ctx.fillStyle = "#ff2e2e"
-  ctx.font = "bold 40px Sans"
-
-  const titleFix = cortarTexto(ctx, title, 480)
+  ctx.font = "bold 42px Sans"
+  const titleFix = cortarTexto(ctx, title, 560)
   ctx.fillText(titleFix, 400, 650)
+
+  // 🧼 limpiar zona tiempo
+  ctx.fillStyle = "#0a0a0a"
+  ctx.fillRect(370, 700, 600, 60)
 
   // 🎯 DURACIÓN
   ctx.fillStyle = "#aaa"
-  ctx.font = "24px Sans"
-
+  ctx.font = "26px Sans"
   ctx.fillText("0:00", 400, 725)
-  ctx.fillText(duration, 820, 725)
+  ctx.fillText(duration, 840, 725)
 
   return canvas.toBuffer("image/png")
 }
@@ -110,7 +120,8 @@ function signature() {
 
 
 /* ========================= */
-
+/* 🚀 PLAY */
+/* ========================= */
 export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
   const chatId = msg?.key?.remoteJid
@@ -157,7 +168,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const thumb2 = await fetchBuffer(THUMB_URL)
     const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-    // 🔥 IMAGEN PERFECTA
+    // 🎧 IMAGEN DINÁMICA
     const bufferImg = await generarCard({
       title,
       artist: allArtists,
