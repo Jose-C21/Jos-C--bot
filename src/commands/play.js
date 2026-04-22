@@ -13,39 +13,66 @@ const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
-/* ========================= */
-/* 🎧 GENERADOR DE IMAGEN */
-/* ========================= */
+
+// 🔥 recorte inteligente
+function cortarTexto(ctx, texto, maxWidth) {
+  let words = texto.split(" ")
+  let line = ""
+
+  for (let i = 0; i < words.length; i++) {
+    let test = line + words[i] + " "
+    if (ctx.measureText(test).width > maxWidth) {
+      return line.trim() + "..."
+    }
+    line = test
+  }
+  return line.trim()
+}
+
+
+/* 🎧 GENERADOR PRO */
 async function generarCard({ title, artist, duration, thumbnail }) {
   const canvas = createCanvas(1024, 1024)
   const ctx = canvas.getContext("2d")
 
-  // fondo base (TU PNG)
-  const bg = await loadImage("./assets/player.png")
+  const bg = await loadImage(path.join(process.cwd(), "assets", "player.png"))
   ctx.drawImage(bg, 0, 0, 1024, 1024)
 
-  // portada
-  const portada = await loadImage(thumbnail)
-  ctx.drawImage(portada, 140, 520, 220, 220)
+  // fallback thumbnail
+  let portada
+  try {
+    portada = await loadImage(thumbnail)
+  } catch {
+    portada = await loadImage(THUMB_URL)
+  }
 
-  // ARTISTA
+  // 🎯 PORTADA PERFECTA (AJUSTADA A TU TEMPLATE)
+  ctx.drawImage(portada, 155, 515, 200, 200)
+
+  // 🎯 ARTISTA
   ctx.fillStyle = "#ffffff"
-  ctx.font = "bold 38px Sans"
-  ctx.fillText(artist.slice(0, 25), 400, 580)
+  ctx.font = "bold 34px Sans"
 
-  // TITULO
+  const artistFix = cortarTexto(ctx, artist, 420)
+  ctx.fillText(artistFix, 400, 585)
+
+  // 🎯 TITULO
   ctx.fillStyle = "#ff2e2e"
-  ctx.font = "bold 42px Sans"
-  ctx.fillText(title.slice(0, 28), 400, 640)
+  ctx.font = "bold 40px Sans"
 
-  // TIEMPO
+  const titleFix = cortarTexto(ctx, title, 480)
+  ctx.fillText(titleFix, 400, 650)
+
+  // 🎯 DURACIÓN
   ctx.fillStyle = "#aaa"
-  ctx.font = "26px Sans"
-  ctx.fillText("0:00", 400, 720)
-  ctx.fillText(duration, 820, 720)
+  ctx.font = "24px Sans"
+
+  ctx.fillText("0:00", 400, 725)
+  ctx.fillText(duration, 820, 725)
 
   return canvas.toBuffer("image/png")
 }
+
 
 /* ========================= */
 
@@ -73,14 +100,16 @@ function safeFileName(name = "") {
 
 async function fetchBuffer(url) {
   const r = await fetch(url)
-  const ab = await r.arrayBuffer()
-  return Buffer.from(ab)
+  return Buffer.from(await r.arrayBuffer())
 }
 
 function signature() {
   return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
 }
+
+
+/* ========================= */
 
 export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
@@ -103,7 +132,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
 
-    /* BUSCAR */
     const res = await yts(text)
     if (!res?.videos?.length) throw "Sin resultados"
 
@@ -129,7 +157,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const thumb2 = await fetchBuffer(THUMB_URL)
     const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-    /* 🎧 IMAGEN DINÁMICA */
+    // 🔥 IMAGEN PERFECTA
     const bufferImg = await generarCard({
       title,
       artist: allArtists,
@@ -141,6 +169,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       image: bufferImg,
       caption: finalCaption
     }, { quoted: msg })
+
 
     /* CACHE */
     if (fs.existsSync(filePath)) {
@@ -174,7 +203,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     let audioUrl = null
 
-    /* SYLPHY */
     try {
       const sylphy = await axios.get(
         `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
@@ -186,7 +214,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       }
     } catch { }
 
-    /* FALLBACK SKY */
     if (!audioUrl) {
       const sky = await axios.post(
         SKY_API,
@@ -209,7 +236,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     if (!audioUrl) throw "No se pudo obtener audio"
 
-    /* DESCARGAR */
     const bin = await axios.get(audioUrl, {
       responseType: "arraybuffer",
       timeout: 60000
@@ -243,7 +269,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
 
   } catch (e) {
-
     console.error("❌ ERROR PLAY:", e)
 
     await sock.sendMessage(chatId, {
