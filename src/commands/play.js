@@ -2,6 +2,7 @@ import fs from "fs"
 import path from "path"
 import yts from "yt-search"
 import axios from "axios"
+import { createCanvas, loadImage } from "canvas"
 import config from "../config.js"
 
 const SKY_APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
@@ -10,219 +11,300 @@ const SKY_API = "https://api-sky.ultraplus.click/youtube/resolve"
 const SYLPHY_APIKEY = "sylphy-MtyAgpx"
 const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
 
-const CARD_IMAGE_URL = "https://i.postimg.cc/TwGh4vDP/IMG-1651.png"
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
-function trad(en=""){
-const map={
-"years ago":"años","year ago":"año",
-"months ago":"meses","month ago":"mes",
-"weeks ago":"semanas","week ago":"semana",
-"days ago":"días","day ago":"día",
-"hours ago":"horas","hour ago":"hora",
-"minutes ago":"minutos","minute ago":"minuto",
-"seconds ago":"segundos","second ago":"segundo"
+
+/* ========================= */
+/* 🔥 UTILIDADES */
+/* ========================= */
+
+function formatearTiempo(segundos) {
+  if (!segundos || isNaN(segundos)) return "0:00"
+  const m = Math.floor(segundos / 60)
+  const s = segundos % 60
+  return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-const out=Object.entries(map).reduce((t,[e,es])=>{
-return t.replace(new RegExp(`\\b${e}\\b`,"g"),es)
-},en||"")
+function dividirTexto(ctx, text, maxWidth) {
+  let words = (text || "").split(" ")
+  let lines = []
+  let line = ""
 
-return ("hace "+out).trim()
+  for (let word of words) {
+    let test = line + word + " "
+    if (ctx.measureText(test).width > maxWidth) {
+      lines.push(line)
+      line = word + " "
+    } else {
+      line = test
+    }
+  }
+  lines.push(line)
+  return lines.slice(0, 2)
 }
 
-function safeFileName(name=""){
-return name.replace(/[^a-zA-Z0-9]/g,"_").slice(0,50)||"audio"
+
+/* ========================= */
+/* 🎧 GENERADOR FINAL */
+/* ========================= */
+
+async function generarCard({ title, artist, duration, thumbnail }) {
+  const canvas = createCanvas(1024, 1024)
+  const ctx = canvas.getContext("2d")
+
+  const bg = await loadImage(path.join(process.cwd(), "assets", "player.png"))
+  ctx.drawImage(bg, 0, 0, 1024, 1024)
+
+  let portada
+  try {
+    portada = await loadImage(thumbnail)
+  } catch {
+    portada = await loadImage(THUMB_URL)
+  }
+
+  // PORTADA
+  ctx.drawImage(portada, 160, 530, 180, 180)
+
+  // LIMPIAR ZONA TEXTO
+  ctx.fillStyle = "#0a0a0a"
+  ctx.fillRect(360, 560, 620, 200)
+
+  // ARTISTA
+  ctx.fillStyle = "#ffffff"
+  ctx.font = "bold 34px Sans"
+  ctx.fillText(artist.slice(0, 30), 400, 590)
+
+  // TITULO (2 LINEAS)
+  ctx.fillStyle = "#ff2e2e"
+  ctx.font = "bold 40px Sans"
+
+  const lines = dividirTexto(ctx, title, 550)
+  ctx.fillText(lines[0] || "", 400, 650)
+  if (lines[1]) ctx.fillText(lines[1], 400, 700)
+
+  // LIMPIAR TIEMPO
+  ctx.fillStyle = "#0a0a0a"
+  ctx.fillRect(360, 740, 620, 80)
+
+  // TIEMPO REAL
+  ctx.fillStyle = "#aaa"
+  ctx.font = "26px Sans"
+  ctx.fillText("0:00", 380, 780)
+  ctx.fillText(duration, 860, 780)
+
+  return canvas.toBuffer("image/png")
 }
 
-async function fetchBuffer(url){
-const r=await fetch(url)
-const ab=await r.arrayBuffer()
-return Buffer.from(ab)
+
+/* ========================= */
+
+function trad(en = "") {
+  const map = {
+    "years ago": "años", "year ago": "año",
+    "months ago": "meses", "month ago": "mes",
+    "weeks ago": "semanas", "week ago": "semana",
+    "days ago": "días", "day ago": "día",
+    "hours ago": "horas", "hour ago": "hora",
+    "minutes ago": "minutos", "minute ago": "minuto",
+    "seconds ago": "segundos", "second ago": "segundo"
+  }
+
+  const out = Object.entries(map).reduce((t, [e, es]) => {
+    return t.replace(new RegExp(`\\b${e}\\b`, "g"), es)
+  }, en || "")
+
+  return ("hace " + out).trim()
 }
 
-function signature(){
-return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+function safeFileName(name = "") {
+  return name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50) || "audio"
+}
+
+async function fetchBuffer(url) {
+  const r = await fetch(url)
+  return Buffer.from(await r.arrayBuffer())
+}
+
+function signature() {
+  return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
 }
 
-export default async function play(sock,msg,{args,usedPrefix="."}){
 
-const chatId=msg?.key?.remoteJid
-if(!chatId) return
+/* ========================= */
+/* 🚀 PLAY */
+/* ========================= */
 
-const text=(args||[]).join(" ").trim()
+export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
-const cacheDir=path.join(process.cwd(),"cache","play")
-if(!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir,{recursive:true})
+  const chatId = msg?.key?.remoteJid
+  if (!chatId) return
 
-if(!text){
-await sock.sendMessage(chatId,{
-text:`✳️ Uso:\n*${usedPrefix}play* <título o artista>\n\n${signature()}`
-},{quoted:msg})
-return
-}
+  const text = (args || []).join(" ").trim()
 
-try{
+  const cacheDir = path.join(process.cwd(), "cache", "play")
+  if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true })
 
-await sock.sendMessage(chatId,{react:{text:"⏳",key:msg.key}})
+  if (!text) {
+    await sock.sendMessage(chatId, {
+      text: `✳️ Uso:\n*${usedPrefix}play* <título o artista>\n\n${signature()}`
+    }, { quoted: msg })
+    return
+  }
 
-/* BUSCAR YOUTUBE */
+  try {
 
-const res=await yts(text)
-if(!res?.videos?.length) throw "Sin resultados"
+    await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
 
-const video=res.videos[0]
+    const res = await yts(text)
+    if (!res?.videos?.length) throw "Sin resultados"
 
-const title=video.title
-const ytUrl=video.url
-const timestamp=video.timestamp
-const views=video.views||0
-const subido=trad(video.uploadedAt||video.ago||"")
-const allArtists=video.author?.name||"Artista desconocido"
+    const video = res.videos[0]
 
-const clean=safeFileName(title)
-const filePath=path.join(cacheDir,`${clean}.mp3`)
+    const title = video.title
+    const ytUrl = video.url
 
-const finalCaption=
-`🔘 ᴛɪᴛᴜʟᴏ: ${title}\n\n`+
-`🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n\n`+
-`🔘 ᴅᴜʀᴀᴄɪᴏɴ: ${timestamp}\n\n`+
-`👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n`+
-signature()
+    // 🔥 DURACIÓN REAL
+    const duration = video.seconds
+      ? formatearTiempo(video.seconds)
+      : video.timestamp
 
-const thumb2=await fetchBuffer(THUMB_URL)
+    const views = video.views || 0
+    const subido = trad(video.uploadedAt || video.ago || "")
+    const allArtists = video.author?.name || "Artista desconocido"
 
-const jidUsuario=msg?.key?.participant||msg?.participant||msg?.key?.remoteJid
+    const clean = safeFileName(title)
+    const filePath = path.join(cacheDir, `${clean}.mp3`)
 
-await sock.sendMessage(chatId,{
-image:{url:CARD_IMAGE_URL},
-caption:finalCaption
-},{quoted:msg})
+    const finalCaption =
+      `🔘 ᴛɪᴛᴜʟᴏ: ${title}\n\n` +
+      `🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n\n` +
+      `🔘 ᴅᴜʀᴀᴄɪᴏɴ: ${duration}\n\n` +
+      `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
+      signature()
 
-/* CACHE */
+    const thumb2 = await fetchBuffer(THUMB_URL)
+    const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-if(fs.existsSync(filePath)){
+    const bufferImg = await generarCard({
+      title,
+      artist: allArtists,
+      duration,
+      thumbnail: video.image || video.thumbnail
+    })
 
-const fkontakAudio={
-key:{
-participants:"0@s.whatsapp.net",
-remoteJid:"0@s.whatsapp.net",
-fromMe:false,
-id:"PlayCache"
-},
-message:{
-locationMessage:{
-name:title,
-jpegThumbnail:thumb2,
-description:"🎵 Archivo desde caché"
-}
-},
-participant:"0@s.whatsapp.net"
-}
+    await sock.sendMessage(chatId, {
+      image: bufferImg,
+      caption: finalCaption
+    }, { quoted: msg })
 
-await sock.sendMessage(chatId,{
-audio:fs.readFileSync(filePath),
-mimetype:"audio/mpeg",
-contextInfo:{mentionedJid: jidUsuario?[jidUsuario]:[]}
-},{quoted:fkontakAudio})
+    /* ================= CACHE ================= */
 
-await sock.sendMessage(chatId,{react:{text:"⚡",key:msg.key}})
-return
-}
+    if (fs.existsSync(filePath)) {
 
-let audioUrl=null
+      const fkontakAudio = {
+        key: {
+          participants: "0@s.whatsapp.net",
+          remoteJid: "0@s.whatsapp.net",
+          fromMe: false,
+          id: "PlayCache"
+        },
+        message: {
+          locationMessage: {
+            name: title,
+            jpegThumbnail: thumb2,
+            description: "🎵 Archivo desde caché"
+          }
+        },
+        participant: "0@s.whatsapp.net"
+      }
 
-/* API SYLPHY V2 */
+      await sock.sendMessage(chatId, {
+        audio: fs.readFileSync(filePath),
+        mimetype: "audio/mpeg",
+        contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
+      }, { quoted: fkontakAudio })
 
-try{
+      await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
+      return
+    }
 
-const sylphy=await axios.get(
-`${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
-{
-headers:{Accept:"application/json"},
-timeout:30000
-})
+    /* ================= DESCARGA ================= */
 
-if(sylphy.data?.status && sylphy.data?.result?.dl_url){
-audioUrl=sylphy.data.result.dl_url
-}
+    let audioUrl = null
 
-}catch(e){
-/* silencio total */
-}
+    try {
+      const sylphy = await axios.get(
+        `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
+        { headers: { Accept: "application/json" }, timeout: 30000 }
+      )
 
-/* FALLBACK SKY */
+      if (sylphy.data?.status && sylphy.data?.result?.dl_url) {
+        audioUrl = sylphy.data.result.dl_url
+      }
+    } catch { }
 
-if(!audioUrl){
+    if (!audioUrl) {
+      const sky = await axios.post(
+        SKY_API,
+        { url: ytUrl, type: "audio", format: "mp3" },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            apikey: SKY_APIKEY
+          }
+        }
+      )
 
-const sky=await axios.post(
-SKY_API,
-{url:ytUrl,type:"audio",format:"mp3"},
-{
-headers:{
-"Content-Type":"application/json",
-apikey:SKY_APIKEY
-}
-}
-)
+      const result = sky.data?.result || sky.data?.data
+      audioUrl = result?.media?.dl_download || result?.media?.direct
 
-const result=sky.data?.result||sky.data?.data
+      if (audioUrl?.startsWith("/")) {
+        audioUrl = "https://api-sky.ultraplus.click" + audioUrl
+      }
+    }
 
-audioUrl=result?.media?.dl_download||result?.media?.direct
+    if (!audioUrl) throw "No se pudo obtener audio"
 
-if(audioUrl?.startsWith("/")){
-audioUrl="https://api-sky.ultraplus.click"+audioUrl
-}
+    const bin = await axios.get(audioUrl, {
+      responseType: "arraybuffer",
+      timeout: 60000
+    })
 
-}
+    fs.writeFileSync(filePath, Buffer.from(bin.data))
 
-if(!audioUrl) throw "No se pudo obtener audio"
+    const fkontakAudio = {
+      key: {
+        participants: "0@s.whatsapp.net",
+        remoteJid: "0@s.whatsapp.net",
+        fromMe: false,
+        id: "PlayNuevo"
+      },
+      message: {
+        locationMessage: {
+          name: title,
+          jpegThumbnail: thumb2,
+          description: "⚡ Descargado y guardado en caché"
+        }
+      },
+      participant: "0@s.whatsapp.net"
+    }
 
-/* DESCARGAR */
+    await sock.sendMessage(chatId, {
+      audio: fs.readFileSync(filePath),
+      mimetype: "audio/mpeg",
+      contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
+    }, { quoted: fkontakAudio })
 
-const bin=await axios.get(audioUrl,{
-responseType:"arraybuffer",
-timeout:60000
-})
+    await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
 
-fs.writeFileSync(filePath,Buffer.from(bin.data))
+  } catch (e) {
+    console.error("❌ ERROR PLAY:", e)
 
-const fkontakAudio={
-key:{
-participants:"0@s.whatsapp.net",
-remoteJid:"0@s.whatsapp.net",
-fromMe:false,
-id:"PlayNuevo"
-},
-message:{
-locationMessage:{
-name:title,
-jpegThumbnail:thumb2,
-description:"⚡ Descargado y guardado en caché"
-}
-},
-participant:"0@s.whatsapp.net"
-}
+    await sock.sendMessage(chatId, {
+      text: `❌ *Error:* ${e}`
+    }, { quoted: msg })
 
-await sock.sendMessage(chatId,{
-audio:fs.readFileSync(filePath),
-mimetype:"audio/mpeg",
-contextInfo:{mentionedJid: jidUsuario?[jidUsuario]:[]}
-},{quoted:fkontakAudio})
-
-await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
-
-}catch(e){
-
-console.error("❌ ERROR PLAY:",e)
-
-await sock.sendMessage(chatId,{
-text:`❌ *Error:* ${e}`
-},{quoted:msg})
-
-await sock.sendMessage(chatId,{react:{text:"❌",key:msg.key}})
-
-}
-
+    await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } })
+  }
 }
