@@ -45,7 +45,7 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   const canvas = createCanvas(1024, 1024)
   const ctx = canvas.getContext("2d")
 
-  const bg = await loadImage(path.join(process.cwd(), "assets", "player.png"))
+  const bg = await loadImage(path.join(process.cwd(), "assets", "player1.png"))
   ctx.drawImage(bg, 0, 0, 1024, 1024)
 
   let portada
