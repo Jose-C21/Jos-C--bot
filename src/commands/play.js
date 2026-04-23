@@ -64,17 +64,25 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   }
 
   /* ========================= */
-  /* 🎯 PORTADA PERFECTA (CLIP) */
+  /* 🎯 PORTADA PERFECTA (FIT + CLIP) */
   /* ========================= */
 
+  const size = 180
+  const x = 155
+  const y = 565
+
+  const ratio = Math.min(size / portada.width, size / portada.height)
+  const w = portada.width * ratio
+  const h = portada.height * ratio
+
+  const offsetX = x + (size - w) / 2
+  const offsetY = y + (size - h) / 2
+
   ctx.save()
-
   ctx.beginPath()
-  ctx.roundRect(155, 560, 185, 185, 18)
+  ctx.roundRect(x, y, size, size, 20)
   ctx.clip()
-
-  ctx.drawImage(portada, 155, 560, 185, 185)
-
+  ctx.drawImage(portada, offsetX, offsetY, w, h)
   ctx.restore()
 
   /* ========================= */
@@ -82,26 +90,26 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   /* ========================= */
 
   ctx.fillStyle = "#eaeaea"
-  ctx.font = "bold 26px Sans"
+  ctx.font = "bold 24px Sans"
   ctx.fillText(artist.slice(0, 28), 380, 610)
 
   ctx.fillStyle = "#ff2e2e"
-  ctx.font = "bold 28px Sans"
+  ctx.font = "bold 26px Sans"
 
-  const lines = dividirTexto(ctx, title, 500)
+  const lines = dividirTexto(ctx, title, 460)
 
   ctx.fillText(lines[0] || "", 380, 650)
   if (lines[1]) ctx.fillText(lines[1], 380, 685)
 
   /* ========================= */
-  /* 🎯 TIEMPO (CORREGIDO) */
+  /* 🎯 TIEMPO ALINEADO A BARRA */
   /* ========================= */
 
   ctx.fillStyle = "#b3b3b3"
-  ctx.font = "24px Sans"
+  ctx.font = "22px Sans"
 
-  ctx.fillText("0:00", 420, 835)
-  ctx.fillText(duration, 780, 835)
+  ctx.fillText("0:00", 420, 845)
+  ctx.fillText(duration, 760, 845)
 
   return canvas.toBuffer("image/png")
 }
@@ -174,6 +182,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     const title = video.title
     const ytUrl = video.url
+
     const duration = video.seconds
       ? formatearTiempo(video.seconds)
       : video.timestamp
@@ -208,7 +217,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     }, { quoted: msg })
 
 
-    /* CACHE */
+    /* ================= CACHE ================= */
 
     if (fs.existsSync(filePath)) {
 
@@ -239,7 +248,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       return
     }
 
-    /* DESCARGA */
+    /* ================= DESCARGA ================= */
 
     let audioUrl = null
 
