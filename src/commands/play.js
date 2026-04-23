@@ -55,16 +55,16 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
- /* ========================= */
-/* 🎯 PORTADA PERFECTA (SIN RECORTE) */
+/* ========================= */
+/* 🎯 PORTADA PERFECTA (FILL COMPLETO) */
 /* ========================= */
 
 const frameX = 150
 const frameY = 520
 const frameSize = 260
 
-// 🔥 ESCALAR SIN RECORTAR (FIT COMPLETO)
-const ratio = Math.min(
+// 🔥 COVER BIEN HECHO (LLENA TODO)
+const ratio = Math.max(
   frameSize / portada.width,
   frameSize / portada.height
 )
@@ -72,8 +72,9 @@ const ratio = Math.min(
 const w = portada.width * ratio
 const h = portada.height * ratio
 
-const offsetX = frameX + (frameSize - w) / 2
-const offsetY = frameY + (frameSize - h) / 2
+// 🔥 CENTRADO PERFECTO
+const offsetX = frameX - (w - frameSize) / 2
+const offsetY = frameY - (h - frameSize) / 2
 
 ctx.save()
 ctx.beginPath()
