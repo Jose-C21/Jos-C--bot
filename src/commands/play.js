@@ -71,7 +71,7 @@ async function generarCard({ title, artist, duration, thumbnail }) {
 
   // 🔥 POSICIÓN REAL (ajustada al diseño)
   const x = 412
-  const y = 440
+  const y = 425
 
   const imgRatio = portada.width / portada.height
 
@@ -89,7 +89,7 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   }
 
   // 🔥 AJUSTE FINO FINAL (CLAVE)
-  offsetY += 35
+  offsetY += 28
 
   ctx.save()
   ctx.beginPath()
