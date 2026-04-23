@@ -63,48 +63,38 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-  /* ========================= */
-  /* 🎯 PORTADA AJUSTADA PERFECTA */
-  /* ========================= */
+/* ========================= */
+/* 🎯 PORTADA PERFECTA (FIT COMPLETO) */
+/* ========================= */
 
-  const size = 200
+const size = 180   // 🔥 tamaño pequeño limpio
+const x = (1024 - size) / 2
+const y = 400      // 🔥 posición correcta centrada
 
-  // 🔥 POSICIÓN REAL (ajustada al diseño)
-  const x = 412
-  const y = 425
+const imgW = portada.width
+const imgH = portada.height
 
-  const imgRatio = portada.width / portada.height
+// 🔥 ESCALA PARA QUE QUEPA COMPLETA (SIN RECORTE)
+const scale = Math.min(size / imgW, size / imgH)
 
-  let drawWidth = size
-  let drawHeight = size
-  let offsetX = 0
-  let offsetY = 0
+const newW = imgW * scale
+const newH = imgH * scale
 
-  if (imgRatio > 1) {
-    drawWidth = size * imgRatio
-    offsetX = -(drawWidth - size) / 2
-  } else {
-    drawHeight = size / imgRatio
-    offsetY = -(drawHeight - size) / 2
-  }
+// 🔥 CENTRAR DENTRO DEL CUADRO
+const posX = x + (size - newW) / 2
+const posY = y + (size - newH) / 2
 
-  // 🔥 AJUSTE FINO FINAL (CLAVE)
-  offsetY += 28
+ctx.save()
 
-  ctx.save()
-  ctx.beginPath()
-  ctx.roundRect(x, y, size, size, 25)
-  ctx.clip()
+// 🔴 borde redondeado del cuadro
+ctx.beginPath()
+ctx.roundRect(x, y, size, size, 25)
+ctx.clip()
 
-  ctx.drawImage(
-    portada,
-    x + offsetX,
-    y + offsetY,
-    drawWidth,
-    drawHeight
-  )
+// 🔥 dibujar imagen SIN cortar
+ctx.drawImage(portada, posX, posY, newW, newH)
 
-  ctx.restore()
+ctx.restore()
 
 
   /* ========================= */
