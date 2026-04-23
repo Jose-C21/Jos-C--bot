@@ -63,28 +63,45 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-  // 🎯 PORTADA PERFECTA
-  ctx.drawImage(portada, 140, 540, 200, 200)
+  /* ========================= */
+  /* 🎯 PORTADA PERFECTA (CLIP) */
+  /* ========================= */
 
-  // 🎯 ARTISTA
+  ctx.save()
+
+  ctx.beginPath()
+  ctx.roundRect(155, 560, 185, 185, 18)
+  ctx.clip()
+
+  ctx.drawImage(portada, 155, 560, 185, 185)
+
+  ctx.restore()
+
+  /* ========================= */
+  /* 🎯 TEXTO */
+  /* ========================= */
+
   ctx.fillStyle = "#eaeaea"
   ctx.font = "bold 26px Sans"
-  ctx.fillText(artist.slice(0, 30), 380, 600)
+  ctx.fillText(artist.slice(0, 28), 380, 610)
 
-  // 🎯 TITULO
   ctx.fillStyle = "#ff2e2e"
-  ctx.font = "bold 30px Sans"
+  ctx.font = "bold 28px Sans"
 
-  const lines = dividirTexto(ctx, title, 520)
-  ctx.fillText(lines[0] || "", 380, 645)
+  const lines = dividirTexto(ctx, title, 500)
+
+  ctx.fillText(lines[0] || "", 380, 650)
   if (lines[1]) ctx.fillText(lines[1], 380, 685)
 
-  // 🎯 TIEMPO
+  /* ========================= */
+  /* 🎯 TIEMPO (CORREGIDO) */
+  /* ========================= */
+
   ctx.fillStyle = "#b3b3b3"
   ctx.font = "24px Sans"
 
-  ctx.fillText("0:00", 390, 790)
-  ctx.fillText(duration, 820, 790)
+  ctx.fillText("0:00", 420, 835)
+  ctx.fillText(duration, 780, 835)
 
   return canvas.toBuffer("image/png")
 }
@@ -150,7 +167,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
 
-    /* 🔎 BUSCAR */
     const res = await yts(text)
     if (!res?.videos?.length) throw "Sin resultados"
 
@@ -179,7 +195,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const thumb2 = await fetchBuffer(THUMB_URL)
     const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-    /* 🎧 IMAGEN */
     const bufferImg = await generarCard({
       title,
       artist: allArtists,
@@ -193,7 +208,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     }, { quoted: msg })
 
 
-    /* ================= CACHE ================= */
+    /* CACHE */
 
     if (fs.existsSync(filePath)) {
 
@@ -224,7 +239,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       return
     }
 
-    /* ================= DESCARGA ================= */
+    /* DESCARGA */
 
     let audioUrl = null
 
