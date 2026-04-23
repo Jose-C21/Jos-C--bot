@@ -33,19 +33,20 @@ function dividirTexto(ctx, text, maxWidth) {
   for (let word of words) {
     let test = line + word + " "
     if (ctx.measureText(test).width > maxWidth) {
-      lines.push(line)
+      lines.push(line.trim())
       line = word + " "
     } else {
       line = test
     }
   }
-  lines.push(line)
+
+  lines.push(line.trim())
   return lines.slice(0, 2)
 }
 
 
 /* ========================= */
-/* 🎧 GENERADOR FINAL */
+/* 🎧 GENERADOR PERFECTO */
 /* ========================= */
 
 async function generarCard({ title, artist, duration, thumbnail }) {
@@ -55,6 +56,7 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   const bg = await loadImage(path.join(process.cwd(), "assets", "player.png"))
   ctx.drawImage(bg, 0, 0, 1024, 1024)
 
+  // portada segura
   let portada
   try {
     portada = await loadImage(thumbnail)
@@ -62,35 +64,33 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-  // PORTADA
-  ctx.drawImage(portada, 160, 530, 180, 180)
+  // 🎯 PORTADA (CUADRO PERFECTO)
+  ctx.drawImage(portada, 145, 545, 190, 190)
 
-  // LIMPIAR ZONA TEXTO
+  // 🧼 limpiar SOLO zona de texto (NO tocar barra)
   ctx.fillStyle = "#0a0a0a"
-  ctx.fillRect(360, 560, 620, 200)
+  ctx.fillRect(360, 560, 620, 140)
 
-  // ARTISTA
-  ctx.fillStyle = "#ffffff"
-  ctx.font = "bold 34px Sans"
-  ctx.fillText(artist.slice(0, 30), 400, 590)
+  // 🎯 ARTISTA (más pequeño y limpio)
+  ctx.fillStyle = "#eaeaea"
+  ctx.font = "bold 28px Sans"
+  ctx.fillText(artist.slice(0, 28), 400, 590)
 
-  // TITULO (2 LINEAS)
+  // 🎯 TITULO (2 líneas, tamaño correcto)
   ctx.fillStyle = "#ff2e2e"
-  ctx.font = "bold 40px Sans"
+  ctx.font = "bold 34px Sans"
 
-  const lines = dividirTexto(ctx, title, 550)
-  ctx.fillText(lines[0] || "", 400, 650)
-  if (lines[1]) ctx.fillText(lines[1], 400, 700)
+  const lines = dividirTexto(ctx, title, 520)
 
-  // LIMPIAR TIEMPO
-  ctx.fillStyle = "#0a0a0a"
-  ctx.fillRect(360, 740, 620, 80)
+  ctx.fillText(lines[0] || "", 400, 635)
+  if (lines[1]) ctx.fillText(lines[1], 400, 675)
 
-  // TIEMPO REAL
-  ctx.fillStyle = "#aaa"
-  ctx.font = "26px Sans"
-  ctx.fillText("0:00", 380, 780)
-  ctx.fillText(duration, 860, 780)
+  // 🎯 TIEMPO (SIN limpiar barra para no borrar diseño)
+  ctx.fillStyle = "#b3b3b3"
+  ctx.font = "24px Sans"
+
+  ctx.fillText("0:00", 380, 800)
+  ctx.fillText(duration, 860, 800)
 
   return canvas.toBuffer("image/png")
 }
@@ -164,7 +164,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const title = video.title
     const ytUrl = video.url
 
-    // 🔥 DURACIÓN REAL
     const duration = video.seconds
       ? formatearTiempo(video.seconds)
       : video.timestamp
@@ -197,6 +196,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       image: bufferImg,
       caption: finalCaption
     }, { quoted: msg })
+
 
     /* ================= CACHE ================= */
 
