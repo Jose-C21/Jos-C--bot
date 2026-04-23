@@ -67,7 +67,7 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   /* 🎯 PORTADA PERFECTA (CENTER + COVER) */
   /* ========================= */
 
-  const size = 260
+  const size = 200
   const x = (1024 - size) / 2
   const y = 360
 
@@ -88,7 +88,7 @@ async function generarCard({ title, artist, duration, thumbnail }) {
 
   ctx.save()
   ctx.beginPath()
-  ctx.roundRect(x, y, size, size, 30)
+  ctx.roundRect(x, y, size, size, 25)
   ctx.clip()
 
   ctx.drawImage(
