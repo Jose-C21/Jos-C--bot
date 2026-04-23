@@ -25,27 +25,35 @@ function formatearTiempo(segundos) {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-// 🔥 texto dinámico (NUNCA se corta)
-function autoSizeText(ctx, text, maxWidth, baseSize) {
-  let size = baseSize
-  do {
-    ctx.font = `bold ${size}px Sans`
-    size--
-  } while (ctx.measureText(text).width > maxWidth && size > 18)
-  return size
+function dividirTexto(ctx, text, maxWidth) {
+  let words = (text || "").split(" ")
+  let lines = []
+  let line = ""
+
+  for (let word of words) {
+    let test = line + word + " "
+    if (ctx.measureText(test).width > maxWidth) {
+      lines.push(line.trim())
+      line = word + " "
+    } else {
+      line = test
+    }
+  }
+
+  lines.push(line.trim())
+  return lines.slice(0, 2)
 }
 
 
 /* ========================= */
-/* 🎧 GENERADOR PERFECTO FINAL */
+/* 🎧 GENERADOR FINAL PRO */
 /* ========================= */
 
 async function generarCard({ title, artist, duration, thumbnail }) {
-
   const canvas = createCanvas(1024, 1024)
   const ctx = canvas.getContext("2d")
 
-  const bg = await loadImage(path.join(process.cwd(), "assets", "player1.png"))
+  const bg = await loadImage(path.join(process.cwd(), "assets", "player2.png"))
   ctx.drawImage(bg, 0, 0, 1024, 1024)
 
   let portada
@@ -55,74 +63,74 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-/* ========================= */
-/* 🎯 PORTADA PERFECTA (FIX REAL) */
-/* ========================= */
-
-const frameX = 165   // ← ajustado
-const frameY = 535   // ← ajustado
-const frameSize = 250 // ← ajustado al borde real
-
-// escala tipo COVER
-const scale = Math.max(
-  frameSize / portada.width,
-  frameSize / portada.height
-)
-
-const newW = portada.width * scale
-const newH = portada.height * scale
-
-// centrado REAL
-const drawX = frameX + (frameSize - newW) / 2
-const drawY = frameY + (frameSize - newH) / 2
-
-// recorte EXACTO
-ctx.save()
-ctx.beginPath()
-ctx.roundRect(frameX, frameY, frameSize, frameSize, 28)
-ctx.clip()
-
-ctx.drawImage(portada, drawX, drawY, newW, newH)
-
-ctx.restore()
-
   /* ========================= */
-  /* 🎯 ARTISTA */
+  /* 🎯 PORTADA PERFECTA (CENTER + COVER) */
   /* ========================= */
 
-  ctx.fillStyle = "#eaeaea"
+  const size = 260
+  const x = (1024 - size) / 2
+  const y = 360
 
-  let artistSize = autoSizeText(ctx, artist, 500, 32)
-  ctx.font = `bold ${artistSize}px Sans`
+  const imgRatio = portada.width / portada.height
 
-  ctx.fillText(artist, 450, 600)
+  let drawWidth = size
+  let drawHeight = size
+  let offsetX = 0
+  let offsetY = 0
 
+  if (imgRatio > 1) {
+    drawWidth = size * imgRatio
+    offsetX = -(drawWidth - size) / 2
+  } else {
+    drawHeight = size / imgRatio
+    offsetY = -(drawHeight - size) / 2
+  }
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.roundRect(x, y, size, size, 30)
+  ctx.clip()
+
+  ctx.drawImage(
+    portada,
+    x + offsetX,
+    y + offsetY,
+    drawWidth,
+    drawHeight
+  )
+
+  ctx.restore()
 
   /* ========================= */
-  /* 🎯 TITULO DINÁMICO */
+  /* 🎯 TEXTO (AUTO AJUSTE) */
   /* ========================= */
 
+  ctx.textAlign = "center"
+
+  // ARTISTA
+  ctx.fillStyle = "#ffffff"
+  ctx.font = "bold 28px Sans"
+  ctx.fillText(artist, 512, 660)
+
+  // TITULO
   ctx.fillStyle = "#ff2e2e"
+  ctx.font = "bold 26px Sans"
 
-  let titleSize = autoSizeText(ctx, title, 520, 40)
-  ctx.font = `bold ${titleSize}px Sans`
-
-  ctx.fillText(title, 450, 650)
-
+  const lines = dividirTexto(ctx, title, 700)
+  ctx.fillText(lines[0] || "", 512, 700)
+  if (lines[1]) ctx.fillText(lines[1], 512, 735)
 
   /* ========================= */
-  /* 🎯 TIEMPO (BAJO LA BARRA) */
+  /* 🎯 TIEMPO (POSICIÓN PERFECTA) */
   /* ========================= */
 
+  ctx.textAlign = "left"
   ctx.fillStyle = "#b3b3b3"
   ctx.font = "24px Sans"
+  ctx.fillText("0:00", 120, 800)
 
-  // izquierda
-  ctx.fillText("0:00", 180, 845)
-
-  // derecha
-  ctx.fillText(duration, 820, 845)
-
+  ctx.textAlign = "right"
+  ctx.fillText(duration, 900, 800)
 
   return canvas.toBuffer("image/png")
 }
@@ -164,7 +172,7 @@ function signature() {
 
 
 /* ========================= */
-/* 🚀 PLAY FINAL */
+/* 🚀 PLAY */
 /* ========================= */
 
 export default async function play(sock, msg, { args, usedPrefix = "." }) {
@@ -217,6 +225,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const thumb2 = await fetchBuffer(THUMB_URL)
     const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
+    /* 🎧 IMAGEN FINAL */
     const bufferImg = await generarCard({
       title,
       artist: allArtists,
