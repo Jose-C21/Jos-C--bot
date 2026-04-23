@@ -25,31 +25,23 @@ function formatearTiempo(segundos) {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-function dividirTexto(ctx, text, maxWidth) {
-  let words = (text || "").split(" ")
-  let lines = []
-  let line = ""
-
-  for (let word of words) {
-    let test = line + word + " "
-    if (ctx.measureText(test).width > maxWidth) {
-      lines.push(line.trim())
-      line = word + " "
-    } else {
-      line = test
-    }
-  }
-
-  lines.push(line.trim())
-  return lines.slice(0, 2)
+// 🔥 texto dinámico (NUNCA se corta)
+function autoSizeText(ctx, text, maxWidth, baseSize) {
+  let size = baseSize
+  do {
+    ctx.font = `bold ${size}px Sans`
+    size--
+  } while (ctx.measureText(text).width > maxWidth && size > 18)
+  return size
 }
 
 
 /* ========================= */
-/* 🎧 GENERADOR PERFECTO */
+/* 🎧 GENERADOR PERFECTO FINAL */
 /* ========================= */
 
 async function generarCard({ title, artist, duration, thumbnail }) {
+
   const canvas = createCanvas(1024, 1024)
   const ctx = canvas.getContext("2d")
 
@@ -64,52 +56,77 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   }
 
   /* ========================= */
-  /* 🎯 PORTADA PERFECTA (FIT + CLIP) */
+  /* 🎯 PORTADA PERFECTA */
   /* ========================= */
 
-  const size = 180
-  const x = 155
-  const y = 565
+  const frameX = 150
+  const frameY = 520
+  const frameSize = 260
 
-  const ratio = Math.min(size / portada.width, size / portada.height)
+  const ratio = Math.max(
+    frameSize / portada.width,
+    frameSize / portada.height
+  )
+
   const w = portada.width * ratio
   const h = portada.height * ratio
 
-  const offsetX = x + (size - w) / 2
-  const offsetY = y + (size - h) / 2
+  const cropX = (w - frameSize) / 2
+  const cropY = (h - frameSize) / 2
 
   ctx.save()
   ctx.beginPath()
-  ctx.roundRect(x, y, size, size, 20)
+  ctx.roundRect(frameX, frameY, frameSize, frameSize, 30)
   ctx.clip()
-  ctx.drawImage(portada, offsetX, offsetY, w, h)
+
+  ctx.drawImage(
+    portada,
+    cropX, cropY,
+    frameSize, frameSize,
+    frameX, frameY,
+    frameSize, frameSize
+  )
+
   ctx.restore()
 
+
   /* ========================= */
-  /* 🎯 TEXTO */
+  /* 🎯 ARTISTA */
   /* ========================= */
 
   ctx.fillStyle = "#eaeaea"
-  ctx.font = "bold 24px Sans"
-  ctx.fillText(artist.slice(0, 28), 380, 610)
 
-  ctx.fillStyle = "#ff2e2e"
-  ctx.font = "bold 26px Sans"
+  let artistSize = autoSizeText(ctx, artist, 500, 32)
+  ctx.font = `bold ${artistSize}px Sans`
 
-  const lines = dividirTexto(ctx, title, 460)
+  ctx.fillText(artist, 450, 600)
 
-  ctx.fillText(lines[0] || "", 380, 650)
-  if (lines[1]) ctx.fillText(lines[1], 380, 685)
 
   /* ========================= */
-  /* 🎯 TIEMPO ALINEADO A BARRA */
+  /* 🎯 TITULO DINÁMICO */
+  /* ========================= */
+
+  ctx.fillStyle = "#ff2e2e"
+
+  let titleSize = autoSizeText(ctx, title, 520, 40)
+  ctx.font = `bold ${titleSize}px Sans`
+
+  ctx.fillText(title, 450, 650)
+
+
+  /* ========================= */
+  /* 🎯 TIEMPO (BAJO LA BARRA) */
   /* ========================= */
 
   ctx.fillStyle = "#b3b3b3"
-  ctx.font = "22px Sans"
+  ctx.font = "24px Sans"
 
-  ctx.fillText("0:00", 420, 845)
-  ctx.fillText(duration, 760, 845)
+  // izquierda
+  ctx.fillText("0:00", 180, 845)
+
+  // derecha
+  ctx.fillText(duration, 820, 845)
+
 
   return canvas.toBuffer("image/png")
 }
@@ -151,7 +168,7 @@ function signature() {
 
 
 /* ========================= */
-/* 🚀 PLAY COMPLETO */
+/* 🚀 PLAY FINAL */
 /* ========================= */
 
 export default async function play(sock, msg, { args, usedPrefix = "." }) {
