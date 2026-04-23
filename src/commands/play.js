@@ -63,38 +63,48 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-/* ========================= */
-/* 🎯 PORTADA PERFECTA (FIT COMPLETO) */
-/* ========================= */
+  /* ========================= */
+  /* 🎯 PORTADA AJUSTADA PERFECTA */
+  /* ========================= */
 
-const size = 180   // 🔥 tamaño pequeño limpio
-const x = (1024 - size) / 2
-const y = 400      // 🔥 posición correcta centrada
+  const size = 200
 
-const imgW = portada.width
-const imgH = portada.height
+  // 🔥 POSICIÓN REAL (ajustada al diseño)
+  const x = 412
+  const y = 425
 
-// 🔥 ESCALA PARA QUE QUEPA COMPLETA (SIN RECORTE)
-const scale = Math.min(size / imgW, size / imgH)
+  const imgRatio = portada.width / portada.height
 
-const newW = imgW * scale
-const newH = imgH * scale
+  let drawWidth = size
+  let drawHeight = size
+  let offsetX = 0
+  let offsetY = 0
 
-// 🔥 CENTRAR DENTRO DEL CUADRO
-const posX = x + (size - newW) / 2
-const posY = y + (size - newH) / 2
+  if (imgRatio > 1) {
+    drawWidth = size * imgRatio
+    offsetX = -(drawWidth - size) / 2
+  } else {
+    drawHeight = size / imgRatio
+    offsetY = -(drawHeight - size) / 2
+  }
 
-ctx.save()
+  // 🔥 AJUSTE FINO FINAL (CLAVE)
+  offsetY += 28
 
-// 🔴 borde redondeado del cuadro
-ctx.beginPath()
-ctx.roundRect(x, y, size, size, 25)
-ctx.clip()
+  ctx.save()
+  ctx.beginPath()
+  ctx.roundRect(x, y, size, size, 25)
+  ctx.clip()
 
-// 🔥 dibujar imagen SIN cortar
-ctx.drawImage(portada, posX, posY, newW, newH)
+  ctx.drawImage(
+    portada,
+    x + offsetX,
+    y + offsetY,
+    drawWidth,
+    drawHeight
+  )
 
-ctx.restore()
+  ctx.restore()
 
 
   /* ========================= */
