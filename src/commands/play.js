@@ -56,7 +56,6 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   const bg = await loadImage(path.join(process.cwd(), "assets", "player.png"))
   ctx.drawImage(bg, 0, 0, 1024, 1024)
 
-  // portada segura
   let portada
   try {
     portada = await loadImage(thumbnail)
@@ -64,33 +63,28 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-  // 🎯 PORTADA (CUADRO PERFECTO)
-  ctx.drawImage(portada, 145, 545, 190, 190)
+  // 🎯 PORTADA PERFECTA
+  ctx.drawImage(portada, 140, 540, 200, 200)
 
-  // 🧼 limpiar SOLO zona de texto (NO tocar barra)
-  ctx.fillStyle = "#0a0a0a"
-  ctx.fillRect(360, 560, 620, 140)
-
-  // 🎯 ARTISTA (más pequeño y limpio)
+  // 🎯 ARTISTA
   ctx.fillStyle = "#eaeaea"
-  ctx.font = "bold 28px Sans"
-  ctx.fillText(artist.slice(0, 28), 400, 590)
+  ctx.font = "bold 26px Sans"
+  ctx.fillText(artist.slice(0, 30), 380, 600)
 
-  // 🎯 TITULO (2 líneas, tamaño correcto)
+  // 🎯 TITULO
   ctx.fillStyle = "#ff2e2e"
-  ctx.font = "bold 34px Sans"
+  ctx.font = "bold 30px Sans"
 
   const lines = dividirTexto(ctx, title, 520)
+  ctx.fillText(lines[0] || "", 380, 645)
+  if (lines[1]) ctx.fillText(lines[1], 380, 685)
 
-  ctx.fillText(lines[0] || "", 400, 635)
-  if (lines[1]) ctx.fillText(lines[1], 400, 675)
-
-  // 🎯 TIEMPO (SIN limpiar barra para no borrar diseño)
+  // 🎯 TIEMPO
   ctx.fillStyle = "#b3b3b3"
   ctx.font = "24px Sans"
 
-  ctx.fillText("0:00", 380, 800)
-  ctx.fillText(duration, 860, 800)
+  ctx.fillText("0:00", 390, 790)
+  ctx.fillText(duration, 820, 790)
 
   return canvas.toBuffer("image/png")
 }
@@ -132,7 +126,7 @@ function signature() {
 
 
 /* ========================= */
-/* 🚀 PLAY */
+/* 🚀 PLAY COMPLETO */
 /* ========================= */
 
 export default async function play(sock, msg, { args, usedPrefix = "." }) {
@@ -156,6 +150,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
 
+    /* 🔎 BUSCAR */
     const res = await yts(text)
     if (!res?.videos?.length) throw "Sin resultados"
 
@@ -163,7 +158,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     const title = video.title
     const ytUrl = video.url
-
     const duration = video.seconds
       ? formatearTiempo(video.seconds)
       : video.timestamp
@@ -176,15 +170,16 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const filePath = path.join(cacheDir, `${clean}.mp3`)
 
     const finalCaption =
-      `🔘 ᴛɪᴛᴜʟᴏ: ${title}\n\n` +
-      `🔘 ᴀʀᴛɪꜱᴛᴀ: ${allArtists}\n\n` +
-      `🔘 ᴅᴜʀᴀᴄɪᴏɴ: ${duration}\n\n` +
+      `🔘 TITULO: ${title}\n\n` +
+      `🔘 ARTISTA: ${allArtists}\n\n` +
+      `🔘 DURACION: ${duration}\n\n` +
       `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
       signature()
 
     const thumb2 = await fetchBuffer(THUMB_URL)
     const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
+    /* 🎧 IMAGEN */
     const bufferImg = await generarCard({
       title,
       artist: allArtists,
@@ -242,7 +237,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       if (sylphy.data?.status && sylphy.data?.result?.dl_url) {
         audioUrl = sylphy.data.result.dl_url
       }
-    } catch { }
+    } catch {}
 
     if (!audioUrl) {
       const sky = await axios.post(
@@ -299,10 +294,11 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
 
   } catch (e) {
+
     console.error("❌ ERROR PLAY:", e)
 
     await sock.sendMessage(chatId, {
-      text: `❌ *Error:* ${e}`
+      text: `❌ Error: ${e}`
     }, { quoted: msg })
 
     await sock.sendMessage(chatId, { react: { text: "❌", key: msg.key } })
