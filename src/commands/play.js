@@ -67,39 +67,42 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   /* 🎯 PORTADA PERFECTA (CENTER + COVER) */
   /* ========================= */
 
-  const size = 200
-  const x = (1024 - size) / 2
-  const y = 360
+ const size = 200
+const x = (1024 - size) / 2
+const y = 380   // 🔥 antes 360 → lo bajamos
 
-  const imgRatio = portada.width / portada.height
+const imgRatio = portada.width / portada.height
 
-  let drawWidth = size
-  let drawHeight = size
-  let offsetX = 0
-  let offsetY = 0
+let drawWidth = size
+let drawHeight = size
+let offsetX = 0
+let offsetY = 0
 
-  if (imgRatio > 1) {
-    drawWidth = size * imgRatio
-    offsetX = -(drawWidth - size) / 2
-  } else {
-    drawHeight = size / imgRatio
-    offsetY = -(drawHeight - size) / 2
-  }
+if (imgRatio > 1) {
+  drawWidth = size * imgRatio
+  offsetX = -(drawWidth - size) / 2
+} else {
+  drawHeight = size / imgRatio
+  offsetY = -(drawHeight - size) / 2
+}
 
-  ctx.save()
-  ctx.beginPath()
-  ctx.roundRect(x, y, size, size, 25)
-  ctx.clip()
+// 🔥 AJUSTE CLAVE (centrado visual real)
+offsetY -= 20   // 👈 esto corrige el “hueco negro abajo”
 
-  ctx.drawImage(
-    portada,
-    x + offsetX,
-    y + offsetY,
-    drawWidth,
-    drawHeight
-  )
+ctx.save()
+ctx.beginPath()
+ctx.roundRect(x, y, size, size, 25)
+ctx.clip()
 
-  ctx.restore()
+ctx.drawImage(
+  portada,
+  x + offsetX,
+  y + offsetY,
+  drawWidth,
+  drawHeight
+)
+
+ctx.restore()
 
   /* ========================= */
   /* 🎯 TEXTO (AUTO AJUSTE) */
