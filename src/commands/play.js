@@ -55,39 +55,34 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-  /* ========================= */
-  /* 🎯 PORTADA PERFECTA */
-  /* ========================= */
+ /* ========================= */
+/* 🎯 PORTADA PERFECTA (SIN RECORTE) */
+/* ========================= */
 
-  const frameX = 150
-  const frameY = 520
-  const frameSize = 260
+const frameX = 150
+const frameY = 520
+const frameSize = 260
 
-  const ratio = Math.max(
-    frameSize / portada.width,
-    frameSize / portada.height
-  )
+// 🔥 ESCALAR SIN RECORTAR (FIT COMPLETO)
+const ratio = Math.min(
+  frameSize / portada.width,
+  frameSize / portada.height
+)
 
-  const w = portada.width * ratio
-  const h = portada.height * ratio
+const w = portada.width * ratio
+const h = portada.height * ratio
 
-  const cropX = (w - frameSize) / 2
-  const cropY = (h - frameSize) / 2
+const offsetX = frameX + (frameSize - w) / 2
+const offsetY = frameY + (frameSize - h) / 2
 
-  ctx.save()
-  ctx.beginPath()
-  ctx.roundRect(frameX, frameY, frameSize, frameSize, 30)
-  ctx.clip()
+ctx.save()
+ctx.beginPath()
+ctx.roundRect(frameX, frameY, frameSize, frameSize, 30)
+ctx.clip()
 
-  ctx.drawImage(
-    portada,
-    cropX, cropY,
-    frameSize, frameSize,
-    frameX, frameY,
-    frameSize, frameSize
-  )
+ctx.drawImage(portada, offsetX, offsetY, w, h)
 
-  ctx.restore()
+ctx.restore()
 
 
   /* ========================= */
