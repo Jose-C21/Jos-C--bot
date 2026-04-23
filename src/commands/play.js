@@ -56,35 +56,35 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   }
 
 /* ========================= */
-/* 🎯 PORTADA PERFECTA (FILL COMPLETO) */
+/* 🎯 PORTADA PERFECTA (FIX REAL) */
 /* ========================= */
 
-const frameX = 150
-const frameY = 520
-const frameSize = 260
+const frameX = 165   // ← ajustado
+const frameY = 535   // ← ajustado
+const frameSize = 250 // ← ajustado al borde real
 
-// 🔥 COVER BIEN HECHO (LLENA TODO)
-const ratio = Math.max(
+// escala tipo COVER
+const scale = Math.max(
   frameSize / portada.width,
   frameSize / portada.height
 )
 
-const w = portada.width * ratio
-const h = portada.height * ratio
+const newW = portada.width * scale
+const newH = portada.height * scale
 
-// 🔥 CENTRADO PERFECTO
-const offsetX = frameX - (w - frameSize) / 2
-const offsetY = frameY - (h - frameSize) / 2
+// centrado REAL
+const drawX = frameX + (frameSize - newW) / 2
+const drawY = frameY + (frameSize - newH) / 2
 
+// recorte EXACTO
 ctx.save()
 ctx.beginPath()
-ctx.roundRect(frameX, frameY, frameSize, frameSize, 30)
+ctx.roundRect(frameX, frameY, frameSize, frameSize, 28)
 ctx.clip()
 
-ctx.drawImage(portada, offsetX, offsetY, w, h)
+ctx.drawImage(portada, drawX, drawY, newW, newH)
 
 ctx.restore()
-
 
   /* ========================= */
   /* 🎯 ARTISTA */
