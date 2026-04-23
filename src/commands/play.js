@@ -64,48 +64,51 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   }
 
   /* ========================= */
-  /* 🎯 PORTADA PERFECTA (CENTER + COVER) */
+  /* 🎯 PORTADA AJUSTADA PERFECTA */
   /* ========================= */
 
- const size = 200
-const x = (1024 - size) / 2
-const y = 380   // 🔥 antes 360 → lo bajamos
+  const size = 200
 
-const imgRatio = portada.width / portada.height
+  // 🔥 POSICIÓN REAL (ajustada al diseño)
+  const x = 412
+  const y = 410
 
-let drawWidth = size
-let drawHeight = size
-let offsetX = 0
-let offsetY = 0
+  const imgRatio = portada.width / portada.height
 
-if (imgRatio > 1) {
-  drawWidth = size * imgRatio
-  offsetX = -(drawWidth - size) / 2
-} else {
-  drawHeight = size / imgRatio
-  offsetY = -(drawHeight - size) / 2
-}
+  let drawWidth = size
+  let drawHeight = size
+  let offsetX = 0
+  let offsetY = 0
 
-// 🔥 AJUSTE CLAVE (centrado visual real)
-offsetY -= 20   // 👈 esto corrige el “hueco negro abajo”
+  if (imgRatio > 1) {
+    drawWidth = size * imgRatio
+    offsetX = -(drawWidth - size) / 2
+  } else {
+    drawHeight = size / imgRatio
+    offsetY = -(drawHeight - size) / 2
+  }
 
-ctx.save()
-ctx.beginPath()
-ctx.roundRect(x, y, size, size, 25)
-ctx.clip()
+  // 🔥 AJUSTE FINO FINAL (CLAVE)
+  offsetY += 25
 
-ctx.drawImage(
-  portada,
-  x + offsetX,
-  y + offsetY,
-  drawWidth,
-  drawHeight
-)
+  ctx.save()
+  ctx.beginPath()
+  ctx.roundRect(x, y, size, size, 25)
+  ctx.clip()
 
-ctx.restore()
+  ctx.drawImage(
+    portada,
+    x + offsetX,
+    y + offsetY,
+    drawWidth,
+    drawHeight
+  )
+
+  ctx.restore()
+
 
   /* ========================= */
-  /* 🎯 TEXTO (AUTO AJUSTE) */
+  /* 🎯 TEXTO CENTRADO */
   /* ========================= */
 
   ctx.textAlign = "center"
@@ -113,27 +116,30 @@ ctx.restore()
   // ARTISTA
   ctx.fillStyle = "#ffffff"
   ctx.font = "bold 28px Sans"
-  ctx.fillText(artist, 512, 660)
+  ctx.fillText(artist, 512, 670)
 
   // TITULO
   ctx.fillStyle = "#ff2e2e"
   ctx.font = "bold 26px Sans"
 
   const lines = dividirTexto(ctx, title, 700)
-  ctx.fillText(lines[0] || "", 512, 700)
-  if (lines[1]) ctx.fillText(lines[1], 512, 735)
+  ctx.fillText(lines[0] || "", 512, 710)
+  if (lines[1]) ctx.fillText(lines[1], 512, 745)
+
 
   /* ========================= */
-  /* 🎯 TIEMPO (POSICIÓN PERFECTA) */
+  /* 🎯 TIEMPO (POSICIÓN EXACTA) */
   /* ========================= */
 
-  ctx.textAlign = "left"
   ctx.fillStyle = "#b3b3b3"
   ctx.font = "24px Sans"
-  ctx.fillText("0:00", 120, 800)
+
+  ctx.textAlign = "left"
+  ctx.fillText("0:00", 140, 820)
 
   ctx.textAlign = "right"
-  ctx.fillText(duration, 900, 800)
+  ctx.fillText(duration, 880, 820)
+
 
   return canvas.toBuffer("image/png")
 }
@@ -228,7 +234,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     const thumb2 = await fetchBuffer(THUMB_URL)
     const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
 
-    /* 🎧 IMAGEN FINAL */
     const bufferImg = await generarCard({
       title,
       artist: allArtists,
@@ -242,45 +247,22 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     }, { quoted: msg })
 
 
-    /* ================= CACHE ================= */
-
     if (fs.existsSync(filePath)) {
-
-      const fkontakAudio = {
-        key: {
-          participants: "0@s.whatsapp.net",
-          remoteJid: "0@s.whatsapp.net",
-          fromMe: false,
-          id: "PlayCache"
-        },
-        message: {
-          locationMessage: {
-            name: title,
-            jpegThumbnail: thumb2,
-            description: "🎵 Archivo desde caché"
-          }
-        },
-        participant: "0@s.whatsapp.net"
-      }
 
       await sock.sendMessage(chatId, {
         audio: fs.readFileSync(filePath),
-        mimetype: "audio/mpeg",
-        contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
-      }, { quoted: fkontakAudio })
+        mimetype: "audio/mpeg"
+      }, { quoted: msg })
 
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
       return
     }
 
-    /* ================= DESCARGA ================= */
-
     let audioUrl = null
 
     try {
       const sylphy = await axios.get(
-        `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
-        { headers: { Accept: "application/json" }, timeout: 30000 }
+        `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`
       )
 
       if (sylphy.data?.status && sylphy.data?.result?.dl_url) {
@@ -292,53 +274,23 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       const sky = await axios.post(
         SKY_API,
         { url: ytUrl, type: "audio", format: "mp3" },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            apikey: SKY_APIKEY
-          }
-        }
+        { headers: { apikey: SKY_APIKEY } }
       )
 
       const result = sky.data?.result || sky.data?.data
       audioUrl = result?.media?.dl_download || result?.media?.direct
-
-      if (audioUrl?.startsWith("/")) {
-        audioUrl = "https://api-sky.ultraplus.click" + audioUrl
-      }
     }
 
     if (!audioUrl) throw "No se pudo obtener audio"
 
-    const bin = await axios.get(audioUrl, {
-      responseType: "arraybuffer",
-      timeout: 60000
-    })
+    const bin = await axios.get(audioUrl, { responseType: "arraybuffer" })
 
     fs.writeFileSync(filePath, Buffer.from(bin.data))
 
-    const fkontakAudio = {
-      key: {
-        participants: "0@s.whatsapp.net",
-        remoteJid: "0@s.whatsapp.net",
-        fromMe: false,
-        id: "PlayNuevo"
-      },
-      message: {
-        locationMessage: {
-          name: title,
-          jpegThumbnail: thumb2,
-          description: "⚡ Descargado y guardado en caché"
-        }
-      },
-      participant: "0@s.whatsapp.net"
-    }
-
     await sock.sendMessage(chatId, {
       audio: fs.readFileSync(filePath),
-      mimetype: "audio/mpeg",
-      contextInfo: { mentionedJid: jidUsuario ? [jidUsuario] : [] }
-    }, { quoted: fkontakAudio })
+      mimetype: "audio/mpeg"
+    }, { quoted: msg })
 
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
 
