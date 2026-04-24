@@ -1,15 +1,14 @@
 import fs from "fs"
+import path from "path"
 import crypto from "crypto"
 import axios from "axios"
 import FormData from "form-data"
-import fileType from "file-type"
 import { downloadContentFromMessage } from "baileys"
 
 export default async function tourl(sock, msg) {
   try {
     const chatId = msg.key.remoteJid
 
-    // reacción
     await sock.sendMessage(chatId, {
       react: { text: "☁️", key: msg.key }
     })
@@ -23,18 +22,15 @@ export default async function tourl(sock, msg) {
     if (!type || !/image|video|audio|sticker|document/i.test(type)) {
       await sock.sendMessage(chatId, {
         text:
-`💬 *Responde a una imagen, video, audio o documento para subirlo a Catbox.*
-
-Ejemplo:
-.tourl`
+          "💬 Responde a una imagen, video, audio o documento.\n\nEjemplo:\n.tourl"
       }, { quoted: msg })
       return
     }
 
-    // descargar
+    // 📥 Descargar archivo
     const stream = await downloadContentFromMessage(
       quoted[type],
-      type.split("M")[0]
+      type.replace("Message", "")
     )
 
     let buffer = Buffer.from([])
@@ -42,67 +38,43 @@ Ejemplo:
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    // guardar temporal
-    const tempPath = `./temp_${Date.now()}`
+    // 📁 Guardar temporal
+    const tempPath = path.join(process.cwd(), `temp_${Date.now()}`)
     await fs.promises.writeFile(tempPath, buffer)
 
-    // tamaño
     const sizeBytes = fs.statSync(tempPath).size
 
     const formatBytes = (bytes) => {
       if (bytes === 0) return "0 B"
       const sizes = ["B", "KB", "MB", "GB"]
       const i = Math.floor(Math.log(bytes) / Math.log(1024))
-      return `${(bytes / 1024 ** i).toFixed(2)} ${sizes[i]}`
+      return (bytes / Math.pow(1024, i)).toFixed(2) + " " + sizes[i]
     }
 
     const humanSize = formatBytes(sizeBytes)
 
     if (sizeBytes > 1024 * 1024 * 1024) {
       await sock.sendMessage(chatId, {
-        text: "⚠️ *El archivo supera 1GB.*"
+        text: "⚠️ El archivo supera 1GB."
       }, { quoted: msg })
 
       await fs.promises.unlink(tempPath)
       return
     }
 
-    // progreso fake
-    const estados = [
-      "⏳ Subiendo a Catbox...",
-      "▰▱▱▱▱▱▱▱ 10%",
-      "▰▰▱▱▱▱▱▱ 25%",
-      "▰▰▰▰▱▱▱▱ 50%",
-      "▰▰▰▰▰▰▱▱ 75%",
-      "✅ Casi listo..."
-    ]
-
+    // ⏳ Mensaje progreso
     const status = await sock.sendMessage(chatId, {
-      text: estados[0]
+      text: "⏳ Subiendo..."
     }, { quoted: msg })
 
-    for (let i = 1; i < estados.length; i++) {
-      await new Promise(r => setTimeout(r, 700))
-      await sock.sendMessage(chatId, {
-        edit: status.key,
-        text: estados[i]
-      })
-    }
-
-    // subir
+    // 📤 Subir a Catbox
     const bufferData = await fs.promises.readFile(tempPath)
-
-    const fileInfo = await fileType.fromBuffer(bufferData)
-    const ext = fileInfo?.ext || "bin"
-    const mime = fileInfo?.mime || "application/octet-stream"
-
-    const random = crypto.randomBytes(5).toString("hex")
 
     const form = new FormData()
     form.append("reqtype", "fileupload")
     form.append("fileToUpload", bufferData, {
-      filename: `${random}.${ext}`,
-      contentType: mime
+      filename: crypto.randomBytes(5).toString("hex") + ".bin",
+      contentType: "application/octet-stream"
     })
 
     const res = await axios.post(
@@ -119,31 +91,24 @@ Ejemplo:
 
     await fs.promises.unlink(tempPath)
 
-    // mensaje final
-    const text =
-`*☑️ Subida completada ☑️*
-
-*乂 CATBOX UPLOAD 乂*
+    // ✅ Resultado
+    const txt =
+`☑️ Subida completada
 
 ❍ Enlace: ${link}
 ❍ Tamaño: ${humanSize}
-❍ Expiración: Permanente
-
-> ⊱┊*Jose Bot*`
+❍ Expiración: Permanente`
 
     await sock.sendMessage(chatId, {
       edit: status.key,
-      text: text.trim()
+      text: txt
     })
 
-  } catch (err) {
-    console.error("[tourl]", err)
+  } catch (error) {
+    console.error("❌ tourl error:", error)
 
     await sock.sendMessage(msg.key.remoteJid, {
-      text:
-`❌ *Error al subir el archivo.*
-
-Intenta nuevamente.`
+      text: "❌ Error al subir archivo."
     }, { quoted: msg })
   }
 }
