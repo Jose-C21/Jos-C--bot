@@ -24,6 +24,7 @@ import kiss from "../commands/kiss.js"
 import setstickeralert from "../commands/setstickeralert.js"
 import testestado from "../commands/testestado.js"
 import antiestado from "../commands/antiestado.js"
+import tourl from "../commands/tourl.js"
 
 // ✅ ytsearch + hook (replies)
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
@@ -71,6 +72,7 @@ const COMMANDS = {
   mute,
   unmute,
   img,
+  tourl,
   sumar,
   spotify,
   addlista,
