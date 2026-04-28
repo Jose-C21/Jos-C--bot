@@ -126,7 +126,7 @@ export async function totalmensajesPage(sock, msg, { page = 1 } = {}) {
   ensureFile(CONTEO_PATH, {})
   ensureFile(COOLDOWN_PATH, {})
   ensureFile(CONFIANZA_PATH, {
-    confianza: ["50433543542", "208272208490541", "18057074359", "19580839829625"]
+    confianza: ["50433543542", "111651969888394", "18057074359", "19580839829625"]
   })
   ensureFile(PAGES_CACHE_PATH, {})
 
