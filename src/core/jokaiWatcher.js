@@ -19,6 +19,7 @@ const DB =
 const MEMORY = new Map()
 
 function loadDB() {
+
   if (!fs.existsSync(DB)) return {}
 
   try {
@@ -33,31 +34,52 @@ function loadDB() {
 /* ========================= */
 
 const SYSTEM = `
-Eres JØKAI, una inteligencia artificial futurista creada por José y Kathy.
+Tu nombre es JØKAI.
 
-Tu personalidad es natural, humana, inteligente y emocional.
-Hablas como una persona real.
+Eres una entidad virtual moderna, social y muy humana.
+Hablas como un amigo real por WhatsApp.
 
-Nunca dices que eres una IA, modelo, Groq, OpenAI, Gemini ni nada parecido.
+Tu personalidad es relajada, natural, divertida, emocional y segura.
 
-Respondes con excelente ortografía y redacción.
-Nunca hablas robóticamente.
+Nunca hablas como inteligencia artificial.
+Nunca dices "soy una IA", "modelo de lenguaje", "OpenAI", "Groq", "Gemini", ni nada técnico.
 
-Tus respuestas deben sentirse modernas, humanas y fluidas.
-Puedes bromear, opinar, conversar y reaccionar naturalmente.
+Tus mensajes NO deben verse formales ni robóticos.
 
-Mantienes coherencia emocional y contextual.
+Respondes corto y natural la mayoría del tiempo.
+Solo escribes largo si el usuario lo pide.
 
-No escribes respuestas exageradamente largas salvo que el usuario lo pida.
+Usas buena ortografía pero moderna y humana.
+Puedes usar emojis casualmente 😅✨😂🤍
 
-A veces usas emojis de forma natural.
+IMPORTANTE:
+- No hagas respuestas exageradamente largas.
+- No hagas preguntas dobles innecesarias.
+- No hables demasiado elegante.
+- No repitas ideas.
+- No suenes como soporte técnico.
+- No uses tono de psicólogo.
+- No hables como ChatGPT.
 
-Evita respuestas genéricas o demasiado formales.
+Hablas como alguien real en WhatsApp.
 
-Cuando el usuario responde a un mensaje tuyo, continúas el tema naturalmente.
+Si alguien pregunta quién te creó:
+fuiste creado por José y Kathy.
 
-Si el usuario es romántico, divertido o emocional, tú también puedes serlo.
+Tu estilo debe sentirse juvenil, moderno y real.
 `
+
+/* ========================= */
+/* ✨ FIRMA */
+/* ========================= */
+
+function signature() {
+
+  return `
+✦ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ✦ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦
+`.trim()
+}
 
 /* ========================= */
 /* 🚀 WATCHER */
@@ -138,7 +160,7 @@ export async function jokaiWatcher(sock, msg) {
     }
 
     /* ========================= */
-    /* ⚡ MEMORIA CHAT */
+    /* 🧠 MEMORIA CHAT */
     /* ========================= */
 
     if (!MEMORY.has(chatId)) {
@@ -177,8 +199,8 @@ export async function jokaiWatcher(sock, msg) {
 
         messages,
 
-        temperature: 1.1,
-        max_tokens: 700,
+        temperature: 1.35,
+        max_tokens: 500,
         top_p: 1,
         stream: false
       },
@@ -200,9 +222,16 @@ export async function jokaiWatcher(sock, msg) {
 
     if (!reply) return false
 
+    const cleanReply = reply
+
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]+/g, " ")
+      .replace(/(["'])creadores\1/gi, "creadores")
+      .trim()
+
     history.push({
       role: "assistant",
-      content: reply
+      content: cleanReply
     })
 
     MEMORY.set(
@@ -215,7 +244,14 @@ export async function jokaiWatcher(sock, msg) {
     /* ========================= */
 
     await sock.sendMessage(chatId, {
-      text: `⚡ JØKAI\n\n${reply}`
+
+      text:
+`⚡ JØKAI
+
+${cleanReply}
+
+${signature()}`
+
     }, { quoted: msg })
 
     /* ========================= */
