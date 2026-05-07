@@ -254,7 +254,7 @@ export async function jokaiWatcher(sock, msg) {
     await sock.sendMessage(chatId, {
 
       text:
-`⚡ JØKAI
+`⚡ Hola, soy JØKAI
 
 ${cleanReply}
 
