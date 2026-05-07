@@ -184,7 +184,7 @@ export async function jokaiWatcher(sock, msg) {
         content: SYSTEM
       },
 
-      ...history.slice(-10)
+      ...history.slice(-4)
     ]
 
     /* ========================= */
@@ -253,8 +253,8 @@ export async function jokaiWatcher(sock, msg) {
 
     await sock.sendMessage(chatId, {
 
-      text:
-`⚡ Hola, soy JØKAI
+     text:
+`\`⚡ Hola, soy JØKAI\`
 
 ${cleanReply}
 
