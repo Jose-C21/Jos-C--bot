@@ -2,17 +2,35 @@ import axios from "axios"
 import fs from "fs"
 import path from "path"
 
-const API_KEY = "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"
+/* ========================= */
+/* ⚡ CONFIG */
+/* ========================= */
+
+const API_KEY =
+  "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"
 
 const DB =
   path.join(process.cwd(), "database", "jokai.json")
+
+/* ========================= */
+/* 🧠 MEMORIA */
+/* ========================= */
 
 const MEMORY = new Map()
 
 function loadDB() {
   if (!fs.existsSync(DB)) return {}
-  return JSON.parse(fs.readFileSync(DB))
+
+  try {
+    return JSON.parse(fs.readFileSync(DB))
+  } catch {
+    return {}
+  }
 }
+
+/* ========================= */
+/* ⚡ JØKAI SYSTEM */
+/* ========================= */
 
 const SYSTEM = `
 Eres JØKAI, una inteligencia artificial futurista creada por José y Kathy.
@@ -33,38 +51,68 @@ Mantienes coherencia emocional y contextual.
 No escribes respuestas exageradamente largas salvo que el usuario lo pida.
 
 A veces usas emojis de forma natural.
+
+Evita respuestas genéricas o demasiado formales.
+
+Cuando el usuario responde a un mensaje tuyo, continúas el tema naturalmente.
+
+Si el usuario es romántico, divertido o emocional, tú también puedes serlo.
 `
+
+/* ========================= */
+/* 🚀 WATCHER */
+/* ========================= */
 
 export async function jokaiWatcher(sock, msg) {
 
   try {
 
     const chatId = msg?.key?.remoteJid
-    if (!chatId) return
+
+    if (!chatId) return false
 
     const db = loadDB()
 
-    if (!db[chatId]) return
+    if (!db[chatId]) return false
 
     const text =
       msg?.message?.conversation ||
       msg?.message?.extendedTextMessage?.text ||
       ""
 
-    if (!text) return
+    if (!text) return false
 
-    const lower = text.toLowerCase()
+    const lower = text.toLowerCase().trim()
+
+    /* ========================= */
+    /* ⚡ INVOCAR JØKAI */
+    /* ========================= */
 
     const isCalling =
       lower.startsWith("jokai")
 
+    /* ========================= */
+    /* ⚡ RESPONDIENDO A JØKAI */
+    /* ========================= */
+
     const quoted =
       msg?.message?.extendedTextMessage?.contextInfo
 
-    const isReply =
-      quoted?.quotedMessage
+    const quotedText =
+      quoted?.quotedMessage?.conversation ||
+      quoted?.quotedMessage?.extendedTextMessage?.text ||
+      ""
 
-    if (!isCalling && !isReply) return
+    const isReplyToJokai =
+      quotedText.includes("⚡ JØKAI")
+
+    if (!isCalling && !isReplyToJokai) {
+      return false
+    }
+
+    /* ========================= */
+    /* ⚡ REACCIÓN */
+    /* ========================= */
 
     await sock.sendMessage(chatId, {
       react: {
@@ -73,16 +121,25 @@ export async function jokaiWatcher(sock, msg) {
       }
     })
 
+    /* ========================= */
+    /* ⚡ TEXTO USUARIO */
+    /* ========================= */
+
     let userText = text
 
     if (isCalling) {
+
       userText =
         text.replace(/^jokai\s*/i, "").trim()
+
+      if (!userText) {
+        userText = "Hola"
+      }
     }
 
-    if (!userText) {
-      userText = "Hola"
-    }
+    /* ========================= */
+    /* ⚡ MEMORIA CHAT */
+    /* ========================= */
 
     if (!MEMORY.has(chatId)) {
       MEMORY.set(chatId, [])
@@ -95,22 +152,35 @@ export async function jokaiWatcher(sock, msg) {
       content: userText
     })
 
+    /* ========================= */
+    /* ⚡ MENSAJES */
+    /* ========================= */
+
     const messages = [
       {
         role: "system",
         content: SYSTEM
       },
+
       ...history.slice(-10)
     ]
+
+    /* ========================= */
+    /* ⚡ REQUEST GROQ */
+    /* ========================= */
 
     const res = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
 
       {
         model: "llama-3.3-70b-versatile",
+
         messages,
-        temperature: 1,
-        max_tokens: 700
+
+        temperature: 1.1,
+        max_tokens: 700,
+        top_p: 1,
+        stream: false
       },
 
       {
@@ -121,19 +191,36 @@ export async function jokaiWatcher(sock, msg) {
       }
     )
 
+    /* ========================= */
+    /* ⚡ RESPUESTA */
+    /* ========================= */
+
     const reply =
-      res.data.choices[0].message.content
+      res?.data?.choices?.[0]?.message?.content?.trim()
+
+    if (!reply) return false
 
     history.push({
       role: "assistant",
       content: reply
     })
 
-    MEMORY.set(chatId, history.slice(-10))
+    MEMORY.set(
+      chatId,
+      history.slice(-10)
+    )
+
+    /* ========================= */
+    /* ⚡ ENVIAR */
+    /* ========================= */
 
     await sock.sendMessage(chatId, {
       text: `⚡ JØKAI\n\n${reply}`
     }, { quoted: msg })
+
+    /* ========================= */
+    /* ⚡ REACCIÓN FINAL */
+    /* ========================= */
 
     await sock.sendMessage(chatId, {
       react: {
@@ -142,11 +229,15 @@ export async function jokaiWatcher(sock, msg) {
       }
     })
 
+    return true
+
   } catch (e) {
 
     console.log(
       "❌ ERROR JØKAI WATCHER:",
       e?.response?.data || e
     )
+
+    return false
   }
 }
