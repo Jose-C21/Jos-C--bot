@@ -126,7 +126,7 @@ export async function jokaiWatcher(sock, msg) {
       ""
 
     const isReplyToJokai =
-      quotedText.includes("⚡ JØKAI")
+      quotedText.includes("JØKAI")
 
     if (!isCalling && !isReplyToJokai) {
       return false
