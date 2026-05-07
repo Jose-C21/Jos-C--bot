@@ -914,6 +914,20 @@ try {
       if (handled) return
     } catch {}
 
+// ─────────────────────────────────────────────
+    // ⚡ JØKAI WATCHER
+    // ─────────────────────────────────────────────
+    try {
+
+      const handledByJokai =
+        await jokaiWatcher(sock, msg)
+
+      if (handledByJokai) return
+
+    } catch (e) {
+      console.error("[JØKAI]", e)
+    }
+    
     if (!text.startsWith(prefix)) {
       logRouter({
         isGroup,
