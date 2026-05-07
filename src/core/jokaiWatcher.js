@@ -222,13 +222,21 @@ export async function jokaiWatcher(sock, msg) {
 
     if (!reply) return false
 
-    const cleanReply = reply
+   const cleanReply = reply
 
-      .replace(/\n{3,}/g, "\n\n")
-      .replace(/[ \t]+/g, " ")
-      .replace(/(["'])creadores\1/gi, "creadores")
-      .trim()
+  // máximo 2 saltos seguidos
+  .replace(/\n{3,}/g, "\n\n")
 
+  // limpia espacios excesivos SIN romper saltos
+  .replace(/[^\S\r\n]{2,}/g, " ")
+
+  // separa después de punto seguido largo
+  .replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/g, "$1\n\n")
+
+  // limpia "creadores"
+  .replace(/(["'])creadores\1/gi, "creadores")
+
+  .trim()
     history.push({
       role: "assistant",
       content: cleanReply
