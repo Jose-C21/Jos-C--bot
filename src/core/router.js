@@ -25,6 +25,7 @@ import setstickeralert from "../commands/setstickeralert.js"
 import testestado from "../commands/testestado.js"
 import antiestado from "../commands/antiestado.js"
 import tourl from "../commands/tourl.js"
+import ai from "../commands/ai.js"
 
 // ✅ ytsearch + hook (replies)
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
@@ -76,6 +77,7 @@ const COMMANDS = {
   sumar,
   spotify,
   addlista,
+  ai,
   testestado,
   antiestado,
   ts: textsticker,
