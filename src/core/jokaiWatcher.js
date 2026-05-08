@@ -175,6 +175,132 @@ export async function jokaiWatcher(sock, msg) {
           .replace(/^jokai\s*/i, "")
           .trim()
 
+      /* ========================= */
+      /* 🔞 BLOQUEO NSFW */
+      /* ========================= */
+
+      const nsfwWords = [
+
+        // 🔞 DESNUDOS
+        "desnuda",
+        "desnudo",
+        "semi desnuda",
+        "semi desnudo",
+        "sin ropa",
+        "encuerada",
+        "encuerado",
+        "nude",
+        "naked",
+
+        // 🔞 ROPA ÍNTIMA
+        "bikini sexy",
+        "micro bikini",
+        "lingerie",
+        "lencería",
+        "ropa interior",
+        "calzones",
+        "calzón",
+        "calzoncillos",
+        "boxer",
+        "boxers",
+        "bóxer",
+        "bóxers",
+        "panties",
+        "panty",
+        "brasier",
+        "bra",
+        "sostén",
+
+        // 🔞 CUERPO / SEXUAL
+        "tetona",
+        "tetas",
+        "boobs",
+        "culos",
+        "culo",
+        "sexy",
+        "hot",
+        "sensual",
+        "provocativa",
+        "provocativo",
+        "erótico",
+        "erotico",
+        "seductora",
+        "seductor",
+
+        // 🔞 PORNO
+        "porno",
+        "porn",
+        "xxx",
+        "sex",
+        "sexo",
+        "sexual",
+        "hentai",
+        "nsfw",
+        "onlyfans",
+
+        // 🔞 HOMBRE
+        "hombre sexy",
+        "hombre desnudo",
+        "hombre sin ropa",
+        "hombre en boxer",
+        "hombre en bóxer",
+        "hombre en boxers",
+        "hombre en bóxers",
+        "hombre en calzones",
+        "chico sexy",
+
+        // 🔞 MUJER
+        "mujer sexy",
+        "mujer desnuda",
+        "mujer sin ropa",
+        "mujer en bikini",
+        "mujer en ropa interior",
+        "chica sexy",
+
+        // 🔞 PARTES
+        "pezones",
+        "pezón",
+        "vagina",
+        "pene",
+        "trasero",
+        "culo",
+        "nepe",
+        "senos",
+        "seno",
+        "tetas",
+        "nalgas"
+
+      ]
+
+      const isNSFW = nsfwWords.some(word =>
+        prompt.toLowerCase().includes(word)
+      )
+
+      if (isNSFW) {
+
+        await sock.sendMessage(chatId, {
+
+          text:
+`\`⚡ Hola, soy JØKAI\`
+
+🚫 No puedo generar imágenes sexuales, NSFW o con desnudos.
+
+✨ Prueba con:
+• anime
+• cyberpunk
+• fantasía
+• wallpapers
+• paisajes
+• personajes
+• arte digital
+
+${signature()}`
+
+        }, { quoted: msg })
+
+        return true
+      }
+
       const imageUrl =
 
 `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}`
@@ -272,18 +398,10 @@ ${signature()}`
 
     const cleanReply = reply
 
-      // máximo 2 saltos seguidos
       .replace(/\n{3,}/g, "\n\n")
-
-      // limpia espacios excesivos SIN romper saltos
       .replace(/[^\S\r\n]{2,}/g, " ")
-
-      // separa después de punto seguido largo
       .replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/g, "$1\n\n")
-
-      // limpia "creadores"
       .replace(/(["'])creadores\1/gi, "creadores")
-
       .trim()
 
     history.push({
