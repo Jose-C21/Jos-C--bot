@@ -160,6 +160,66 @@ export async function jokaiWatcher(sock, msg) {
     }
 
     /* ========================= */
+    /* 🖼️ DETECTOR DE IMÁGENES */
+    /* ========================= */
+
+    const wantsImage =
+
+/\b(
+genera|
+generame|
+crea|
+créame|
+dibujame|
+dibújame|
+hazme|
+imagen|
+foto|
+wallpaper|
+dibuja
+)\b/ix.test(userText)
+
+    if (wantsImage) {
+
+      const prompt =
+
+        userText
+          .replace(/^jokai\s*/i, "")
+          .trim()
+
+      const imageUrl =
+
+`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}`
+
+      await sock.sendMessage(chatId, {
+
+        image: {
+          url: imageUrl
+        },
+
+        caption:
+`\`⚡ Hola, soy JØKAI\`
+
+🖼️ Imagen generada correctamente.
+
+✨ Prompt:
+${prompt}
+
+${signature()}`
+
+      }, { quoted: msg })
+
+      await sock.sendMessage(chatId, {
+        react: {
+          text: "🖼️",
+          key: msg.key
+        }
+      })
+
+      return true
+    }
+
+    /* ========================= */
     /* 🧠 MEMORIA CHAT */
     /* ========================= */
 
@@ -222,21 +282,22 @@ export async function jokaiWatcher(sock, msg) {
 
     if (!reply) return false
 
-   const cleanReply = reply
+    const cleanReply = reply
 
-  // máximo 2 saltos seguidos
-  .replace(/\n{3,}/g, "\n\n")
+      // máximo 2 saltos seguidos
+      .replace(/\n{3,}/g, "\n\n")
 
-  // limpia espacios excesivos SIN romper saltos
-  .replace(/[^\S\r\n]{2,}/g, " ")
+      // limpia espacios excesivos SIN romper saltos
+      .replace(/[^\S\r\n]{2,}/g, " ")
 
-  // separa después de punto seguido largo
-  .replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/g, "$1\n\n")
+      // separa después de punto seguido largo
+      .replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/g, "$1\n\n")
 
-  // limpia "creadores"
-  .replace(/(["'])creadores\1/gi, "creadores")
+      // limpia "creadores"
+      .replace(/(["'])creadores\1/gi, "creadores")
 
-  .trim()
+      .trim()
+
     history.push({
       role: "assistant",
       content: cleanReply
@@ -253,7 +314,7 @@ export async function jokaiWatcher(sock, msg) {
 
     await sock.sendMessage(chatId, {
 
-     text:
+      text:
 `\`⚡ Hola, soy JØKAI\`
 
 ${cleanReply}
