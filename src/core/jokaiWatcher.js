@@ -164,20 +164,8 @@ export async function jokaiWatcher(sock, msg) {
     /* ========================= */
 
     const wantsImage =
-
-/\b(
-genera|
-generame|
-crea|
-créame|
-dibujame|
-dibújame|
-hazme|
-imagen|
-foto|
-wallpaper|
-dibuja
-)\b/ix.test(userText)
+/\b(genera|generame|crea|créame|dibujame|dibújame|hazme|imagen|foto|wallpaper|dibuja)\b/i
+.test(userText)
 
     if (wantsImage) {
 
