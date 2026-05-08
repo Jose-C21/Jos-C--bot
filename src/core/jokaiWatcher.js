@@ -283,7 +283,7 @@ export async function jokaiWatcher(sock, msg) {
           text:
 `\`⚡ Hola, soy JØKAI\`
 
-🚫 No puedo generar imágenes sexuales, NSFW o con desnudos.
+🚫 No puedo generar imágenes sexuales, NSFW o con desnudos, por seguridad.
 
 ✨ Prueba con:
 • anime
