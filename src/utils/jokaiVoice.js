@@ -1,4 +1,4 @@
-import edgeTTS from "node-edge-tts"
+import { EdgeTTS } from "node-edge-tts"
 
 import ffmpeg from "fluent-ffmpeg"
 import ffmpegPath from "@ffmpeg-installer/ffmpeg"
@@ -29,7 +29,7 @@ export async function generateJokaiVoice(text) {
   /* 🎙️ GENERAR MP3 */
   /* ========================= */
 
-  const tts = new edgeTTS()
+  const tts = new EdgeTTS()
 
   await tts.ttsPromise(
     text,
