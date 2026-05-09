@@ -2,9 +2,6 @@ import axios from "axios"
 import fs from "fs"
 import path from "path"
 
-import { generateJokaiVoice }
-from "../utils/jokaiVoice.js"
-
 /* ========================= */
 /* ⚡ CONFIG */
 /* ========================= */
@@ -163,14 +160,6 @@ export async function jokaiWatcher(sock, msg) {
     }
 
     /* ========================= */
-    /* 🎙️ DETECTOR VOZ */
-    /* ========================= */
-
-    const wantsVoice =
-/\b(audio|voz|háblame|hablame|voz ia|nota de voz|voz de jokai|manda audio|responde con voz)\b/i
-.test(userText)
-
-    /* ========================= */
     /* 🖼️ DETECTOR DE IMÁGENES */
     /* ========================= */
 
@@ -192,6 +181,7 @@ export async function jokaiWatcher(sock, msg) {
 
       const nsfwWords = [
 
+        // 🔞 DESNUDOS
         "desnuda",
         "desnudo",
         "semi desnuda",
@@ -202,6 +192,7 @@ export async function jokaiWatcher(sock, msg) {
         "nude",
         "naked",
 
+        // 🔞 ROPA ÍNTIMA
         "bikini sexy",
         "micro bikini",
         "lingerie",
@@ -220,6 +211,7 @@ export async function jokaiWatcher(sock, msg) {
         "bra",
         "sostén",
 
+        // 🔞 CUERPO / SEXUAL
         "tetona",
         "tetas",
         "boobs",
@@ -235,6 +227,7 @@ export async function jokaiWatcher(sock, msg) {
         "seductora",
         "seductor",
 
+        // 🔞 PORNO
         "porno",
         "porn",
         "xxx",
@@ -245,6 +238,7 @@ export async function jokaiWatcher(sock, msg) {
         "nsfw",
         "onlyfans",
 
+        // 🔞 HOMBRE
         "hombre sexy",
         "hombre desnudo",
         "hombre sin ropa",
@@ -255,6 +249,7 @@ export async function jokaiWatcher(sock, msg) {
         "hombre en calzones",
         "chico sexy",
 
+        // 🔞 MUJER
         "mujer sexy",
         "mujer desnuda",
         "mujer sin ropa",
@@ -262,6 +257,7 @@ export async function jokaiWatcher(sock, msg) {
         "mujer en ropa interior",
         "chica sexy",
 
+        // 🔞 PARTES
         "pezones",
         "pezón",
         "vagina",
@@ -273,6 +269,7 @@ export async function jokaiWatcher(sock, msg) {
         "seno",
         "tetas",
         "nalgas"
+
       ]
 
       const isNSFW = nsfwWords.some(word =>
@@ -418,35 +415,6 @@ ${signature()}`
     )
 
     /* ========================= */
-    /* 🎙️ RESPUESTA CON VOZ */
-    /* ========================= */
-
-    if (wantsVoice) {
-
-      const voiceBuffer =
-        await generateJokaiVoice(cleanReply)
-
-      await sock.sendMessage(chatId, {
-
-        audio: voiceBuffer,
-
-        mimetype: "audio/ogg; codecs=opus",
-
-        ptt: true
-
-      }, { quoted: msg })
-
-      await sock.sendMessage(chatId, {
-        react: {
-          text: "🎙️",
-          key: msg.key
-        }
-      })
-
-      return true
-    }
-
-    /* ========================= */
     /* ⚡ ENVIAR */
     /* ========================= */
 
@@ -484,3 +452,4 @@ ${signature()}`
     return false
   }
 }
+
