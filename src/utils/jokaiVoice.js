@@ -50,15 +50,22 @@ export async function generateJokaiVoice(text) {
     .trim()
 
   /* ========================= */
+  /* ✂️ RECORTAR TEXTO */
+  /* ========================= */
+
+  const shortText =
+    cleanText.slice(0, 350)
+
+  /* ========================= */
   /* 🎙️ GENERAR MP3 */
   /* ========================= */
 
   const tts = new EdgeTTS()
 
   await tts.ttsPromise(
-    cleanText,
+    shortText,
     mp3Path,
-    "es-MX-DaliaNeural"
+    "es-AR-TomasNeural"
   )
 
   /* ========================= */
@@ -98,6 +105,7 @@ export async function generateJokaiVoice(text) {
   /* ========================= */
 
   try { fs.unlinkSync(mp3Path) } catch {}
+
   try { fs.unlinkSync(opusPath) } catch {}
 
   return buffer
