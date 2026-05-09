@@ -1,4 +1,5 @@
 import edgeTTS from "node-edge-tts"
+
 import ffmpeg from "fluent-ffmpeg"
 import ffmpegPath from "@ffmpeg-installer/ffmpeg"
 
@@ -28,11 +29,13 @@ export async function generateJokaiVoice(text) {
   /* 🎙️ GENERAR MP3 */
   /* ========================= */
 
-  await edgeTTS.generate({
+  const tts = new edgeTTS()
+
+  await tts.ttsPromise(
     text,
-    voice: "es-MX-DaliaNeural",
-    file: mp3Path
-  })
+    mp3Path,
+    "es-MX-DaliaNeural"
+  )
 
   /* ========================= */
   /* 🔊 CONVERTIR A OPUS */
@@ -56,7 +59,7 @@ export async function generateJokaiVoice(text) {
   })
 
   /* ========================= */
-  /* 📦 BUFFER FINAL */
+  /* 📦 BUFFER */
   /* ========================= */
 
   const buffer =
