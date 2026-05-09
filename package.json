@@ -19,6 +19,8 @@
     "fluent-ffmpeg": "^2.1.2",
     "node-webpmux": "^3.1.7",
     "form-data": "^4.0.0",
+  "edge-tts": "^1.7.4",
+  "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "canvas": "^2.11.2",
     "chalk": "^5.3.0",
     "moment": "^2.30.1",
