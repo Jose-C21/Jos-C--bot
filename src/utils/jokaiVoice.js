@@ -26,13 +26,37 @@ export async function generateJokaiVoice(text) {
     path.join(TMP_DIR, `${id}.ogg`)
 
   /* ========================= */
+  /* 🧼 LIMPIAR TEXTO */
+  /* ========================= */
+
+  const cleanText = text
+
+    // quitar emojis unicode
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+
+    // quitar símbolos raros
+    .replace(/[✨🤍😂😅🔥💀🤣😭🥺🎧🖤💜💙❤️💕💞💖]/g, "")
+
+    // reemplazos inglés -> español
+    .replace(/\bnah\b/gi, "na")
+    .replace(/\bbro\b/gi, "hermano")
+    .replace(/\bok\b/gi, "okay")
+    .replace(/\bhello\b/gi, "hola")
+    .replace(/\bhey\b/gi, "oye")
+
+    // limpiar múltiples espacios
+    .replace(/\s+/g, " ")
+
+    .trim()
+
+  /* ========================= */
   /* 🎙️ GENERAR MP3 */
   /* ========================= */
 
   const tts = new EdgeTTS()
 
   await tts.ttsPromise(
-    text,
+    cleanText,
     mp3Path,
     "es-MX-DaliaNeural"
   )
@@ -47,7 +71,11 @@ export async function generateJokaiVoice(text) {
 
       .audioCodec("libopus")
 
-      .audioBitrate(128)
+      .audioChannels(1)
+
+      .audioFrequency(48000)
+
+      .audioBitrate(64)
 
       .format("ogg")
 
