@@ -6,10 +6,7 @@ import path from "path"
 /* ⚡ CONFIG */
 /* ========================= */
 
-const API_KEY =
-  process.env.GROQ_API_KEY
-  
-  console.log(process.env.GROQ_API_KEY)
+const API_KEY = process.env.GROQ_API_KEY
 
 const DB =
   path.join(process.cwd(), "database", "jokai.json")
