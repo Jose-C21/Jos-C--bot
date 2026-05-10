@@ -7,7 +7,7 @@ import path from "path"
 /* ========================= */
 
 const API_KEY =
-  "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"
+  process.env.GROQ_API_KEY
 
 const DB =
   path.join(process.cwd(), "database", "jokai.json")
