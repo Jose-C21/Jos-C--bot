@@ -11,6 +11,17 @@ const API_KEY = process.env.GROQ_API_KEY
 const DB =
   path.join(process.cwd(), "database", "jokai.json")
 
+const DB_DIR =
+  path.dirname(DB)
+
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true })
+}
+
+if (!fs.existsSync(DB)) {
+  fs.writeFileSync(DB, "{}")
+}
+
 /* ========================= */
 /* 🧠 MEMORIA */
 /* ========================= */
