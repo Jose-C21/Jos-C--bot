@@ -1,3 +1,5 @@
+import "dotenv/config"
+
 import { startSock } from "./adapter/baileys.js"
 import { routeMessage } from "./core/router.js"
 
