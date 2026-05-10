@@ -232,7 +232,7 @@ export default async function textsticker(sock, msg, { args = [], usedPrefix = "
   const text = (args || []).join(" ").trim()
   if (!text) {
     await sock.sendMessage(chatId, {
-      text: `✳️ Uso:\n*${usedPrefix}textsticker* <texto>\n\nEjemplo:\n${usedPrefix}textsticker HOLA 😎`
+      text: `✳️ Uso:\n*${usedPrefix}ts* <texto>\n\nEjemplo:\n${usedPrefix}ts HOLA`
     }, { quoted: msg })
     return
   }
