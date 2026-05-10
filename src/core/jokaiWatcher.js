@@ -8,6 +8,8 @@ import path from "path"
 
 const API_KEY =
   process.env.GROQ_API_KEY
+  
+  console.log(process.env.GROQ_API_KEY)
 
 const DB =
   path.join(process.cwd(), "database", "jokai.json")
