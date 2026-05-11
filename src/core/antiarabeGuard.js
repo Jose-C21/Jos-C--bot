@@ -1,4 +1,4 @@
-// src/core/antiarabeGuard.js
+
 import fs from "fs"
 import path from "path"
 import { jidToNumber } from "../utils/jid.js"
@@ -42,14 +42,14 @@ function readActivosSafe() {
 
 const normDigits = (x) => String(x || "").replace(/\D/g, "")
 
-// ✅ saca el mejor JID para detectar número (phone real si viene)
+
 function pickDetectJid(p) {
   if (!p) return ""
   if (typeof p === "string") return p
   return p.phoneNumber || p.id || ""
 }
 
-// ✅ saca el mejor JID para expulsar (id lid si viene)
+
 function pickKickJid(p) {
   if (!p) return ""
   if (typeof p === "string") return p
@@ -70,7 +70,7 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
     const parts = update?.participants || []
     if (!parts.length) return false
 
-    // ✅ prefijos prohibidos (incluye 57)
+    
     const disallowedPrefixes = [
       "20","63","212","213","216","218","222","249","252","253","962","963","964","965","966",
       "967","968","970","971","973","974","211","220","223","224","225","226","227","228",
@@ -91,12 +91,12 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
 
       if (!detectJid || !kickJid) continue
 
-      // ✅ número desde el jid (sirve lid/s.whatsapp)
+      
       const num = jidToNumber(detectJid)
       const isDisallowed = disallowedPrefixes.some(prefix => String(num).startsWith(prefix))
       if (!isDisallowed) continue
 
-      // ✅ bypass admin: comparar por dígitos (lid vs s.whatsapp)
+      
       let bypass = false
       try {
         const target = normDigits(kickJid) || normDigits(detectJid)
@@ -104,34 +104,32 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
         if (found?.admin === "admin" || found?.admin === "superadmin") bypass = true
       } catch {}
 
-      // ✅ bypass owner (si helper viene desde baileys.js)
+      
       if (!bypass && typeof isOwnerByNumbers === "function") {
         if (isOwnerByNumbers({ senderNum: num, senderNumDecoded: num })) bypass = true
       }
 
       if (bypass) continue
 
-      // ✅ ARREGLO: que el aviso muestre la mención (@) del usuario, no el "num" detectado
-      // - Si viene phoneNumber (s.whatsapp.net) usamos eso para que el @ salga con número real
-      // - Si no, usamos kickJid / detectJid como fallback
+      
       const mentionBase =
         (typeof p === "object" && p?.phoneNumber) ? p.phoneNumber : (kickJid || detectJid)
 
       const mentionNum = jidToNumber(mentionBase) || jidToNumber(kickJid) || jidToNumber(detectJid) || num
 
-      // ✅ aviso (menciona al user real)
+      
       await sock.sendMessage(groupId, {
         text: `> ⚠️ @${mentionNum} ᴛɪᴇɴᴇ ᴜɴ ɴᴜ́ᴍᴇʀᴏ ᴘʀᴏʜɪʙɪᴅᴏ ʏ ꜱᴇʀᴀ́ ᴇxᴘᴜʟꜱᴀᴅᴏ.`,
         mentions: [kickJid]
       }).catch(() => {})
 
-      // ✅ expulsión (usar LID si está)
+      
       await sock.groupParticipantsUpdate(groupId, [kickJid], "remove").catch(() => {})
 
       expelledSomeone = true
     }
 
-    // ✅ si expulsó a alguien => el caller debe NO dar bienvenida
+    
     return expelledSomeone
   } catch (e) {
     console.error("[antiarabeGuard] error:", e)
