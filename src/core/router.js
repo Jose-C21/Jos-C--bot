@@ -1,4 +1,4 @@
-// src/core/router.js
+
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
@@ -7,7 +7,7 @@ import chalk from "chalk"
 import fs from "fs"
 import path from "path"
 
-// ✅ RATE LIMIT
+
 import { checkRateLimit, buildUserMentionJid, buildUserMentionTag } from "./ratelimit.js"
 
 import sticker from "../commands/sticker.js"
@@ -28,14 +28,14 @@ import tourl from "../commands/tourl.js"
 import jokai from "../commands/jokai.js"
 import { jokaiWatcher } from "./jokaiWatcher.js"
 
-// ✅ ytsearch + hook (replies)
+
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
 
-// ✅ NUEVO: antipersona (toggle) + watcher
+
 import antipersona from "../commands/antipersona.js"
 import { antiPersonaObserve } from "./antipersonaWatch.js"
 
-// ✅ IMPORTA PAGE TAMBIÉN
+
 import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
 
 import tiktok from "../commands/tiktok.js"
@@ -93,17 +93,17 @@ const COMMANDS = {
   warns: warnSystem,
   unwarn: warnSystem,
 
-  // ✅ "restablecer advertencias" en inglés:
+  
   resetwarns: warnSystem,
-  resetwarnings: warnSystem, // alias opcional
+  resetwarnings: warnSystem, 
 
   warncfg: warnSystem,
 
-  // ✅ ytsearch
+  
   ytsearch,
   yts: ytsearch,
 
-  // ✅ antipersona toggle
+  
   antipersona,
 
   totalmensajes,
@@ -181,9 +181,7 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   )
 }
 
-// ─────────────────────────────────────────────
-// 🔴 DETECTOR DE ESTADOS
-// ─────────────────────────────────────────────
+
 function isStatusMessage(msg) {
   const m = msg?.message || {}
 
@@ -195,14 +193,10 @@ function isStatusMessage(msg) {
   )
 }
 
-// ─────────────────────────────────────────────
-// ✅ DATA DIR
-// ─────────────────────────────────────────────
+
 const DATA_DIR = path.join(process.cwd(), "data")
 
-// ─────────────────────────────────────────────
-// ✅ ACTIVOS (persistente) -> data/activos.json
-// ─────────────────────────────────────────────
+
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
 
 function ensureActivosDB() {
@@ -247,9 +241,7 @@ function readActivosSafe() {
   }
 }
 
-// ─────────────────────────────────────────────
-// 🔴 FUNCIÓN ANTI-ESTADO (LISTA PARA USAR EN ROUTER)
-// ─────────────────────────────────────────────
+
 export async function antiEstadoHandler(sock, msg, chatId, isGroup, fromMe) {
   try {
     const activos = readActivosSafe()
@@ -283,9 +275,7 @@ export async function antiEstadoHandler(sock, msg, chatId, isGroup, fromMe) {
   }
 }
 
-// ─────────────────────────────────────────────
-// ✅ CONTEO DE MENSAJES (persistente)
-// ─────────────────────────────────────────────
+
 const CONTEO_PATH = path.join(DATA_DIR, "conteo.json")
 
 function ensureConteoDB() {
@@ -309,9 +299,7 @@ function writeConteoSafe(db) {
   } catch {}
 }
 
-// ─────────────────────────────────────────────
-// ✅ MUTE DB (persistente)
-// ─────────────────────────────────────────────
+
 const MUTE_PATH = path.join(DATA_DIR, "mute.json")
 
 function ensureMuteDB() {
@@ -335,9 +323,7 @@ function isMuted(chatId, senderNum) {
   return list.includes(String(senderNum))
 }
 
-// ─────────────────────────────────────────────
-// ✅ LOG COMPACTO
-// ─────────────────────────────────────────────
+
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 const padRightAnsi = (txt, width) => {
   const raw = stripAnsi(txt)
@@ -457,9 +443,7 @@ export async function routeMessage(sock, msg) {
     const prefix = config.prefix || "."
     if (fromMe && (!text || !text.startsWith(prefix))) return
 
-    // ─────────────────────────────────────────────
-    // ✅ ANTILINK GUARD
-// ─────────────────────────────────────────────
+    
 try {
   const blocked = await antiLinkGuard(sock, msg)
 
@@ -487,9 +471,7 @@ try {
   console.error("[antilinkGuard] error:", e)
 }
 
-    // ─────────────────────────────────────────────
-    // ✅ ANTIPERSONA WATCH (solo cambio de nombre)
-    // ─────────────────────────────────────────────
+    
     try {
       const activos = readActivosSafe()
       await antiPersonaObserve(sock, msg, { activos, isOwnerByNumbers })
@@ -497,9 +479,7 @@ try {
       console.error("[antipersona] error:", e)
     }
 
-    // ─────────────────────────────────────────────
-    // ✅ ANTISTICKERS GUARD (LOG SIEMPRE)
-    // ─────────────────────────────────────────────
+    
     try {
       const activos = readActivosSafe()
       const antisOn = !!activos?.antis?.[chatId]
@@ -565,16 +545,14 @@ try {
 const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
 console.log("[antisGuard] whitelisted:", isWhitelisted)
 
-// ─────────────────────────────────────────────
-// ✅ STICKER ALERT PRIVADO (SOLO STICKER ESPECÍFICO)
-// ─────────────────────────────────────────────
+
 try {
 
 if(isGroup && !fromMe && isStickerLike){
 
 if(normalizedUser === "19580839829625"){
 
-// obtener sticker real
+
 const sticker = stickerMsg || mUnwrapped?.stickerMessage
 
 const hash = sticker?.fileSha256?.toString("base64")
@@ -586,7 +564,7 @@ if(!fs.existsSync(DB)) return
 
 const data = JSON.parse(fs.readFileSync(DB))
 
-// ⚠ SOLO SI ES EL STICKER GUARDADO
+
 if(hash !== data.hash) return
 
 global.stickerAlert = global.stickerAlert || {}
@@ -706,9 +684,7 @@ const userKey = String(rawUser)
       console.error("[antisGuard] error:", e)
     }
 
-    // ─────────────────────────────────────────────
-    // ✅ CONTADOR DE MENSAJES
-    // ─────────────────────────────────────────────
+    
     try {
       if (isGroup && isTextMessage(msg)) {
         const senderId = msg.key.participant || msg.key.remoteJid
@@ -743,9 +719,7 @@ const userKey = String(rawUser)
       console.error("❌ Error en contador de mensajes:", e)
     }
 
-    // ─────────────────────────────────────────────
-    // ✅ MUTE BLOQUEO
-    // ─────────────────────────────────────────────
+    
     if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
       global._muteCounter = global._muteCounter || {}
       const key = `${chatId}:${finalNum}`
@@ -815,7 +789,7 @@ const userKey = String(rawUser)
       return
     }
 
-    // ✅ privado allowlist
+    
     const allowed = isAllowedPrivate(msg)
     if (!isOwner && !allowed) {
       logRouter({
@@ -832,9 +806,7 @@ const userKey = String(rawUser)
       return
     }
 
-    // ─────────────────────────────────────────────
-// ✅ STICKER ALERT PRIVADO (DEBUG)
-// ─────────────────────────────────────────────
+    
 try {
 
   const m = msg?.message || {}
@@ -907,16 +879,13 @@ try {
       return
     }
 
-    // ✅ REPLIES (ytsearch: siguiente/anterior/N1) — sin comandos
-    // Va antes del prefijo para que funcione respondiendo al bot.
+    
     try {
       const handled = await ytsearchReplyHook(sock, msg)
       if (handled) return
     } catch {}
 
-// ─────────────────────────────────────────────
-    // ⚡ JØKAI WATCHER
-    // ─────────────────────────────────────────────
+
     try {
 
       const handledByJokai =
@@ -947,9 +916,7 @@ try {
     const command = (parts.shift() || "").toLowerCase()
     const args = parts
 
-    // ─────────────────────────────────────────────
-    // ✅ RATE LIMIT (solo play y sticker/s) — por usuario, owners bypass
-    // ─────────────────────────────────────────────
+    
     try {
       const rl = checkRateLimit(sock, msg, { command, isOwner })
       if (rl?.blocked) {
