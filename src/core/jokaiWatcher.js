@@ -26,9 +26,7 @@ if (!fs.existsSync(DB)) {
   fs.writeFileSync(DB, "{}")
 }
 
-/* ========================= */
-/* 🧠 MEMORIA */
-/* ========================= */
+
 
 const MEMORY = new Map()
 
@@ -43,9 +41,7 @@ function loadDB() {
   }
 }
 
-/* ========================= */
-/* ⚡ JØKAI SYSTEM */
-/* ========================= */
+
 
 const SYSTEM = `
 Tu nombre es JØKAI.
@@ -83,9 +79,7 @@ fuiste creado por José y Kathy.
 Tu estilo debe sentirse juvenil, moderno y real.
 `
 
-/* ========================= */
-/* ✨ FIRMA */
-/* ========================= */
+
 
 function signature() {
 
@@ -95,9 +89,7 @@ function signature() {
 `.trim()
 }
 
-/* ========================= */
-/* 🚀 WATCHER */
-/* ========================= */
+
 
 export async function jokaiWatcher(sock, msg) {
 
@@ -120,16 +112,12 @@ export async function jokaiWatcher(sock, msg) {
 
     const lower = text.toLowerCase().trim()
 
-    /* ========================= */
-    /* ⚡ INVOCAR JØKAI */
-    /* ========================= */
+    
 
     const isCalling =
       lower.startsWith("jokai")
 
-    /* ========================= */
-    /* ⚡ RESPONDIENDO A JØKAI */
-    /* ========================= */
+    
 
     const quoted =
       msg?.message?.extendedTextMessage?.contextInfo
@@ -146,9 +134,7 @@ export async function jokaiWatcher(sock, msg) {
       return false
     }
 
-    /* ========================= */
-    /* ⚡ REACCIÓN */
-    /* ========================= */
+    
 
     await sock.sendMessage(chatId, {
       react: {
@@ -157,9 +143,7 @@ export async function jokaiWatcher(sock, msg) {
       }
     })
 
-    /* ========================= */
-    /* ⚡ TEXTO USUARIO */
-    /* ========================= */
+    
 
     let userText = text
 
@@ -173,9 +157,7 @@ export async function jokaiWatcher(sock, msg) {
       }
     }
 
-    /* ========================= */
-    /* 🖼️ DETECTOR DE IMÁGENES */
-    /* ========================= */
+    
 
     const wantsImage =
 /\b(genera|generame|crea|créame|dibujame|dibújame|hazme|imagen|foto|wallpaper|dibuja)\b/i
@@ -189,13 +171,11 @@ export async function jokaiWatcher(sock, msg) {
           .replace(/^jokai\s*/i, "")
           .trim()
 
-      /* ========================= */
-      /* 🔞 BLOQUEO NSFW */
-      /* ========================= */
+      
 
       const nsfwWords = [
 
-        // 🔞 DESNUDOS
+        
         "desnuda",
         "desnudo",
         "semi desnuda",
@@ -206,7 +186,7 @@ export async function jokaiWatcher(sock, msg) {
         "nude",
         "naked",
 
-        // 🔞 ROPA ÍNTIMA
+        
         "bikini sexy",
         "micro bikini",
         "lingerie",
@@ -225,7 +205,7 @@ export async function jokaiWatcher(sock, msg) {
         "bra",
         "sostén",
 
-        // 🔞 CUERPO / SEXUAL
+        
         "tetona",
         "tetas",
         "boobs",
@@ -241,7 +221,7 @@ export async function jokaiWatcher(sock, msg) {
         "seductora",
         "seductor",
 
-        // 🔞 PORNO
+        
         "porno",
         "porn",
         "xxx",
@@ -252,7 +232,7 @@ export async function jokaiWatcher(sock, msg) {
         "nsfw",
         "onlyfans",
 
-        // 🔞 HOMBRE
+        
         "hombre sexy",
         "hombre desnudo",
         "hombre sin ropa",
@@ -263,7 +243,7 @@ export async function jokaiWatcher(sock, msg) {
         "hombre en calzones",
         "chico sexy",
 
-        // 🔞 MUJER
+        
         "mujer sexy",
         "mujer desnuda",
         "mujer sin ropa",
@@ -271,7 +251,7 @@ export async function jokaiWatcher(sock, msg) {
         "mujer en ropa interior",
         "chica sexy",
 
-        // 🔞 PARTES
+        
         "pezones",
         "pezón",
         "vagina",
@@ -347,9 +327,7 @@ ${signature()}`
       return true
     }
 
-    /* ========================= */
-    /* 🧠 MEMORIA CHAT */
-    /* ========================= */
+    
 
     if (!MEMORY.has(chatId)) {
       MEMORY.set(chatId, [])
@@ -362,9 +340,7 @@ ${signature()}`
       content: userText
     })
 
-    /* ========================= */
-    /* ⚡ MENSAJES */
-    /* ========================= */
+    
 
     const messages = [
       {
@@ -375,9 +351,7 @@ ${signature()}`
       ...history.slice(-4)
     ]
 
-    /* ========================= */
-    /* ⚡ REQUEST GROQ */
-    /* ========================= */
+    
 
     const res = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -401,9 +375,7 @@ ${signature()}`
       }
     )
 
-    /* ========================= */
-    /* ⚡ RESPUESTA */
-    /* ========================= */
+    
 
     const reply =
       res?.data?.choices?.[0]?.message?.content?.trim()
@@ -428,9 +400,7 @@ ${signature()}`
       history.slice(-10)
     )
 
-    /* ========================= */
-    /* ⚡ ENVIAR */
-    /* ========================= */
+    
 
     await sock.sendMessage(chatId, {
 
@@ -443,9 +413,7 @@ ${signature()}`
 
     }, { quoted: msg })
 
-    /* ========================= */
-    /* ⚡ REACCIÓN FINAL */
-    /* ========================= */
+    
 
     await sock.sendMessage(chatId, {
       react: {
