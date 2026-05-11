@@ -1,10 +1,11 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import axios from "axios"
 import fs from "fs"
 import path from "path"
 
-/* ========================= */
-/* ⚡ CONFIG */
-/* ========================= */
+
 
 const API_KEY = process.env.GROQ_API_KEY
 
