@@ -1,4 +1,4 @@
-// src/core/antipersonaWatch.js
+
 import fs from "fs"
 import path from "path"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
@@ -6,8 +6,8 @@ import { getSenderJid, jidToNumber } from "../utils/jid.js"
 const DATA_DIR = path.join(process.cwd(), "data")
 const DB_PATH = path.join(DATA_DIR, "antipersona_names.json")
 
-const COOLDOWN_MS = 10 * 60 * 1000 // 10 min por usuario por grupo
-const cooldown = new Map() // key: `${chatId}:${num}` -> ts
+const COOLDOWN_MS = 10 * 60 * 1000 
+const cooldown = new Map() 
 
 function ensureDB() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -31,7 +31,7 @@ function writeDB(db) {
 }
 
 function getMentionJid(sock, msg) {
-  // participante real en grupos
+  
   const raw = msg?.key?.participant || getSenderJid(msg)
   let decoded = raw
   try { if (sock?.decodeJid) decoded = sock.decodeJid(raw) } catch {}
@@ -52,11 +52,7 @@ function nowHHMM() {
   return `${hh}:${mm}`
 }
 
-/**
- * Detecta cambios de nombre SOLO si el grupo tiene antipersona ON.
- * - No requiere contacts.update
- * - Detecta cuando la persona envía mensaje (pushName)
- */
+
 export async function antiPersonaObserve(sock, msg, { activos, isOwnerByNumbers } = {}) {
   try {
     const chatId = msg?.key?.remoteJid
@@ -74,7 +70,7 @@ export async function antiPersonaObserve(sock, msg, { activos, isOwnerByNumbers 
     const num = jidToNumber(jid) || String(jid).replace(/\D/g, "")
     if (!num) return
 
-    // owner bypass (si quieres que owners no sean anunciados)
+    
     if (typeof isOwnerByNumbers === "function") {
       const owner = isOwnerByNumbers({ senderNum: num, senderNumDecoded: num })
       if (owner) return
@@ -87,7 +83,7 @@ export async function antiPersonaObserve(sock, msg, { activos, isOwnerByNumbers 
     db[chatId] = db[chatId] || {}
     const prev = normalizeName(db[chatId][num]?.name)
 
-    // primera vez: solo guarda (no avisa)
+    
     if (!prev) {
       db[chatId][num] = { name: newName, ts: Date.now() }
       writeDB(db)
@@ -96,18 +92,18 @@ export async function antiPersonaObserve(sock, msg, { activos, isOwnerByNumbers 
 
     if (prev === newName) return
 
-    // cooldown anti-spam
+    
     const key = `${chatId}:${num}`
     const last = cooldown.get(key) || 0
     if (Date.now() - last < COOLDOWN_MS) {
-      // solo actualiza DB sin spamear
+      
       db[chatId][num] = { name: newName, ts: Date.now() }
       writeDB(db)
       return
     }
     cooldown.set(key, Date.now())
 
-    // actualizar DB
+    
     db[chatId][num] = { name: newName, ts: Date.now() }
     writeDB(db)
 
