@@ -2,7 +2,7 @@
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
-import { antiLinkGuard } from "./antilinkGuard.js" // ✅ FIX: nombre correcto
+import { antiLinkGuard } from "./antilinkGuard.js" 
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -129,10 +129,6 @@ const COMMANDS = {
   kick,
   ban: kick,
   tag,
-  minar,
-  pescar,
-  tesoro,
-  cazar,
   antiarabe,
 
   fantasma,
