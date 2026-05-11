@@ -1,8 +1,8 @@
-// src/core/groupWelcome.js
+
 import fs from "fs"
 import path from "path"
 
-// ✅ MISMA RUTA QUE EL COMANDO
+
 const DATA_DIR = path.join(process.cwd(), "data")
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
 
@@ -34,27 +34,27 @@ function readActivosSafe() {
   }
 }
 
-// ✅ URL fallback si no hay foto
+
 const FALLBACK_AVATAR = "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
 
-// ✅ Normalizar participant (string o object)
+
 function normalizeParticipant(p) {
   if (!p) return { jid: "", phoneJid: "" }
 
-  // si ya viene como string
+  
   if (typeof p === "string") {
     return { jid: p, phoneJid: "" }
   }
 
-  // si viene como objeto (como en tu log)
+  
   const jid = String(p.id || "")
   const phoneJid = String(p.phoneNumber || "")
   return { jid, phoneJid }
 }
 
-// ✅ sacar @tag bonito para caption
+
 function makeMentionTag(jid, phoneJid = "") {
-  // si es lid, mejor usar phoneNumber para mostrar el número real
+  
   const base = (phoneJid && phoneJid.includes("@")) ? phoneJid : jid
   return `@${String(base).split("@")[0]}`
 }
@@ -78,7 +78,7 @@ export async function onGroupParticipantsUpdate(sock, update) {
     if (action === "add" && !welcomeOn) return
     if (action === "remove" && !byeOn) return
 
-    // metadata del grupo
+    
     let groupName = "este grupo"
     let desc = ""
     try {
@@ -93,11 +93,11 @@ export async function onGroupParticipantsUpdate(sock, update) {
       const { jid: participantJid, phoneJid } = normalizeParticipant(p)
       if (!participantJid && !phoneJid) continue
 
-      // ✅ para mencionar SIEMPRE manda jid válido (preferimos phoneNumber si existe)
+      
       const mentionJid = phoneJid || participantJid
       const mentionTag = makeMentionTag(participantJid, phoneJid)
 
-      // foto perfil (primero intenta jid lid, luego phoneNumber, luego fallback)
+      
       let profilePicUrl = FALLBACK_AVATAR
       try {
         const pic1 = await sock.profilePictureUrl(participantJid, "image")
@@ -113,7 +113,7 @@ export async function onGroupParticipantsUpdate(sock, update) {
 
       if (!profilePicUrl || typeof profilePicUrl !== "string") profilePicUrl = FALLBACK_AVATAR
 
-      // ✅ Bienvenida
+      
       if (action === "add" && welcomeOn) {
         const caption =
           `╭─༻❀\n` +
@@ -131,7 +131,7 @@ export async function onGroupParticipantsUpdate(sock, update) {
         console.log("[groupWelcome] WELCOME SENT ->", mentionJid)
       }
 
-      // ✅ Despedida
+      
       if (action === "remove" && byeOn) {
         const caption = `👋 ${mentionTag} ha salido de *${groupName}* 👋`
 
