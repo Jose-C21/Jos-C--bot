@@ -9,7 +9,7 @@ import path from "path"
 
 const API_KEY = process.env.GROQ_API_KEY
 
-console.log("KEY EXISTS:", API_KEY)
+console.log("KEY EXISTS:", !!API_KEY)
 console.log("KEY START:", API_KEY?.slice(0, 8))
 
 const DB =
