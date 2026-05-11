@@ -1,4 +1,4 @@
-// src/core/ratelimit.js
+
 import fs from "fs"
 import path from "path"
 import { jidToNumber } from "../utils/jid.js"
@@ -30,7 +30,7 @@ function writeJsonSafe(filePath, data) {
   } catch {}
 }
 
-// ✅ helpers
+
 const onlyDigits = (x) => String(x || "").replace(/\D/g, "")
 
 function getSenderRawJid(msg) {
@@ -42,7 +42,7 @@ function getSenderRawJid(msg) {
   )
 }
 
-// ✅ key por usuario: lid + decoded + número (para que siempre sea el mismo usuario)
+ 
 export function buildUserRateKey(sock, msg) {
   const raw = getSenderRawJid(msg)
 
@@ -52,12 +52,12 @@ export function buildUserRateKey(sock, msg) {
   const n1 = onlyDigits(jidToNumber(raw))
   const n2 = onlyDigits(jidToNumber(decoded))
 
-  // si por alguna razón no hay número, usa el jid como fallback
+  
   const base = n2 || n1 || String(decoded || raw)
   return `u:${base}`
 }
 
-// ✅ JID para mencionar (preferimos decoded si existe)
+ 
 export function buildUserMentionJid(sock, msg) {
   const raw = getSenderRawJid(msg)
 
@@ -73,21 +73,19 @@ export function buildUserMentionTag(sock, msg) {
   return num ? `@${num}` : "@usuario"
 }
 
-// ✅ límites por comando
-// play: 1 vez / 20s
-// sticker: 2 veces / 20s
+
 function getRule(command = "") {
   const c = String(command || "").toLowerCase()
 
   if (c === "play") return { limit: 1, windowSec: 80 }
   if (c === "sticker" || c === "s") return { limit: 2, windowSec: 20 }
 
-  return null // sin ratelimit para otros comandos
+  return null 
 }
 
-// ✅ GC: limpiar entradas viejas para que el JSON no crezca infinito
+
 function gc(db, now) {
-  const MAX_AGE_MS = 60 * 60 * 1000 // 1h
+  const MAX_AGE_MS = 60 * 60 * 1000 
   for (const k of Object.keys(db)) {
     const row = db[k]
     if (!row || !row.lastTs) { delete db[k]; continue }
@@ -95,9 +93,9 @@ function gc(db, now) {
   }
 }
 
-// ✅ check principal (persistente en data/ratelimits.json)
+
 export function checkRateLimit(sock, msg, { command, isOwner } = {}) {
-  // owners bypass
+  
   if (isOwner) return { blocked: false, waitSec: 0 }
 
   const rule = getRule(command)
@@ -106,7 +104,7 @@ export function checkRateLimit(sock, msg, { command, isOwner } = {}) {
   const now = Date.now()
   const db = readJsonSafe(RL_PATH, {})
 
-  // limpiar viejo
+  
   gc(db, now)
 
   const userKey = buildUserRateKey(sock, msg)
@@ -116,7 +114,7 @@ export function checkRateLimit(sock, msg, { command, isOwner } = {}) {
   const row = db[key] || { ts: [], lastTs: 0 }
   const windowMs = rule.windowSec * 1000
 
-  // quedarnos solo con timestamps dentro de ventana
+   
   const ts = (row.ts || []).filter(t => now - t < windowMs)
 
   if (ts.length >= rule.limit) {
@@ -124,14 +122,14 @@ export function checkRateLimit(sock, msg, { command, isOwner } = {}) {
     const waitMs = windowMs - (now - oldest)
     const waitSec = Math.max(1, Math.ceil(waitMs / 1000))
 
-    // actualizar lastTs para GC
+    
     db[key] = { ts, lastTs: now }
     writeJsonSafe(RL_PATH, db)
 
     return { blocked: true, waitSec }
   }
 
-  // registrar uso
+  
   ts.push(now)
   db[key] = { ts, lastTs: now }
   writeJsonSafe(RL_PATH, db)
