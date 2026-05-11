@@ -1,4 +1,4 @@
-// src/core/middleware/allowlist.js
+
 import fs from "fs"
 import path from "path"
 import { getSenderJid, jidToNumber } from "../../utils/jid.js"
