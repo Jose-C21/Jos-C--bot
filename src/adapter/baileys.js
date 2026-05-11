@@ -8,18 +8,16 @@ import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
 
-// ✅ bienvenida/despedida (evento)
+
 import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
 
-// ✅ antiarabe guard (evento)
+
 import { antiarabeGuard } from "../core/antiarabeGuard.js"
 
-// ✅ config para owners
+
 import config from "../config.js"
 
-// ─────────────────────────────────────────────
-// ✅ INPUT SIMPLE (sin readline) para panel web
-// ─────────────────────────────────────────────
+
 function createInput() {
   process.stdin.setEncoding("utf8")
   process.stdin.resume()
@@ -48,7 +46,7 @@ function createInput() {
 }
 const inputLine = createInput()
 
-// ✅ Banner helpers
+
 const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
 const centerAnsi = (txt, width) => {
   const raw = stripAnsi(txt)
@@ -78,16 +76,14 @@ function banner() {
   console.log("")
 }
 
-// ✅ Formato pro del pairing code: ABCD – EFGH (solo visual)
+
 function formatPairingCode(code = "") {
   const raw = String(code).replace(/[^A-Za-z0-9]/g, "").toUpperCase()
   if (raw.length >= 8) return raw.slice(0, 4) + " – " + raw.slice(4, 8)
   return raw
 }
 
-// ─────────────────────────────────────────────
-// ✅ UI PRO (sin emojis)
-// ─────────────────────────────────────────────
+
 const UI = {
   OUT: 44,
   hrSoft(len = 34) {
@@ -123,9 +119,7 @@ const UI = {
   }
 }
 
-// ─────────────────────────────────────────────
-// ✅ Menú de selección
-// ─────────────────────────────────────────────
+
 async function askMode() {
   while (true) {
     UI.hrSoft(26)
@@ -158,7 +152,7 @@ async function askPhone() {
   }
 }
 
-// ✅ helper owner (para bypass)
+
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
   const ownersLid = (config.ownersLid || []).map(String)
@@ -170,9 +164,7 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   )
 }
 
-// ─────────────────────────────────────────────
-// ✅ Reconnect backoff (anti-loop)
-// ─────────────────────────────────────────────
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 let RECONNECT_TRIES = 0
 
@@ -182,9 +174,7 @@ function nextBackoffMs() {
   return seq[Math.min(RECONNECT_TRIES, seq.length - 1)]
 }
 
-// ─────────────────────────────────────────────
-// ✅ Socket
-// ─────────────────────────────────────────────
+
 export async function startSock(onMessage) {
   const { state, saveCreds } = await useMultiFileAuthState("sessions")
   const alreadyLinked = !!state?.creds?.registered
@@ -202,7 +192,7 @@ export async function startSock(onMessage) {
     UI.success("Sesión ya vinculada, iniciando...\n")
   }
 
-  // ✅ SIEMPRE usa la versión más reciente compatible (evita 428 / precondition / close raros)
+ 
   let waVersion = undefined
   try {
     const v = await fetchLatestBaileysVersion()
@@ -214,41 +204,41 @@ export async function startSock(onMessage) {
     printQRInTerminal: false,
     logger,
 
-    // ✅ recomendado para pairing code (formato correcto)
+    
     browser: Browsers.macOS("Chrome"),
 
-    // ✅ si obtuvimos versión, pásala
+    
     ...(Array.isArray(waVersion) ? { version: waVersion } : {})
   })
 
   sock.ev.on("creds.update", saveCreds)
 
-  // ✅ EVENTO: entradas/salidas del grupo
+
   sock.ev.on("group-participants.update", async (update) => {
     try {
       console.log("[group-participants.update] RAW:", JSON.stringify(update))
 
-      // ✅ 1) ANTIARABE primero
+      
       const blocked = await antiarabeGuard(sock, update, { isOwnerByNumbers })
       if (blocked) {
         console.log("[antiarabeGuard] blocked -> NO welcome")
         return
       }
 
-      // ✅ 2) BIENVENIDA / DESPEDIDA
+      
       await onGroupParticipantsUpdate(sock, update)
     } catch (e) {
       console.error("[group-participants.update] ERROR:", e)
     }
   })
 
-  // ✅ Pairing: pedir código SOLO cuando llega `qr` (socket listo para auth)
+  
   let pairingRequested = false
 
   sock.ev.on("connection.update", async (u) => {
     const { connection, lastDisconnect, qr } = u
 
-    // ── QR flow
+    
     if (!alreadyLinked && mode === "qr" && qr) {
       UI.hrSoft(26)
       UI.title("QR de vinculación")
@@ -262,7 +252,7 @@ export async function startSock(onMessage) {
       console.log("")
     }
 
-    // ── CODE flow (IMPORTANTE: pedirlo cuando llega qr)
+     
     if (!alreadyLinked && mode === "code" && qr && !pairingRequested) {
       pairingRequested = true
       try {
@@ -303,13 +293,13 @@ export async function startSock(onMessage) {
         return
       }
 
-      // ✅ backoff
+      
       RECONNECT_TRIES++
       const wait = nextBackoffMs()
       UI.dim(`Reintentando en ${Math.round(wait / 1000)}s...`)
       await sleep(wait)
 
-      // ⚠️ reiniciar
+      
       startSock(onMessage)
     }
   })
