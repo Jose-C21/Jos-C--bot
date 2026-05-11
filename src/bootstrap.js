@@ -1,4 +1,4 @@
-// src/bootstrap.js
+
 import dotenv from "dotenv"
 
 dotenv.config()
@@ -13,14 +13,12 @@ import chalk from "chalk"
 const TMP = path.join(process.cwd(), "data", "tmp")
 try { fs.mkdirSync(TMP, { recursive: true }) } catch {}
 
-// ✅ Mueve los temporales aquí (Baileys usa os.tmpdir())
+
 process.env.TMPDIR = TMP
 process.env.TMP = TMP
 process.env.TEMP = TMP
 
-// ─────────────────────────────────────────────
-// ✅ LOG PRO (para confirmar que sí aplica TMPDIR)
-// ─────────────────────────────────────────────
+
 function bytesToHuman(bytes = 0) {
   const u = ["B", "KB", "MB", "GB", "TB"]
   let i = 0
@@ -41,7 +39,7 @@ function logTmpStatus() {
     console.log(chalk.gray("  • ") + chalk.white("os.tmpdir(): ") + chalk.greenBright(os.tmpdir()))
     console.log(chalk.gray("  • ") + chalk.white("RAM libre/total: ") + chalk.white(`${bytesToHuman(free)} / ${bytesToHuman(total)}`))
 
-    // listar un poquito de uso del tmp (cuantos archivos)
+   
     let count = 0
     let size = 0
     try {
@@ -64,9 +62,7 @@ function logTmpStatus() {
 
 logTmpStatus()
 
-// ─────────────────────────────────────────────
-// ✅ anti-crash (para que no se muera feo)
-// ─────────────────────────────────────────────
+
 process.on("uncaughtException", (err) => {
   console.error("[FATAL] uncaughtException:", err)
   if (String(err?.code) === "ENOSPC") {
@@ -78,8 +74,8 @@ process.on("unhandledRejection", (err) => {
   console.error("[FATAL] unhandledRejection:", err)
 })
 
-// ✅ (opcional) limpieza de temporales viejos
-function cleanupTmp(maxAgeMs = 10 * 60 * 1000) { // 10 min
+
+function cleanupTmp(maxAgeMs = 10 * 60 * 1000) { 
   try {
     const now = Date.now()
     for (const f of fs.readdirSync(TMP)) {
@@ -95,5 +91,5 @@ function cleanupTmp(maxAgeMs = 10 * 60 * 1000) { // 10 min
 }
 setInterval(() => cleanupTmp(), 60_000).unref?.()
 
-// ✅ Importa tu app real DESPUÉS de setear TMPDIR
+
 await import("./app.js")
