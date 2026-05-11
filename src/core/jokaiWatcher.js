@@ -5,8 +5,6 @@ import axios from "axios"
 import fs from "fs"
 import path from "path"
 
-
-
 const API_KEY = process.env.GROQ_API_KEY
 
 console.log("KEY EXISTS:", !!API_KEY)
@@ -26,8 +24,6 @@ if (!fs.existsSync(DB)) {
   fs.writeFileSync(DB, "{}")
 }
 
-
-
 const MEMORY = new Map()
 
 function loadDB() {
@@ -40,8 +36,6 @@ function loadDB() {
     return {}
   }
 }
-
-
 
 const SYSTEM = `
 Tu nombre es JØKAI.
@@ -227,8 +221,6 @@ Haz que cada respuesta se sienta única y emocionalmente real.
 Tu estilo siempre debe sentirse humano, moderno, observador y emocional.
 `
 
-
-
 function signature() {
 
   return `
@@ -236,8 +228,6 @@ function signature() {
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦
 `.trim()
 }
-
-
 
 export async function jokaiWatcher(sock, msg) {
 
@@ -260,12 +250,8 @@ export async function jokaiWatcher(sock, msg) {
 
     const lower = text.toLowerCase().trim()
 
-    
-
     const isCalling =
-      lower.startsWith("jokai")
-
-    
+      /\bjokai\b/i.test(lower)
 
     const quoted =
       msg?.message?.extendedTextMessage?.contextInfo
@@ -282,8 +268,6 @@ export async function jokaiWatcher(sock, msg) {
       return false
     }
 
-    
-
     await sock.sendMessage(chatId, {
       react: {
         text: "🧠",
@@ -291,21 +275,20 @@ export async function jokaiWatcher(sock, msg) {
       }
     })
 
-    
-
     let userText = text
 
     if (isCalling) {
 
       userText =
-        text.replace(/^jokai\s*/i, "").trim()
+        text
+          .replace(/\bjokai\b/gi, "")
+          .replace(/\s{2,}/g, " ")
+          .trim()
 
       if (!userText) {
         userText = "Hola"
       }
     }
-
-    
 
     const wantsImage =
 /\b(genera|generame|crea|créame|dibujame|dibújame|hazme|imagen|foto|wallpaper|dibuja)\b/i
@@ -316,14 +299,12 @@ export async function jokaiWatcher(sock, msg) {
       const prompt =
 
         userText
-          .replace(/^jokai\s*/i, "")
+          .replace(/\bjokai\b/gi, "")
+          .replace(/\s{2,}/g, " ")
           .trim()
-
-      
 
       const nsfwWords = [
 
-        
         "desnuda",
         "desnudo",
         "semi desnuda",
@@ -334,7 +315,6 @@ export async function jokaiWatcher(sock, msg) {
         "nude",
         "naked",
 
-        
         "bikini sexy",
         "micro bikini",
         "lingerie",
@@ -353,7 +333,6 @@ export async function jokaiWatcher(sock, msg) {
         "bra",
         "sostén",
 
-        
         "tetona",
         "tetas",
         "boobs",
@@ -369,7 +348,6 @@ export async function jokaiWatcher(sock, msg) {
         "seductora",
         "seductor",
 
-        
         "porno",
         "porn",
         "xxx",
@@ -380,7 +358,6 @@ export async function jokaiWatcher(sock, msg) {
         "nsfw",
         "onlyfans",
 
-        
         "hombre sexy",
         "hombre desnudo",
         "hombre sin ropa",
@@ -391,7 +368,6 @@ export async function jokaiWatcher(sock, msg) {
         "hombre en calzones",
         "chico sexy",
 
-        
         "mujer sexy",
         "mujer desnuda",
         "mujer sin ropa",
@@ -399,7 +375,6 @@ export async function jokaiWatcher(sock, msg) {
         "mujer en ropa interior",
         "chica sexy",
 
-        
         "pezones",
         "pezón",
         "vagina",
@@ -475,8 +450,6 @@ ${signature()}`
       return true
     }
 
-    
-
     if (!MEMORY.has(chatId)) {
       MEMORY.set(chatId, [])
     }
@@ -488,8 +461,6 @@ ${signature()}`
       content: userText
     })
 
-    
-
     const messages = [
       {
         role: "system",
@@ -498,8 +469,6 @@ ${signature()}`
 
       ...history.slice(-4)
     ]
-
-    
 
     const res = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -522,8 +491,6 @@ ${signature()}`
         }
       }
     )
-
-    
 
     const reply =
       res?.data?.choices?.[0]?.message?.content?.trim()
@@ -548,8 +515,6 @@ ${signature()}`
       history.slice(-10)
     )
 
-    
-
     await sock.sendMessage(chatId, {
 
       text:
@@ -560,8 +525,6 @@ ${cleanReply}
 ${signature()}`
 
     }, { quoted: msg })
-
-    
 
     await sock.sendMessage(chatId, {
       react: {
@@ -582,4 +545,3 @@ ${signature()}`
     return false
   }
 }
-
