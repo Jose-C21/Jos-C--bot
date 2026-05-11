@@ -1,4 +1,4 @@
-// src/core/antilinkGuard.js
+
 import fs from "fs"
 import path from "path"
 import axios from "axios"
@@ -45,7 +45,7 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   )
 }
 
-// extra por si baileys manda objetos raros
+
 function normalizeParticipant(p) {
   if (!p) return { jid: "", phoneJid: "" }
   if (typeof p === "string") return { jid: p, phoneJid: "" }
@@ -81,20 +81,20 @@ function getQuotedTextAndAuthor(msg) {
   return { text: String(text || "").trim(), authorJid: String(author || "") }
 }
 
-// detectar links
+
 const ANY_LINK_RE =
   /(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi
 
-// limpiar ?parametros
+
 function cleanLink(link) {
   return link.split("?")[0]
 }
 
-// TikTok
+
 const linkTikTokVideo = /tiktok\.com\/\@[^\/]+\/video\/\d+/i
 const linkTikTokAcortado = /(vm|vt)\.tiktok\.com\/[^\s]+/i
 
-// Facebook
+
 const linkFacebookVideo = /facebook\.com\/.+\/videos\/\d+/i
 const linkFacebookWatch = /facebook\.com\/watch\/\?v=\d+/i
 const linkFacebookReel = /facebook\.com\/reel\/\d+/i
@@ -102,7 +102,7 @@ const linkFacebookShareVideo = /facebook\.com\/share\/v\//i
 const linkFacebookShareReel = /facebook\.com\/share\/r\//i
 const linkFbShort = /fb\.watch\/[^\s]+/i
 
-// Instagram FIX
+
 const linkInstagramReel = /instagram\.com\/reels?\/[A-Za-z0-9_-]+/i
 
 async function headResolve(url) {
@@ -138,7 +138,7 @@ function isCommandAllowed(name) {
   return ["tiktok", "facebook", "instagram"].includes(String(name || "").toLowerCase())
 }
 
-// globals
+
 global.avisados = global.avisados || new Set()
 global.mensajesConLink = global.mensajesConLink || {}
 
@@ -174,12 +174,12 @@ export async function antiLinkGuard(sock, msg) {
 
   if (!links.length) return false
 
-  // guardar historial
+  
   global.mensajesConLink[chatId] = global.mensajesConLink[chatId] || []
   global.mensajesConLink[chatId].push(msg)
   if (global.mensajesConLink[chatId].length > 150) global.mensajesConLink[chatId].shift()
 
-  // comando permitido
+  
   const esComando = messageText.startsWith(prefix)
   const nombreComando = esComando
     ? messageText.slice(prefix.length).trim().split(/\s+/)[0]?.toLowerCase()
@@ -197,7 +197,7 @@ export async function antiLinkGuard(sock, msg) {
 
   if (esComandoPermitido) return false
 
-  // validar links
+  
   let todoValido = true
 
   for (let link of links) {
@@ -221,7 +221,7 @@ export async function antiLinkGuard(sock, msg) {
 
   if (todoValido) return false
 
-  // bypass
+  
   let canBypass = fromMe || isOwner
   let autorEsAdmin = false
 
@@ -244,13 +244,13 @@ export async function antiLinkGuard(sock, msg) {
 
   const idUsuario = autorAnalizado
 
-  // 1 expulsar
+  
   await sock.groupParticipantsUpdate(chatId, [idUsuario], "remove").catch(() => {})
 
-  // 2 borrar msg
+  
   await sock.sendMessage(chatId, { delete: msg.key }).catch(() => {})
 
-  // borrar historial
+  
   try {
     const limpiar = j => String(j || "").replace(/\D/g, "")
     const list = global.mensajesConLink[chatId] || []
@@ -262,7 +262,7 @@ export async function antiLinkGuard(sock, msg) {
     }
   } catch {}
 
-  // 3 aviso
+  
   if (!global.avisados.has(idUsuario)) {
     global.avisados.add(idUsuario)
     const tag = `@${jidToNumber(idUsuario)}`
