@@ -35,7 +35,9 @@ import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
 import antipersona from "../commands/antipersona.js"
 import { antiPersonaObserve } from "./antipersonaWatch.js"
 
-
+import pausarconteo from "../commands/pausarconteo.js"
+import reanudarconteo from "../commands/reanudarconteo.js"
+import estadoconteo from "../commands/estadoconteo.js"
 import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
 
 import tiktok from "../commands/tiktok.js"
@@ -77,6 +79,9 @@ const COMMANDS = {
   addlista,
   jokai,
   testestado,
+  pausarconteo,
+reanudarconteo,
+estadoconteo,
   antiestado,
   ts: textsticker,
   playvideo,
@@ -194,43 +199,88 @@ const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
 
 function ensureActivosDB() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+
   if (!fs.existsSync(ACTIVOS_PATH)) {
     fs.writeFileSync(
       ACTIVOS_PATH,
-      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {}, antiestado: {} }, null, 2)
+      JSON.stringify({
+        bienvenida: {},
+        despedidas: {},
+        antilink: {},
+        antis: {},
+        antipersona: {},
+        antiestado: {},
+        conteooff: {}
+      }, null, 2)
     )
     return
   }
+
   try {
     const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+
     if (!j.bienvenida) j.bienvenida = {}
     if (!j.despedidas) j.despedidas = {}
     if (!j.antilink) j.antilink = {}
     if (!j.antis) j.antis = {}
     if (!j.antipersona) j.antipersona = {}
-    if (!j.antiestado) j.antiestado = {} // 🔴 NUEVO
-    fs.writeFileSync(ACTIVOS_PATH, JSON.stringify(j, null, 2))
-  } catch {
+    if (!j.antiestado) j.antiestado = {}
+    if (!j.conteooff) j.conteooff = {}
+
     fs.writeFileSync(
       ACTIVOS_PATH,
-      JSON.stringify({ bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {}, antiestado: {} }, null, 2)
+      JSON.stringify(j, null, 2)
     )
+
+  } catch {
+
+    fs.writeFileSync(
+      ACTIVOS_PATH,
+      JSON.stringify({
+        bienvenida: {},
+        despedidas: {},
+        antilink: {},
+        antis: {},
+        antipersona: {},
+        antiestado: {},
+        conteooff: {}
+      }, null, 2)
+    )
+
   }
 }
 
 function readActivosSafe() {
   try {
+
     ensureActivosDB()
-    const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+
+    const j = JSON.parse(
+      fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}"
+    )
+
     if (!j.bienvenida) j.bienvenida = {}
     if (!j.despedidas) j.despedidas = {}
     if (!j.antilink) j.antilink = {}
     if (!j.antis) j.antis = {}
     if (!j.antipersona) j.antipersona = {}
-    if (!j.antiestado) j.antiestado = {} // 🔴 NUEVO
+    if (!j.antiestado) j.antiestado = {}
+    if (!j.conteooff) j.conteooff = {}
+
     return j
+
   } catch {
-    return { bienvenida: {}, despedidas: {}, antilink: {}, antis: {}, antipersona: {}, antiestado: {} }
+
+    return {
+      bienvenida: {},
+      despedidas: {},
+      antilink: {},
+      antis: {},
+      antipersona: {},
+      antiestado: {},
+      conteooff: {}
+    }
+
   }
 }
 
@@ -679,38 +729,85 @@ const userKey = String(rawUser)
 
     
     try {
-      if (isGroup && isTextMessage(msg)) {
-        const senderId = msg.key.participant || msg.key.remoteJid
 
-        const nowTs = Date.now()
-        global.msgFlood = global.msgFlood || {}
-        const u = global.msgFlood[senderId] || { last: 0, count: 0, blockedUntil: 0 }
+  const activos = readActivosSafe()
 
-        if (nowTs - u.last < 7000) u.count++
-        else u.count = 1
+  const conteoPausado =
+    !!activos?.conteooff?.[chatId]
 
-        u.last = nowTs
+  if (
+    isGroup &&
+    isTextMessage(msg) &&
+    !conteoPausado
+  ) {
 
-        if (!fromMe && u.count >= 2) {
-          u.blockedUntil = nowTs + 12000
-          console.log(`⚡ [ANTIFLOOD] Usuario ${senderId} activó bloqueo de conteo. (${u.count} mensajes rápidos)`)
-        }
+    const senderId =
+      msg.key.participant ||
+      msg.key.remoteJid
 
-        global.msgFlood[senderId] = u
+    const nowTs = Date.now()
 
-        const blocked = !fromMe && u.blockedUntil && nowTs < u.blockedUntil
+    global.msgFlood =
+      global.msgFlood || {}
 
-        if (!blocked) {
-          const conteoData = readConteoSafe()
-          if (!conteoData[chatId]) conteoData[chatId] = {}
-          if (!conteoData[chatId][senderId]) conteoData[chatId][senderId] = 0
-          conteoData[chatId][senderId] += 1
-          writeConteoSafe(conteoData)
-        }
+    const u =
+      global.msgFlood[senderId] || {
+        last: 0,
+        count: 0,
+        blockedUntil: 0
       }
-    } catch (e) {
-      console.error("❌ Error en contador de mensajes:", e)
+
+    if (nowTs - u.last < 7000)
+      u.count++
+    else
+      u.count = 1
+
+    u.last = nowTs
+
+    if (!fromMe && u.count >= 2) {
+
+      u.blockedUntil =
+        nowTs + 12000
+
+      console.log(
+        `⚡ [ANTIFLOOD] Usuario ${senderId} activó bloqueo de conteo. (${u.count} mensajes rápidos)`
+      )
     }
+
+    global.msgFlood[senderId] = u
+
+    const blocked =
+      !fromMe &&
+      u.blockedUntil &&
+      nowTs < u.blockedUntil
+
+    if (!blocked) {
+
+      const conteoData =
+        readConteoSafe()
+
+      if (!conteoData[chatId]) {
+        conteoData[chatId] = {}
+      }
+
+      if (!conteoData[chatId][senderId]) {
+        conteoData[chatId][senderId] = 0
+      }
+
+      conteoData[chatId][senderId] += 1
+
+      writeConteoSafe(conteoData)
+    }
+  }
+
+} catch (e) {
+
+  console.error(
+    "❌ Error en contador de mensajes:",
+    e
+  )
+
+}
 
     
     if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
