@@ -91,7 +91,7 @@ Describe:
 
 Habla natural y humano.`,
 
-        image: base64
+        image: `data:image/jpeg;base64,${base64}`
       },
 
       {
