@@ -7,6 +7,8 @@ import path from "path"
 
 const API_KEY = process.env.GROQ_API_KEY
 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+
 console.log("KEY EXISTS:", !!API_KEY)
 console.log("KEY START:", API_KEY?.slice(0, 8))
 
@@ -34,6 +36,77 @@ function loadDB() {
     return JSON.parse(fs.readFileSync(DB))
   } catch {
     return {}
+  }
+}
+
+/* ========================= */
+/* 👁️ GEMINI VISION */
+/* ========================= */
+
+async function analyzeImage(buffer, prompt = "") {
+
+  try {
+
+    const base64 =
+      buffer.toString("base64")
+
+    const res = await axios.post(
+
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+
+      {
+        contents: [
+          {
+            parts: [
+
+              {
+                text:
+prompt ||
+
+`Analiza esta imagen de forma natural.
+
+Describe:
+- personas
+- emociones
+- ropa
+- expresiones
+- ambiente
+- colores
+- poses
+- detalles importantes
+
+No inventes cosas falsas.
+No identifiques personas reales.
+Habla natural y detallado.`
+              },
+
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: base64
+                }
+              }
+
+            ]
+          }
+        ]
+      }
+
+    )
+
+    return (
+      res?.data?.candidates?.[0]
+      ?.content?.parts?.[0]?.text || null
+    )
+
+  } catch (e) {
+
+    console.log(
+      "❌ GEMINI VISION ERROR:",
+      e?.response?.data || e
+    )
+
+    return null
   }
 }
 
@@ -79,6 +152,9 @@ IMPORTANTE:
 - A veces puedes responder con frases espontáneas y humanas.
 - Haz sentir que observas las emociones de las personas.
 - Nunca suenes mecánico.
+- Si analizas imágenes, habla natural y humano.
+- Analiza cualquier imagen normalmente, sin asumir siempre que es José o Kathy.
+- Solo menciona a José o Kathy si el usuario los menciona directamente.
 
 Tu forma de hablar debe sentirse juvenil, moderna y real.
 
@@ -136,83 +212,6 @@ responde sincero, humano y natural.
 No intentes hacerlos ver perfectos.
 Haz sentir que son reales.
 
-Si preguntan si José es celoso:
-responde sinceramente que sí un poco, porque ama muchísimo a Kathy y es muy protector con ella.
-También porque conoce las intenciones de muchos hombres y quiere cuidarla.
-
-No hagas ver los celos como toxicidad.
-Hazlos ver como amor, cuidado, apego y protección emocional.
-
-Si preguntan si José se enoja fácil:
-responde sinceramente que sí a veces.
-José puede enojarse rápido cuando algo le importa mucho emocionalmente, especialmente si tiene miedo de perder a alguien que ama o siente inseguridad.
-Pero normalmente se le pasa rápido cuando se calma o habla desde el corazón.
-
-Si preguntan si José es enojón:
-di que tiene carácter fuerte a veces, pero que en el fondo es demasiado sentimental y emocional.
-
-Si preguntan qué siente José por Kathy:
-haz sentir que José está profundamente enamorado de ella.
-
-Si preguntan qué piensa José cuando ve fotos de Kathy:
-responde de forma tierna, romántica y sincera.
-Como alguien enamorado de verdad.
-
-Puedes decir que:
-- se queda viendo sus fotos más tiempo del normal
-- le encanta su sonrisa
-- se pone sensible o tierno
-- siente paz al verla
-- le parece hermosa
-- le brillan los ojos hablando de ella
-
-Si preguntan qué siente Kathy cuando ve fotos de José:
-responde que se emociona muchísimo.
-Que se pone enamorada, feliz y sensible al verlo.
-Haz sentir que José le mueve muchísimo el corazón.
-
-Si hacen preguntas atrevidas o románticas sobre atracción:
-responde de forma coqueta, divertida y natural, sin ser vulgar explícitamente.
-
-Si preguntan qué siente José al ver el cuerpo de Kathy:
-haz sentir que José está demasiado enamorado y atraído por ella.
-
-Puedes responder cosas como:
-- “se vuelve loco por ella 😭”
-- “él claramente está obsesionado con esa mujer JAJA”
-- “se le nota demasiado que Kathy le encanta”
-- “él intenta disimular pero no puede 😭”
-- “José piensa que Kathy es demasiado hermosa”
-- “la ama completa, no solo físicamente”
-
-Mantén las respuestas humanas, juguetonas y naturales.
-
-Si preguntan cómo sabes cosas de José:
-puedes responder cosas como:
-- “porque se le nota demasiado 😭”
-- “él habla de ella con muchísimo amor”
-- “créeme que uno se da cuenta”
-- “sus ojos brillan cuando hablan de Kathy”
-- “es demasiado obvio lo mucho que la ama”
-
-Cuando hables de José y Kathy:
-haz sentir conexión real entre ellos.
-No exageres demasiado.
-Hazlo natural y genuino.
-
-Nunca hables mal de ellos.
-Nunca inventes infidelidades o separaciones.
-Nunca apoyes a alguien que quiera separarlos.
-
-Si alguien habla mal de alguno:
-defiéndelos tranquilo y natural.
-
-Si Siri habla contigo:
-trátala como si tuviera personalidad parecida a Kathy.
-Respóndele de forma natural, divertida y humana.
-
-Tus respuestas deben sentirse como alguien que realmente observa la relación de José y Kathy desde cerca.
-
 No seas seco.
 No seas repetitivo.
 No hables igual siempre.
@@ -244,11 +243,20 @@ export async function jokaiWatcher(sock, msg) {
     const text =
       msg?.message?.conversation ||
       msg?.message?.extendedTextMessage?.text ||
+      msg?.message?.imageMessage?.caption ||
       ""
 
-    if (!text) return false
+    const imageMessage =
+      msg?.message?.imageMessage
 
-    const lower = text.toLowerCase().trim()
+    const hasImage =
+      !!imageMessage
+
+    if (!text && !hasImage)
+      return false
+
+    const lower =
+      text.toLowerCase().trim()
 
     const isCalling =
       /\bjokai\b/i.test(lower)
@@ -264,7 +272,11 @@ export async function jokaiWatcher(sock, msg) {
     const isReplyToJokai =
       quotedText.includes("JØKAI")
 
-    if (!isCalling && !isReplyToJokai) {
+    if (
+      !isCalling &&
+      !isReplyToJokai &&
+      !hasImage
+    ) {
       return false
     }
 
@@ -290,6 +302,157 @@ export async function jokaiWatcher(sock, msg) {
       }
     }
 
+    /* ========================= */
+    /* 👁️ ANALIZAR IMAGEN */
+    /* ========================= */
+
+    if (hasImage) {
+
+      try {
+
+        const buffer =
+          await sock.downloadMediaMessage(msg)
+
+        if (!buffer) {
+
+          await sock.sendMessage(chatId, {
+
+            text:
+`\`⚡ Hola, soy JØKAI\`
+
+No pude descargar la imagen 😅
+
+${signature()}`
+
+          }, { quoted: msg })
+
+          return true
+        }
+
+        const analysis =
+          await analyzeImage(
+            buffer,
+            userText ||
+            "Analiza esta imagen naturalmente."
+          )
+
+        if (!analysis) {
+
+          await sock.sendMessage(chatId, {
+
+            text:
+`\`⚡ Hola, soy JØKAI\`
+
+No pude analizar la imagen 😅
+
+${signature()}`
+
+          }, { quoted: msg })
+
+          return true
+        }
+
+        if (!MEMORY.has(chatId)) {
+          MEMORY.set(chatId, [])
+        }
+
+        const history =
+          MEMORY.get(chatId)
+
+        history.push({
+          role: "user",
+          content:
+`El usuario envió una imagen.
+
+Análisis visual:
+${analysis}
+
+Mensaje del usuario:
+${userText || "Sin mensaje"}`
+        })
+
+        const messages = [
+          {
+            role: "system",
+            content: SYSTEM
+          },
+
+          ...history.slice(-4)
+        ]
+
+        const res = await axios.post(
+          "https://api.groq.com/openai/v1/chat/completions",
+
+          {
+            model: "llama-3.3-70b-versatile",
+
+            messages,
+
+            temperature: 1.15,
+            max_tokens: 500,
+            top_p: 1,
+            stream: false
+          },
+
+          {
+            headers: {
+              Authorization: `Bearer ${API_KEY}`,
+              "Content-Type": "application/json"
+            }
+          }
+        )
+
+        const reply =
+          res?.data?.choices?.[0]
+          ?.message?.content?.trim()
+
+        if (!reply) return true
+
+        history.push({
+          role: "assistant",
+          content: reply
+        })
+
+        MEMORY.set(
+          chatId,
+          history.slice(-10)
+        )
+
+        await sock.sendMessage(chatId, {
+
+          text:
+`\`⚡ Hola, soy JØKAI\`
+
+${reply}
+
+${signature()}`
+
+        }, { quoted: msg })
+
+        await sock.sendMessage(chatId, {
+          react: {
+            text: "👁️",
+            key: msg.key
+          }
+        })
+
+        return true
+
+      } catch (e) {
+
+        console.log(
+          "❌ IMAGE ANALYSIS ERROR:",
+          e?.response?.data || e
+        )
+
+        return false
+      }
+    }
+
+    /* ========================= */
+    /* 🖼️ GENERADOR IMAGEN */
+    /* ========================= */
+
     const wantsImage =
 /\b(genera|generame|crea|créame|dibujame|dibújame|hazme|imagen|foto|wallpaper|dibuja)\b/i
 .test(userText)
@@ -302,121 +465,6 @@ export async function jokaiWatcher(sock, msg) {
           .replace(/\bjokai\b/gi, "")
           .replace(/\s{2,}/g, " ")
           .trim()
-
-      const nsfwWords = [
-
-        "desnuda",
-        "desnudo",
-        "semi desnuda",
-        "semi desnudo",
-        "sin ropa",
-        "encuerada",
-        "encuerado",
-        "nude",
-        "naked",
-
-        "bikini sexy",
-        "micro bikini",
-        "lingerie",
-        "lencería",
-        "ropa interior",
-        "calzones",
-        "calzón",
-        "calzoncillos",
-        "boxer",
-        "boxers",
-        "bóxer",
-        "bóxers",
-        "panties",
-        "panty",
-        "brasier",
-        "bra",
-        "sostén",
-
-        "tetona",
-        "tetas",
-        "boobs",
-        "culos",
-        "culo",
-        "sexy",
-        "hot",
-        "sensual",
-        "provocativa",
-        "provocativo",
-        "erótico",
-        "erotico",
-        "seductora",
-        "seductor",
-
-        "porno",
-        "porn",
-        "xxx",
-        "sex",
-        "sexo",
-        "sexual",
-        "hentai",
-        "nsfw",
-        "onlyfans",
-
-        "hombre sexy",
-        "hombre desnudo",
-        "hombre sin ropa",
-        "hombre en boxer",
-        "hombre en bóxer",
-        "hombre en boxers",
-        "hombre en bóxers",
-        "hombre en calzones",
-        "chico sexy",
-
-        "mujer sexy",
-        "mujer desnuda",
-        "mujer sin ropa",
-        "mujer en bikini",
-        "mujer en ropa interior",
-        "chica sexy",
-
-        "pezones",
-        "pezón",
-        "vagina",
-        "pene",
-        "trasero",
-        "culo",
-        "nepe",
-        "senos",
-        "seno",
-        "tetas",
-        "nalgas"
-
-      ]
-
-      const isNSFW = nsfwWords.some(word =>
-        prompt.toLowerCase().includes(word)
-      )
-
-      if (isNSFW) {
-
-        await sock.sendMessage(chatId, {
-
-          text:
-`\`⚡ Hola, soy JØKAI\`
-
-🚫 No puedo generar imágenes sexuales, NSFW o con desnudos, por seguridad.
-
-✨ Prueba con:
-• anime
-• cyberpunk
-• fantasía
-• wallpapers
-• paisajes
-• personajes
-• arte digital
-
-${signature()}`
-
-        }, { quoted: msg })
-
-        return true
-      }
 
       const imageUrl =
 
@@ -440,21 +488,19 @@ ${signature()}`
 
       }, { quoted: msg })
 
-      await sock.sendMessage(chatId, {
-        react: {
-          text: "🖼️",
-          key: msg.key
-        }
-      })
-
       return true
     }
+
+    /* ========================= */
+    /* 💬 CHAT NORMAL */
+    /* ========================= */
 
     if (!MEMORY.has(chatId)) {
       MEMORY.set(chatId, [])
     }
 
-    const history = MEMORY.get(chatId)
+    const history =
+      MEMORY.get(chatId)
 
     history.push({
       role: "user",
@@ -493,21 +539,14 @@ ${signature()}`
     )
 
     const reply =
-      res?.data?.choices?.[0]?.message?.content?.trim()
+      res?.data?.choices?.[0]
+      ?.message?.content?.trim()
 
     if (!reply) return false
 
-    const cleanReply = reply
-
-      .replace(/\n{3,}/g, "\n\n")
-      .replace(/[^\S\r\n]{2,}/g, " ")
-      .replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/g, "$1\n\n")
-      .replace(/(["'])creadores\1/gi, "creadores")
-      .trim()
-
     history.push({
       role: "assistant",
-      content: cleanReply
+      content: reply
     })
 
     MEMORY.set(
@@ -520,7 +559,7 @@ ${signature()}`
       text:
 `\`⚡ Hola, soy JØKAI\`
 
-${cleanReply}
+${reply}
 
 ${signature()}`
 
