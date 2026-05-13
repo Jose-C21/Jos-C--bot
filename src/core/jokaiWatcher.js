@@ -71,10 +71,16 @@ async function analyzeImage(buffer, prompt = "") {
 
     const res = await axios.post(
 
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
 
       {
-        prompt:
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text:
 prompt ||
 
 `Analiza esta imagen naturalmente.
@@ -89,15 +95,23 @@ Describe:
 - poses
 - detalles visibles
 
-Habla natural y humano.`,
+Habla natural y humano.`
+              },
 
-        image: `data:image/jpeg;base64,${base64}`
+              {
+                type: "image",
+                image:
+`data:image/jpeg;base64,${base64}`
+              }
+            ]
+          }
+        ]
       },
 
       {
         headers: {
           Authorization:
-`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+`Bearer ${CLOUDFLARE_API_TOKEN}`,
 
           "Content-Type":
 "application/json"
@@ -107,8 +121,8 @@ Habla natural y humano.`,
     )
 
     return (
-      res?.data?.result?.description ||
       res?.data?.result?.response ||
+      res?.data?.result?.description ||
       null
     )
 
