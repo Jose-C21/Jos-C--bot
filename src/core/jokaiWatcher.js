@@ -12,20 +12,23 @@ const API_KEY = process.env.GROQ_API_KEY
 console.log("KEY EXISTS:", !!API_KEY)
 console.log("KEY START:", API_KEY?.slice(0, 8))
 
-const CLOUDFLARE_API_KEY =
-  process.env.CLOUDFLARE_API_KEY
+const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN
 
-const CLOUDFLARE_ACCOUNT_ID =
-  process.env.CLOUDFLARE_ACCOUNT_ID
+const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID
 
 console.log(
   "CLOUDFLARE EXISTS:",
-  !!CLOUDFLARE_API_KEY
+  !!CLOUDFLARE_API_TOKEN
 )
 
 console.log(
   "CLOUDFLARE START:",
-  CLOUDFLARE_API_KEY?.slice(0, 10)
+  CLOUDFLARE_API_TOKEN?.slice(0, 10)
+)
+
+console.log(
+  "ACCOUNT ID:",
+  CLOUDFLARE_ACCOUNT_ID
 )
 
 const DB =
