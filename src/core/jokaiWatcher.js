@@ -68,13 +68,13 @@ async function analyzeImage(buffer, prompt = "") {
 
     const res = await axios.post(
 
-      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
+      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
 
       {
         prompt:
 prompt ||
 
-`Analiza esta imagen de forma natural.
+`Analiza esta imagen naturalmente.
 
 Describe:
 - personas
@@ -84,11 +84,9 @@ Describe:
 - ambiente
 - colores
 - poses
-- detalles importantes
+- detalles visibles
 
-No inventes cosas falsas.
-No identifiques personas reales.
-Habla natural y detallado.`,
+Habla natural y humano.`,
 
         image: base64
       },
@@ -96,7 +94,7 @@ Habla natural y detallado.`,
       {
         headers: {
           Authorization:
-`Bearer ${CLOUDFLARE_API_KEY}`,
+`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
 
           "Content-Type":
 "application/json"
