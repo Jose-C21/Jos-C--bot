@@ -358,21 +358,6 @@ await sock.sendMessage(chatId, {
   }
 })
 
-let userText = text
-
-if (isCalling) {
-
-  userText =
-    text
-      .replace(/\bjokai\b/gi, "")
-      .replace(/\s{2,}/g, " ")
-      .trim()
-
-  if (!userText) {
-    userText = "Hola"
-  }
-}
-
 /* ========================= */
 /* 👁️ ANALIZAR IMAGEN */
 /* ========================= */
