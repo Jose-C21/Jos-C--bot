@@ -1,6 +1,4 @@
-import {
-  downloadMediaMessage
-} from "@whiskeysockets/baileys"
+import { downloadContentFromMessage } from "baileys"
 
 import dotenv from 'dotenv'
 dotenv.config()
@@ -366,21 +364,20 @@ if (hasImage && wantsAnalysis) {
 
   try {
 
-    const targetMessage =
-      quotedImageMessage
-        ? { message: quoted.quotedMessage }
-        : msg
+    const targetImage =
+  quotedImageMessage || imageMessage
 
-    const buffer =
-      await downloadMediaMessage(
-        targetMessage,
-        "buffer",
-        {},
-        {
-          logger: console,
-          reuploadRequest: sock.updateMediaMessage
-        }
-      )
+const stream =
+  await downloadContentFromMessage(
+    targetImage,
+    "image"
+  )
+
+let buffer = Buffer.from([])
+
+for await (const chunk of stream) {
+  buffer = Buffer.concat([buffer, chunk])
+}
 
     if (!buffer) {
 
