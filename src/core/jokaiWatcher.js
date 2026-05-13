@@ -362,29 +362,25 @@ await sock.sendMessage(chatId, {
 /* 👁️ ANALIZAR IMAGEN */
 /* ========================= */
 
-const wantsAnalysis =
-/\b(analiza|analizar|describe|observa|opina|que ves|qué ves|ves ahi|ves ahí)\b/i
-.test(userText)
-
 if (hasImage && wantsAnalysis) {
 
   try {
 
     const targetMessage =
-  quotedImageMessage
-    ? { message: quoted.quotedMessage }
-    : msg
+      quotedImageMessage
+        ? { message: quoted.quotedMessage }
+        : msg
 
-const buffer =
-  await downloadMediaMessage(
-    targetMessage,
-    "buffer",
-    {},
-    {
-      logger: console,
-      reuploadRequest: sock.updateMediaMessage
-    }
-  )
+    const buffer =
+      await downloadMediaMessage(
+        targetMessage,
+        "buffer",
+        {},
+        {
+          logger: console,
+          reuploadRequest: sock.updateMediaMessage
+        }
+      )
 
     if (!buffer) {
 
