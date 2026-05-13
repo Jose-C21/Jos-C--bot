@@ -251,16 +251,39 @@ export async function jokaiWatcher(sock, msg) {
     if (!db[chatId]) return false
 
     const text =
-      msg?.message?.conversation ||
-      msg?.message?.extendedTextMessage?.text ||
-      msg?.message?.imageMessage?.caption ||
-      ""
 
-    const imageMessage =
-      msg?.message?.imageMessage
+  msg?.message?.conversation ||
 
-    const hasImage =
-      !!imageMessage
+  msg?.message?.extendedTextMessage?.text ||
+
+  msg?.message?.imageMessage?.caption ||
+
+  msg?.message?.viewOnceMessage
+    ?.message?.imageMessage?.caption ||
+
+  msg?.message?.viewOnceMessageV2
+    ?.message?.imageMessage?.caption ||
+
+  msg?.message?.viewOnceMessageV2Extension
+    ?.message?.imageMessage?.caption ||
+
+  ""
+
+const imageMessage =
+
+  msg?.message?.imageMessage ||
+
+  msg?.message?.viewOnceMessage
+    ?.message?.imageMessage ||
+
+  msg?.message?.viewOnceMessageV2
+    ?.message?.imageMessage ||
+
+  msg?.message?.viewOnceMessageV2Extension
+    ?.message?.imageMessage
+
+const hasImage =
+  !!imageMessage
 
     if (!text && !hasImage)
       return false
@@ -312,32 +335,40 @@ export async function jokaiWatcher(sock, msg) {
       }
     }
 
-    /* ========================= */
-    /* 👁️ ANALIZAR IMAGEN */
-    /* ========================= */
+   /* ========================= */
+/* 👁️ ANALIZAR IMAGEN */
+/* ========================= */
 
-    if (hasImage) {
+if (hasImage) {
 
-      try {
+  try {
 
-        const buffer =
-          await sock.downloadMediaMessage(msg)
+    const buffer =
+      await sock.downloadMediaMessage(
+        msg,
+        "buffer",
+        {},
+        {
+          logger: console,
+          reuploadRequest: sock.updateMediaMessage
+        }
+      )
 
-        if (!buffer) {
+    if (!buffer) {
 
-          await sock.sendMessage(chatId, {
+      await sock.sendMessage(chatId, {
 
-            text:
+        text:
 `\`⚡ Hola, soy JØKAI\`
 
 No pude descargar la imagen 😅
 
 ${signature()}`
 
-          }, { quoted: msg })
+      }, { quoted: msg })
 
-          return true
-        }
+      return true
+    }
 
         const analysis =
           await analyzeImage(
