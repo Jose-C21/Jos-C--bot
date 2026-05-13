@@ -250,7 +250,7 @@ export async function jokaiWatcher(sock, msg) {
 
     if (!db[chatId]) return false
 
-    const text =
+    const text = (
 
   msg?.message?.conversation ||
 
@@ -269,6 +269,8 @@ export async function jokaiWatcher(sock, msg) {
 
   ""
 
+).trim()
+
 const imageMessage =
 
   msg?.message?.imageMessage ||
@@ -285,61 +287,65 @@ const imageMessage =
 const hasImage =
   !!imageMessage
 
-    if (!text && !hasImage)
-      return false
+if (!text && !hasImage)
+  return false
 
-    const lower =
-      text.toLowerCase().trim()
+const lower =
+  text.toLowerCase().trim()
 
-    const isCalling =
-      /\bjokai\b/i.test(lower)
+const isCalling =
+  /\bjokai\b/i.test(lower)
 
-    const quoted =
-      msg?.message?.extendedTextMessage?.contextInfo
+const quoted =
+  msg?.message?.extendedTextMessage?.contextInfo
 
-    const quotedText =
-      quoted?.quotedMessage?.conversation ||
-      quoted?.quotedMessage?.extendedTextMessage?.text ||
-      ""
+const quotedText =
+  quoted?.quotedMessage?.conversation ||
+  quoted?.quotedMessage?.extendedTextMessage?.text ||
+  ""
 
-    const isReplyToJokai =
-      quotedText.includes("JØKAI")
+const isReplyToJokai =
+  quotedText.includes("JØKAI")
 
-    if (
-      !isCalling &&
-      !isReplyToJokai &&
-      !hasImage
-    ) {
-      return false
-    }
+if (
+  !isCalling &&
+  !isReplyToJokai &&
+  !(hasImage && wantsAnalysis)
+) {
+  return false
+}
 
-    await sock.sendMessage(chatId, {
-      react: {
-        text: "🧠",
-        key: msg.key
-      }
-    })
+await sock.sendMessage(chatId, {
+  react: {
+    text: "🧠",
+    key: msg.key
+  }
+})
 
-    let userText = text
+let userText = text
 
-    if (isCalling) {
+if (isCalling) {
 
-      userText =
-        text
-          .replace(/\bjokai\b/gi, "")
-          .replace(/\s{2,}/g, " ")
-          .trim()
+  userText =
+    text
+      .replace(/\bjokai\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
 
-      if (!userText) {
-        userText = "Hola"
-      }
-    }
+  if (!userText) {
+    userText = "Hola"
+  }
+}
 
-   /* ========================= */
+/* ========================= */
 /* 👁️ ANALIZAR IMAGEN */
 /* ========================= */
 
-if (hasImage) {
+const wantsAnalysis =
+/\b(analiza|analizar|describe|observa|opina|que ves|qué ves|ves ahi|ves ahí)\b/i
+.test(userText)
+
+if (hasImage && wantsAnalysis) {
 
   try {
 
@@ -370,39 +376,39 @@ ${signature()}`
       return true
     }
 
-        const analysis =
-          await analyzeImage(
-            buffer,
-            userText ||
-            "Analiza esta imagen naturalmente."
-          )
+    const analysis =
+      await analyzeImage(
+        buffer,
+        userText ||
+        "Analiza esta imagen naturalmente."
+      )
 
-        if (!analysis) {
+    if (!analysis) {
 
-          await sock.sendMessage(chatId, {
+      await sock.sendMessage(chatId, {
 
-            text:
+        text:
 `\`⚡ Hola, soy JØKAI\`
 
 No pude analizar la imagen 😅
 
 ${signature()}`
 
-          }, { quoted: msg })
+      }, { quoted: msg })
 
-          return true
-        }
+      return true
+    }
 
-        if (!MEMORY.has(chatId)) {
-          MEMORY.set(chatId, [])
-        }
+    if (!MEMORY.has(chatId)) {
+      MEMORY.set(chatId, [])
+    }
 
-        const history =
-          MEMORY.get(chatId)
+    const history =
+      MEMORY.get(chatId)
 
-        history.push({
-          role: "user",
-          content:
+    history.push({
+      role: "user",
+      content:
 `El usuario envió una imagen.
 
 Análisis visual:
@@ -410,114 +416,114 @@ ${analysis}
 
 Mensaje del usuario:
 ${userText || "Sin mensaje"}`
-        })
+    })
 
-        const messages = [
-          {
-            role: "system",
-            content: SYSTEM
-          },
+    const messages = [
+      {
+        role: "system",
+        content: SYSTEM
+      },
 
-          ...history.slice(-4)
-        ]
+      ...history.slice(-4)
+    ]
 
-        const res = await axios.post(
-          "https://api.groq.com/openai/v1/chat/completions",
+    const res = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
 
-          {
-            model: "llama-3.3-70b-versatile",
+      {
+        model: "llama-3.3-70b-versatile",
 
-            messages,
+        messages,
 
-            temperature: 1.15,
-            max_tokens: 500,
-            top_p: 1,
-            stream: false
-          },
+        temperature: 1.15,
+        max_tokens: 500,
+        top_p: 1,
+        stream: false
+      },
 
-          {
-            headers: {
-              Authorization: `Bearer ${API_KEY}`,
-              "Content-Type": "application/json"
-            }
-          }
-        )
+      {
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    )
 
-        const reply =
-          res?.data?.choices?.[0]
-          ?.message?.content?.trim()
+    const reply =
+      res?.data?.choices?.[0]
+      ?.message?.content?.trim()
 
-        if (!reply) return true
+    if (!reply) return true
 
-        history.push({
-          role: "assistant",
-          content: reply
-        })
+    history.push({
+      role: "assistant",
+      content: reply
+    })
 
-        MEMORY.set(
-          chatId,
-          history.slice(-10)
-        )
+    MEMORY.set(
+      chatId,
+      history.slice(-10)
+    )
 
-        await sock.sendMessage(chatId, {
+    await sock.sendMessage(chatId, {
 
-          text:
+      text:
 `\`⚡ Hola, soy JØKAI\`
 
 ${reply}
 
 ${signature()}`
 
-        }, { quoted: msg })
+    }, { quoted: msg })
 
-        await sock.sendMessage(chatId, {
-          react: {
-            text: "👁️",
-            key: msg.key
-          }
-        })
-
-        return true
-
-      } catch (e) {
-
-        console.log(
-          "❌ IMAGE ANALYSIS ERROR:",
-          e?.response?.data || e
-        )
-
-        return false
+    await sock.sendMessage(chatId, {
+      react: {
+        text: "👁️",
+        key: msg.key
       }
-    }
+    })
 
-    /* ========================= */
-    /* 🖼️ GENERADOR IMAGEN */
-    /* ========================= */
+    return true
 
-    const wantsImage =
-/\b(genera|generame|crea|créame|dibujame|dibújame|hazme|imagen|foto|wallpaper|dibuja)\b/i
+  } catch (e) {
+
+    console.log(
+      "❌ IMAGE ANALYSIS ERROR:",
+      e?.response?.data || e
+    )
+
+    return false
+  }
+}
+
+/* ========================= */
+/* 🖼️ GENERADOR IMAGEN */
+/* ========================= */
+
+const wantsImage =
+/\b(genera|generame|crea|créame|dibujame|dibújame|hazme|wallpaper|dibuja)\b/i
 .test(userText)
 
-    if (wantsImage) {
+if (wantsImage) {
 
-      const prompt =
+  const prompt =
 
-        userText
-          .replace(/\bjokai\b/gi, "")
-          .replace(/\s{2,}/g, " ")
-          .trim()
+    userText
+      .replace(/\bjokai\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
 
-      const imageUrl =
+  const imageUrl =
 
 `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}`
 
-      await sock.sendMessage(chatId, {
+  await sock.sendMessage(chatId, {
 
-        image: {
-          url: imageUrl
-        },
+    image: {
+      url: imageUrl
+    },
 
-        caption:
+    caption:
 `\`⚡ Hola, soy JØKAI\`
 
 🖼️ Imagen generada correctamente.
@@ -527,10 +533,10 @@ ${prompt}
 
 ${signature()}`
 
-      }, { quoted: msg })
+  }, { quoted: msg })
 
-      return true
-    }
+  return true
+}
 
     /* ========================= */
     /* 💬 CHAT NORMAL */
