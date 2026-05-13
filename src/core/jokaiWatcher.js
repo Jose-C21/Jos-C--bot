@@ -1,3 +1,7 @@
+import {
+  downloadMediaMessage
+} from "@whiskeysockets/baileys"
+
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -284,8 +288,29 @@ const imageMessage =
   msg?.message?.viewOnceMessageV2Extension
     ?.message?.imageMessage
 
+const quoted =
+  msg?.message?.extendedTextMessage?.contextInfo
+
+const quotedText =
+  quoted?.quotedMessage?.conversation ||
+  quoted?.quotedMessage?.extendedTextMessage?.text ||
+  ""
+
+const quotedImageMessage =
+
+  quoted?.quotedMessage?.imageMessage ||
+
+  quoted?.quotedMessage?.viewOnceMessage
+    ?.message?.imageMessage ||
+
+  quoted?.quotedMessage?.viewOnceMessageV2
+    ?.message?.imageMessage ||
+
+  quoted?.quotedMessage?.viewOnceMessageV2Extension
+    ?.message?.imageMessage
+
 const hasImage =
-  !!imageMessage
+  !!imageMessage || !!quotedImageMessage
 
 if (!text && !hasImage)
   return false
@@ -296,16 +321,27 @@ const lower =
 const isCalling =
   /\bjokai\b/i.test(lower)
 
-const quoted =
-  msg?.message?.extendedTextMessage?.contextInfo
-
-const quotedText =
-  quoted?.quotedMessage?.conversation ||
-  quoted?.quotedMessage?.extendedTextMessage?.text ||
-  ""
-
 const isReplyToJokai =
   quotedText.includes("JØKAI")
+
+let userText = text
+
+if (isCalling) {
+
+  userText =
+    text
+      .replace(/\bjokai\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+
+  if (!userText) {
+    userText = "Hola"
+  }
+}
+
+const wantsAnalysis =
+/\b(analiza|analizar|describe|observa|opina|que ves|qué ves|ves ahi|ves ahí)\b/i
+.test(userText)
 
 if (
   !isCalling &&
@@ -349,16 +385,21 @@ if (hasImage && wantsAnalysis) {
 
   try {
 
-    const buffer =
-      await sock.downloadMediaMessage(
-        msg,
-        "buffer",
-        {},
-        {
-          logger: console,
-          reuploadRequest: sock.updateMediaMessage
-        }
-      )
+    const targetMessage =
+  quotedImageMessage
+    ? { message: quoted.quotedMessage }
+    : msg
+
+const buffer =
+  await downloadMediaMessage(
+    targetMessage,
+    "buffer",
+    {},
+    {
+      logger: console,
+      reuploadRequest: sock.updateMediaMessage
+    }
+  )
 
     if (!buffer) {
 
