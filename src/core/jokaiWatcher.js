@@ -12,8 +12,15 @@ console.log("KEY START:", API_KEY?.slice(0, 8))
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
-console.log("KEY EXISTS:", !!API_KEY)
-console.log("KEY START:", API_KEY?.slice(0, 8))
+console.log(
+  "GEMINI EXISTS:",
+  !!GEMINI_API_KEY
+)
+
+console.log(
+  "GEMINI START:",
+  GEMINI_API_KEY?.slice(0, 10)
+)
 
 const DB =
   path.join(process.cwd(), "database", "jokai.json")
