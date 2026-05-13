@@ -77,9 +77,12 @@ async function analyzeImage(buffer, prompt = "") {
         messages: [
           {
             role: "user",
+
             content: [
+
               {
                 type: "text",
+
                 text:
 prompt ||
 
@@ -100,9 +103,14 @@ Habla natural y humano.`
 
               {
                 type: "image",
-                image:
-`data:image/jpeg;base64,${base64}`
+
+                source: {
+                  type: "base64",
+                  media_type: "image/jpeg",
+                  data: base64
+                }
               }
+
             ]
           }
         ]
