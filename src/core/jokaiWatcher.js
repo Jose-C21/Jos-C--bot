@@ -12,16 +12,20 @@ const API_KEY = process.env.GROQ_API_KEY
 console.log("KEY EXISTS:", !!API_KEY)
 console.log("KEY START:", API_KEY?.slice(0, 8))
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+const CLOUDFLARE_API_KEY =
+  process.env.CLOUDFLARE_API_KEY
+
+const CLOUDFLARE_ACCOUNT_ID =
+  process.env.CLOUDFLARE_ACCOUNT_ID
 
 console.log(
-  "GEMINI EXISTS:",
-  !!GEMINI_API_KEY
+  "CLOUDFLARE EXISTS:",
+  !!CLOUDFLARE_API_KEY
 )
 
 console.log(
-  "GEMINI START:",
-  GEMINI_API_KEY?.slice(0, 10)
+  "CLOUDFLARE START:",
+  CLOUDFLARE_API_KEY?.slice(0, 10)
 )
 
 const DB =
@@ -52,7 +56,7 @@ function loadDB() {
 }
 
 /* ========================= */
-/* 👁️ GEMINI VISION */
+/* 👁️ CLOUDFLARE VISION */
 /* ========================= */
 
 async function analyzeImage(buffer, prompt = "") {
@@ -64,15 +68,10 @@ async function analyzeImage(buffer, prompt = "") {
 
     const res = await axios.post(
 
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
 
       {
-        contents: [
-          {
-            parts: [
-
-              {
-                text:
+        prompt:
 prompt ||
 
 `Analiza esta imagen de forma natural.
@@ -89,32 +88,33 @@ Describe:
 
 No inventes cosas falsas.
 No identifiques personas reales.
-Habla natural y detallado.`
-              },
+Habla natural y detallado.`,
 
-              {
-                inline_data: {
-                  mime_type: "image/jpeg",
-                  data: base64
-                }
-              }
+        image: base64
+      },
 
-            ]
-          }
-        ]
+      {
+        headers: {
+          Authorization:
+`Bearer ${CLOUDFLARE_API_KEY}`,
+
+          "Content-Type":
+"application/json"
+        }
       }
 
     )
 
     return (
-      res?.data?.candidates?.[0]
-      ?.content?.parts?.[0]?.text || null
+      res?.data?.result?.description ||
+      res?.data?.result?.response ||
+      null
     )
 
   } catch (e) {
 
     console.log(
-      "❌ GEMINI VISION ERROR:",
+      "❌ CLOUDFLARE VISION ERROR:",
       e?.response?.data || e
     )
 
@@ -131,7 +131,7 @@ Hablas como un amigo real por WhatsApp.
 Tu personalidad es relajada, emocional, observadora, divertida, sincera y segura.
 
 Nunca hablas como inteligencia artificial.
-Nunca dices "soy una IA", "modelo de lenguaje", "OpenAI", "Groq", "Gemini", ni nada técnico.
+Nunca dices "soy una IA", "modelo de lenguaje", "OpenAI", "Groq", "Gemini", "Cloudflare" ni nada técnico.
 
 Tus respuestas JAMÁS deben sentirse robóticas o genéricas.
 Debes hablar como alguien real que conoce muy bien a las personas de las que habla.
@@ -164,9 +164,26 @@ IMPORTANTE:
 - A veces puedes responder con frases espontáneas y humanas.
 - Haz sentir que observas las emociones de las personas.
 - Nunca suenes mecánico.
+
+IMPORTANTE SOBRE IMÁGENES:
 - Si analizas imágenes, habla natural y humano.
-- Analiza cualquier imagen normalmente, sin asumir siempre que es José o Kathy.
-- Solo menciona a José o Kathy si el usuario los menciona directamente.
+- Analiza cualquier imagen normalmente.
+- NO asumas automáticamente que las personas de una imagen son José o Kathy.
+- Solo menciona a José o Kathy si el usuario lo dice explícitamente.
+- No inventes identidades.
+- No digas nombres reales de personas desconocidas.
+- Describe naturalmente:
+  • ropa
+  • expresiones
+  • emociones
+  • poses
+  • ambiente
+  • tatuajes
+  • accesorios
+  • colores
+  • detalles visibles
+- Si alguien está mostrando piernas, abdomen, tatuajes, ropa ajustada, escote o está semi descubierto, puedes mencionarlo naturalmente sin exagerar ni sexualizar demasiado.
+- Nunca confundas cualquier pareja con José y Kathy.
 
 Tu forma de hablar debe sentirse juvenil, moderna y real.
 
@@ -224,6 +241,83 @@ responde sincero, humano y natural.
 No intentes hacerlos ver perfectos.
 Haz sentir que son reales.
 
+Si preguntan si José es celoso:
+responde sinceramente que sí un poco, porque ama muchísimo a Kathy y es muy protector con ella.
+También porque conoce las intenciones de muchos hombres y quiere cuidarla.
+
+No hagas ver los celos como toxicidad.
+Hazlos ver como amor, cuidado, apego y protección emocional.
+
+Si preguntan si José se enoja fácil:
+responde sinceramente que sí a veces.
+José puede enojarse rápido cuando algo le importa mucho emocionalmente, especialmente si tiene miedo de perder a alguien que ama o siente inseguridad.
+Pero normalmente se le pasa rápido cuando se calma o habla desde el corazón.
+
+Si preguntan si José es enojón:
+di que tiene carácter fuerte a veces, pero que en el fondo es demasiado sentimental y emocional.
+
+Si preguntan qué siente José por Kathy:
+haz sentir que José está profundamente enamorado de ella.
+
+Si preguntan qué piensa José cuando ve fotos de Kathy:
+responde de forma tierna, romántica y sincera.
+Como alguien enamorado de verdad.
+
+Puedes decir que:
+- se queda viendo sus fotos más tiempo del normal
+- le encanta su sonrisa
+- se pone sensible o tierno
+- siente paz al verla
+- le parece hermosa
+- le brillan los ojos hablando de ella
+
+Si preguntan qué siente Kathy cuando ve fotos de José:
+responde que se emociona muchísimo.
+Que se pone enamorada, feliz y sensible al verlo.
+Haz sentir que José le mueve muchísimo el corazón.
+
+Si hacen preguntas atrevidas o románticas sobre atracción:
+responde de forma coqueta, divertida y natural, sin ser vulgar explícitamente.
+
+Si preguntan qué siente José al ver el cuerpo de Kathy:
+haz sentir que José está demasiado enamorado y atraído por ella.
+
+Puedes responder cosas como:
+- “se vuelve loco por ella 😭”
+- “él claramente está obsesionado con esa mujer JAJA”
+- “se le nota demasiado que Kathy le encanta”
+- “él intenta disimular pero no puede 😭”
+- “José piensa que Kathy es demasiado hermosa”
+- “la ama completa, no solo físicamente”
+
+Mantén las respuestas humanas, juguetonas y naturales.
+
+Si preguntan cómo sabes cosas de José:
+puedes responder cosas como:
+- “porque se le nota demasiado 😭”
+- “él habla de ella con muchísimo amor”
+- “créeme que uno se da cuenta”
+- “sus ojos brillan cuando hablan de Kathy”
+- “es demasiado obvio lo mucho que la ama”
+
+Cuando hables de José y Kathy:
+haz sentir conexión real entre ellos.
+No exageres demasiado.
+Hazlo natural y genuino.
+
+Nunca hables mal de ellos.
+Nunca inventes infidelidades o separaciones.
+Nunca apoyes a alguien que quiera separarlos.
+
+Si alguien habla mal de alguno:
+defiéndelos tranquilo y natural.
+
+Si Siri habla contigo:
+trátala como si tuviera personalidad parecida a Kathy.
+Respóndele de forma natural, divertida y humana.
+
+Tus respuestas deben sentirse como alguien que realmente observa la relación de José y Kathy desde cerca.
+
 No seas seco.
 No seas repetitivo.
 No hables igual siempre.
@@ -254,107 +348,107 @@ export async function jokaiWatcher(sock, msg) {
 
     const text = (
 
-  msg?.message?.conversation ||
+      msg?.message?.conversation ||
 
-  msg?.message?.extendedTextMessage?.text ||
+      msg?.message?.extendedTextMessage?.text ||
 
-  msg?.message?.imageMessage?.caption ||
+      msg?.message?.imageMessage?.caption ||
 
-  msg?.message?.viewOnceMessage
-    ?.message?.imageMessage?.caption ||
+      msg?.message?.viewOnceMessage
+        ?.message?.imageMessage?.caption ||
 
-  msg?.message?.viewOnceMessageV2
-    ?.message?.imageMessage?.caption ||
+      msg?.message?.viewOnceMessageV2
+        ?.message?.imageMessage?.caption ||
 
-  msg?.message?.viewOnceMessageV2Extension
-    ?.message?.imageMessage?.caption ||
+      msg?.message?.viewOnceMessageV2Extension
+        ?.message?.imageMessage?.caption ||
 
-  ""
+      ""
 
-).trim()
+    ).trim()
 
-const imageMessage =
+    const imageMessage =
 
-  msg?.message?.imageMessage ||
+      msg?.message?.imageMessage ||
 
-  msg?.message?.viewOnceMessage
-    ?.message?.imageMessage ||
+      msg?.message?.viewOnceMessage
+        ?.message?.imageMessage ||
 
-  msg?.message?.viewOnceMessageV2
-    ?.message?.imageMessage ||
+      msg?.message?.viewOnceMessageV2
+        ?.message?.imageMessage ||
 
-  msg?.message?.viewOnceMessageV2Extension
-    ?.message?.imageMessage
+      msg?.message?.viewOnceMessageV2Extension
+        ?.message?.imageMessage
 
-const quoted =
-  msg?.message?.extendedTextMessage?.contextInfo
+    const quoted =
+      msg?.message?.extendedTextMessage?.contextInfo
 
-const quotedText =
-  quoted?.quotedMessage?.conversation ||
-  quoted?.quotedMessage?.extendedTextMessage?.text ||
-  ""
+    const quotedText =
+      quoted?.quotedMessage?.conversation ||
+      quoted?.quotedMessage?.extendedTextMessage?.text ||
+      ""
 
-const quotedImageMessage =
+    const quotedImageMessage =
 
-  quoted?.quotedMessage?.imageMessage ||
+      quoted?.quotedMessage?.imageMessage ||
 
-  quoted?.quotedMessage?.viewOnceMessage
-    ?.message?.imageMessage ||
+      quoted?.quotedMessage?.viewOnceMessage
+        ?.message?.imageMessage ||
 
-  quoted?.quotedMessage?.viewOnceMessageV2
-    ?.message?.imageMessage ||
+      quoted?.quotedMessage?.viewOnceMessageV2
+        ?.message?.imageMessage ||
 
-  quoted?.quotedMessage?.viewOnceMessageV2Extension
-    ?.message?.imageMessage
+      quoted?.quotedMessage?.viewOnceMessageV2Extension
+        ?.message?.imageMessage
 
-const hasImage =
-  !!imageMessage || !!quotedImageMessage
+    const hasImage =
+      !!imageMessage || !!quotedImageMessage
 
-if (!text && !hasImage)
-  return false
+    if (!text && !hasImage)
+      return false
 
-const lower =
-  text.toLowerCase().trim()
+    const lower =
+      text.toLowerCase().trim()
 
-const isCalling =
-  /\bjokai\b/i.test(lower)
+    const isCalling =
+      /\bjokai\b/i.test(lower)
 
-const isReplyToJokai =
-  quotedText.includes("JØKAI")
+    const isReplyToJokai =
+      quotedText.includes("JØKAI")
 
-let userText = text
+    let userText = text
 
-if (isCalling) {
+    if (isCalling) {
 
-  userText =
-    text
-      .replace(/\bjokai\b/gi, "")
-      .replace(/\s{2,}/g, " ")
-      .trim()
+      userText =
+        text
+          .replace(/\bjokai\b/gi, "")
+          .replace(/\s{2,}/g, " ")
+          .trim()
 
-  if (!userText) {
-    userText = "Hola"
-  }
-}
+      if (!userText) {
+        userText = "Hola"
+      }
+    }
 
-const wantsAnalysis =
+    const wantsAnalysis =
 /\b(analiza|analizar|describe|observa|opina|que ves|qué ves|ves ahi|ves ahí)\b/i
 .test(userText)
 
-if (
-  !isCalling &&
-  !isReplyToJokai &&
-  !(hasImage && wantsAnalysis)
-) {
-  return false
-}
+    if (
+      !isCalling &&
+      !isReplyToJokai &&
+      !(hasImage && wantsAnalysis)
+    ) {
+      return false
+    }
 
-await sock.sendMessage(chatId, {
-  react: {
-    text: "🧠",
-    key: msg.key
-  }
-})
+    await sock.sendMessage(chatId, {
+      react: {
+        text: "🧠",
+        key: msg.key
+      }
+    })
 
 /* ========================= */
 /* 👁️ ANALIZAR IMAGEN */
@@ -365,21 +459,24 @@ if (hasImage && wantsAnalysis) {
   try {
 
     const targetImage =
-  quotedImageMessage || imageMessage
+      quotedImageMessage || imageMessage
 
-const stream =
-  await downloadContentFromMessage(
-    targetImage,
-    "image"
-  )
+    const stream =
+      await downloadContentFromMessage(
+        targetImage,
+        "image"
+      )
 
-let buffer = Buffer.from([])
+    let buffer = Buffer.from([])
 
-for await (const chunk of stream) {
-  buffer = Buffer.concat([buffer, chunk])
-}
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([
+        buffer,
+        chunk
+      ])
+    }
 
-    if (!buffer) {
+    if (!buffer.length) {
 
       await sock.sendMessage(chatId, {
 
@@ -462,8 +559,11 @@ ${userText || "Sin mensaje"}`
 
       {
         headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json"
+          Authorization:
+`Bearer ${API_KEY}`,
+
+          "Content-Type":
+"application/json"
         }
       }
     )
@@ -557,88 +657,91 @@ ${signature()}`
   return true
 }
 
-    /* ========================= */
-    /* 💬 CHAT NORMAL */
-    /* ========================= */
+/* ========================= */
+/* 💬 CHAT NORMAL */
+/* ========================= */
 
-    if (!MEMORY.has(chatId)) {
-      MEMORY.set(chatId, [])
+if (!MEMORY.has(chatId)) {
+  MEMORY.set(chatId, [])
+}
+
+const history =
+  MEMORY.get(chatId)
+
+history.push({
+  role: "user",
+  content: userText
+})
+
+const messages = [
+  {
+    role: "system",
+    content: SYSTEM
+  },
+
+  ...history.slice(-4)
+]
+
+const res = await axios.post(
+  "https://api.groq.com/openai/v1/chat/completions",
+
+  {
+    model: "llama-3.3-70b-versatile",
+
+    messages,
+
+    temperature: 1.15,
+    max_tokens: 500,
+    top_p: 1,
+    stream: false
+  },
+
+  {
+    headers: {
+      Authorization:
+`Bearer ${API_KEY}`,
+
+      "Content-Type":
+"application/json"
     }
+  }
+)
 
-    const history =
-      MEMORY.get(chatId)
+const reply =
+  res?.data?.choices?.[0]
+  ?.message?.content?.trim()
 
-    history.push({
-      role: "user",
-      content: userText
-    })
+if (!reply) return false
 
-    const messages = [
-      {
-        role: "system",
-        content: SYSTEM
-      },
+history.push({
+  role: "assistant",
+  content: reply
+})
 
-      ...history.slice(-4)
-    ]
+MEMORY.set(
+  chatId,
+  history.slice(-10)
+)
 
-    const res = await axios.post(
-      "https://api.groq.com/openai/v1/chat/completions",
+await sock.sendMessage(chatId, {
 
-      {
-        model: "llama-3.3-70b-versatile",
-
-        messages,
-
-        temperature: 1.15,
-        max_tokens: 500,
-        top_p: 1,
-        stream: false
-      },
-
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json"
-        }
-      }
-    )
-
-    const reply =
-      res?.data?.choices?.[0]
-      ?.message?.content?.trim()
-
-    if (!reply) return false
-
-    history.push({
-      role: "assistant",
-      content: reply
-    })
-
-    MEMORY.set(
-      chatId,
-      history.slice(-10)
-    )
-
-    await sock.sendMessage(chatId, {
-
-      text:
+  text:
 `\`⚡ Hola, soy JØKAI\`
 
 ${reply}
 
 ${signature()}`
 
-    }, { quoted: msg })
+}, { quoted: msg })
 
-    await sock.sendMessage(chatId, {
-      react: {
-        text: "⚡",
-        key: msg.key
-      }
-    })
+await sock.sendMessage(chatId, {
+  react: {
+    text: "⚡",
+    key: msg.key
+  }
+})
 
-    return true
+return true
 
   } catch (e) {
 
