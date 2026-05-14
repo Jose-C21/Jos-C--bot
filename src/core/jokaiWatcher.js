@@ -64,23 +64,21 @@ async function analyzeImage(buffer, prompt = "") {
 
     const res = await axios.post(
 
-      "https://openrouter.ai/api/v1/chat/completions",
+  "https://openrouter.ai/api/v1/chat/completions",
 
+  {
+    model: "openrouter/free",
+
+    messages: [
       {
-        model:
-"meta-llama/llama-4-maverick:free",
+        role: "user",
 
-        messages: [
+        content: [
 
           {
-            role: "user",
+            type: "text",
 
-            content: [
-
-              {
-                type: "text",
-
-                text:
+            text:
 prompt ||
 
 `Analiza esta imagen naturalmente.
@@ -96,43 +94,39 @@ Describe:
 - detalles visibles
 
 Habla natural y humano.`
-              },
+          },
 
-              {
-                type: "image_url",
+          {
+            type: "image_url",
 
-                image_url: {
-                  url:
+            image_url: {
+              url:
 `data:image/jpeg;base64,${base64}`
-                }
-              }
-
-            ]
+            }
           }
 
         ]
+      }
+    ]
+  },
 
-      },
+  {
+    headers: {
 
-      {
-        headers: {
+      Authorization:
+`Bearer ${OPENROUTER_API_KEY}`,
 
-          Authorization:
-`Bearer ${process.env.OPENROUTER_API_KEY}`,
-
-          "Content-Type":
+      "Content-Type":
 "application/json",
 
-          "HTTP-Referer":
+      "HTTP-Referer":
 "https://localhost",
 
-          "X-Title":
+      "X-Title":
 "JOKAI"
-
-        }
-      }
-
-    )
+    }
+  }
+)
 
     return (
       res?.data?.choices?.[0]
