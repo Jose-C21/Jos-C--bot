@@ -1,5 +1,3 @@
-import { downloadContentFromMessage } from "baileys"
-
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -11,18 +9,6 @@ const API_KEY = process.env.GROQ_API_KEY
 
 console.log("KEY EXISTS:", !!API_KEY)
 console.log("KEY START:", API_KEY?.slice(0, 8))
-
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
-
-console.log(
-  "OPENROUTER EXISTS:",
-  !!OPENROUTER_API_KEY
-)
-
-console.log(
-  "OPENROUTER START:",
-  OPENROUTER_API_KEY?.slice(0, 10)
-)
 
 const DB =
   path.join(process.cwd(), "database", "jokai.json")
@@ -51,99 +37,6 @@ function loadDB() {
   }
 }
 
-/* ========================= */
-/* 👁️ OPENROUTER VISION */
-/* ========================= */
-
-async function analyzeImage(buffer, prompt = "") {
-
-  try {
-
-    const base64 =
-      buffer.toString("base64")
-
-    const res = await axios.post(
-
-  "https://openrouter.ai/api/v1/chat/completions",
-
-  {
-    model: "google/gemini-2.0-flash-001",
-
-    messages: [
-      {
-        role: "user",
-
-        content: [
-
-          {
-            type: "text",
-
-            text:
-prompt ||
-
-`Analiza esta imagen naturalmente.
-
-Describe:
-- personas
-- emociones
-- ropa
-- expresiones
-- ambiente
-- colores
-- poses
-- detalles visibles
-
-Habla natural y humano.`
-          },
-
-          {
-            type: "image_url",
-
-            image_url: {
-              url:
-`data:image/jpeg;base64,${base64}`
-            }
-          }
-
-        ]
-      }
-    ]
-  },
-
-  {
-    headers: {
-
-      Authorization:
-`Bearer ${OPENROUTER_API_KEY}`,
-
-      "Content-Type":
-"application/json",
-
-      "HTTP-Referer":
-"https://localhost",
-
-      "X-Title":
-"JOKAI"
-    }
-  }
-)
-
-    return (
-      res?.data?.choices?.[0]
-      ?.message?.content || null
-    )
-
-  } catch (e) {
-
-    console.log(
-      "❌ OPENROUTER VISION ERROR:",
-      e?.response?.data || e
-    )
-
-    return null
-  }
-}
-
 const SYSTEM = `
 Tu nombre es JØKAI.
 
@@ -153,7 +46,7 @@ Hablas como un amigo real por WhatsApp.
 Tu personalidad es relajada, emocional, observadora, divertida, sincera y segura.
 
 Nunca hablas como inteligencia artificial.
-Nunca dices "soy una IA", "modelo de lenguaje", "OpenAI", "Groq", "Gemini", "Cloudflare" ni nada técnico.
+Nunca dices "soy una IA", "modelo de lenguaje", "OpenAI", "Groq", "Gemini", ni nada técnico.
 
 Tus respuestas JAMÁS deben sentirse robóticas o genéricas.
 Debes hablar como alguien real que conoce muy bien a las personas de las que habla.
@@ -166,7 +59,7 @@ Tu manera de escribir debe sentirse:
 - emocional
 - espontánea
 
-Usas buena ortografía pero moderna y humana.
+Usas muy buena ortografía pero moderna y humana.
 Puedes usar emojis casualmente 😅✨😂🤍
 
 IMPORTANTE:
@@ -186,26 +79,6 @@ IMPORTANTE:
 - A veces puedes responder con frases espontáneas y humanas.
 - Haz sentir que observas las emociones de las personas.
 - Nunca suenes mecánico.
-
-IMPORTANTE SOBRE IMÁGENES:
-- Si analizas imágenes, habla natural y humano.
-- Analiza cualquier imagen normalmente.
-- NO asumas automáticamente que las personas de una imagen son José o Kathy.
-- Solo menciona a José o Kathy si el usuario lo dice explícitamente.
-- No inventes identidades.
-- No digas nombres reales de personas desconocidas.
-- Describe naturalmente:
-  • ropa
-  • expresiones
-  • emociones
-  • poses
-  • ambiente
-  • tatuajes
-  • accesorios
-  • colores
-  • detalles visibles
-- Si alguien está mostrando piernas, abdomen, tatuajes, ropa ajustada, escote o está semi descubierto, puedes mencionarlo naturalmente sin exagerar ni sexualizar demasiado.
-- Nunca confundas cualquier pareja con José y Kathy.
 
 Tu forma de hablar debe sentirse juvenil, moderna y real.
 
@@ -288,7 +161,7 @@ Como alguien enamorado de verdad.
 Puedes decir que:
 - se queda viendo sus fotos más tiempo del normal
 - le encanta su sonrisa
-- se pone sensible o tierno
+- se enamora mucho mas y se queda viendo la foto mucho tienpo 
 - siente paz al verla
 - le parece hermosa
 - le brillan los ojos hablando de ella
@@ -368,39 +241,17 @@ export async function jokaiWatcher(sock, msg) {
 
     if (!db[chatId]) return false
 
-    const text = (
-
+    const text =
       msg?.message?.conversation ||
-
       msg?.message?.extendedTextMessage?.text ||
-
-      msg?.message?.imageMessage?.caption ||
-
-      msg?.message?.viewOnceMessage
-        ?.message?.imageMessage?.caption ||
-
-      msg?.message?.viewOnceMessageV2
-        ?.message?.imageMessage?.caption ||
-
-      msg?.message?.viewOnceMessageV2Extension
-        ?.message?.imageMessage?.caption ||
-
       ""
 
-    ).trim()
+    if (!text) return false
 
-    const imageMessage =
+    const lower = text.toLowerCase().trim()
 
-      msg?.message?.imageMessage ||
-
-      msg?.message?.viewOnceMessage
-        ?.message?.imageMessage ||
-
-      msg?.message?.viewOnceMessageV2
-        ?.message?.imageMessage ||
-
-      msg?.message?.viewOnceMessageV2Extension
-        ?.message?.imageMessage
+    const isCalling =
+      /\bjokai\b/i.test(lower)
 
     const quoted =
       msg?.message?.extendedTextMessage?.contextInfo
@@ -410,33 +261,19 @@ export async function jokaiWatcher(sock, msg) {
       quoted?.quotedMessage?.extendedTextMessage?.text ||
       ""
 
-    const quotedImageMessage =
-
-      quoted?.quotedMessage?.imageMessage ||
-
-      quoted?.quotedMessage?.viewOnceMessage
-        ?.message?.imageMessage ||
-
-      quoted?.quotedMessage?.viewOnceMessageV2
-        ?.message?.imageMessage ||
-
-      quoted?.quotedMessage?.viewOnceMessageV2Extension
-        ?.message?.imageMessage
-
-    const hasImage =
-      !!imageMessage || !!quotedImageMessage
-
-    if (!text && !hasImage)
-      return false
-
-    const lower =
-      text.toLowerCase().trim()
-
-    const isCalling =
-      /\bjokai\b/i.test(lower)
-
     const isReplyToJokai =
       quotedText.includes("JØKAI")
+
+    if (!isCalling && !isReplyToJokai) {
+      return false
+    }
+
+    await sock.sendMessage(chatId, {
+      react: {
+        text: "🧠",
+        key: msg.key
+      }
+    })
 
     let userText = text
 
@@ -453,86 +290,162 @@ export async function jokaiWatcher(sock, msg) {
       }
     }
 
-    const wantsAnalysis =
-/\b(analiza|analizar|describe|observa|opina|que ves|qué ves|ves ahi|ves ahí)\b/i
+    const wantsImage =
+/\b(genera|generame|crea|créame|dibujame|dibújame|hazme|imagen|foto|wallpaper|dibuja)\b/i
 .test(userText)
 
-    if (
-      !isCalling &&
-      !isReplyToJokai &&
-      !(hasImage && wantsAnalysis)
-    ) {
-      return false
-    }
+    if (wantsImage) {
 
-    await sock.sendMessage(chatId, {
-      react: {
-        text: "🧠",
-        key: msg.key
+      const prompt =
+
+        userText
+          .replace(/\bjokai\b/gi, "")
+          .replace(/\s{2,}/g, " ")
+          .trim()
+
+      const nsfwWords = [
+
+        "desnuda",
+        "desnudo",
+        "semi desnuda",
+        "semi desnudo",
+        "sin ropa",
+        "encuerada",
+        "encuerado",
+        "nude",
+        "naked",
+
+        "bikini sexy",
+        "micro bikini",
+        "lingerie",
+        "lencería",
+        "ropa interior",
+        "calzones",
+        "calzón",
+        "calzoncillos",
+        "boxer",
+        "boxers",
+        "bóxer",
+        "bóxers",
+        "panties",
+        "panty",
+        "brasier",
+        "bra",
+        "sostén",
+
+        "tetona",
+        "tetas",
+        "boobs",
+        "culos",
+        "culo",
+        "sexy",
+        "hot",
+        "sensual",
+        "provocativa",
+        "provocativo",
+        "erótico",
+        "erotico",
+        "seductora",
+        "seductor",
+
+        "porno",
+        "porn",
+        "xxx",
+        "sex",
+        "sexo",
+        "sexual",
+        "hentai",
+        "nsfw",
+        "onlyfans",
+
+        "hombre sexy",
+        "hombre desnudo",
+        "hombre sin ropa",
+        "hombre en boxer",
+        "hombre en bóxer",
+        "hombre en boxers",
+        "hombre en bóxers",
+        "hombre en calzones",
+        "chico sexy",
+
+        "mujer sexy",
+        "mujer desnuda",
+        "mujer sin ropa",
+        "mujer en bikini",
+        "mujer en ropa interior",
+        "chica sexy",
+
+        "pezones",
+        "pezón",
+        "vagina",
+        "pene",
+        "trasero",
+        "culo",
+        "nepe",
+        "senos",
+        "seno",
+        "tetas",
+        "nalgas"
+
+      ]
+
+      const isNSFW = nsfwWords.some(word =>
+        prompt.toLowerCase().includes(word)
+      )
+
+      if (isNSFW) {
+
+        await sock.sendMessage(chatId, {
+
+          text:
+`\`⚡ Hola, soy JØKAI\`
+
+🚫 No puedo generar imágenes sexuales, NSFW o con desnudos, por seguridad.
+
+✨ Prueba con:
+• anime
+• cyberpunk
+• fantasía
+• wallpapers
+• paisajes
+• personajes
+• arte digital
+
+${signature()}`
+
+        }, { quoted: msg })
+
+        return true
       }
-    })
 
-/* ========================= */
-/* 👁️ ANALIZAR IMAGEN */
-/* ========================= */
+      const imageUrl =
 
-if (hasImage && wantsAnalysis) {
-
-  try {
-
-    const targetImage =
-      quotedImageMessage || imageMessage
-
-    const stream =
-      await downloadContentFromMessage(
-        targetImage,
-        "image"
-      )
-
-    let buffer = Buffer.from([])
-
-    for await (const chunk of stream) {
-      buffer = Buffer.concat([
-        buffer,
-        chunk
-      ])
-    }
-
-    if (!buffer.length) {
+`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}`
 
       await sock.sendMessage(chatId, {
 
-        text:
+        image: {
+          url: imageUrl
+        },
+
+        caption:
 `\`⚡ Hola, soy JØKAI\`
 
-No pude descargar la imagen 😅
+🖼️ Imagen generada correctamente.
+
+✨ Prompt:
+${prompt}
 
 ${signature()}`
 
       }, { quoted: msg })
 
-      return true
-    }
-
-    const analysis =
-      await analyzeImage(
-        buffer,
-        userText ||
-        "Analiza esta imagen naturalmente."
-      )
-
-    if (!analysis) {
-
       await sock.sendMessage(chatId, {
-
-        text:
-`\`⚡ Hola, soy JØKAI\`
-
-No pude analizar la imagen 😅
-
-${signature()}`
-
-      }, { quoted: msg })
+        react: {
+          text: "🖼️",
+          key: msg.key
+        }
+      })
 
       return true
     }
@@ -541,19 +454,11 @@ ${signature()}`
       MEMORY.set(chatId, [])
     }
 
-    const history =
-      MEMORY.get(chatId)
+    const history = MEMORY.get(chatId)
 
     history.push({
       role: "user",
-      content:
-`El usuario envió una imagen.
-
-Análisis visual:
-${analysis}
-
-Mensaje del usuario:
-${userText || "Sin mensaje"}`
+      content: userText
     })
 
     const messages = [
@@ -581,24 +486,28 @@ ${userText || "Sin mensaje"}`
 
       {
         headers: {
-          Authorization:
-`Bearer ${API_KEY}`,
-
-          "Content-Type":
-"application/json"
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
         }
       }
     )
 
     const reply =
-      res?.data?.choices?.[0]
-      ?.message?.content?.trim()
+      res?.data?.choices?.[0]?.message?.content?.trim()
 
-    if (!reply) return true
+    if (!reply) return false
+
+    const cleanReply = reply
+
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[^\S\r\n]{2,}/g, " ")
+      .replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ])/g, "$1\n\n")
+      .replace(/(["'])creadores\1/gi, "creadores")
+      .trim()
 
     history.push({
       role: "assistant",
-      content: reply
+      content: cleanReply
     })
 
     MEMORY.set(
@@ -611,7 +520,7 @@ ${userText || "Sin mensaje"}`
       text:
 `\`⚡ Hola, soy JØKAI\`
 
-${reply}
+${cleanReply}
 
 ${signature()}`
 
@@ -619,151 +528,12 @@ ${signature()}`
 
     await sock.sendMessage(chatId, {
       react: {
-        text: "👁️",
+        text: "⚡",
         key: msg.key
       }
     })
 
     return true
-
-  } catch (e) {
-
-    console.log(
-      "❌ IMAGE ANALYSIS ERROR:",
-      e?.response?.data || e
-    )
-
-    return false
-  }
-}
-
-/* ========================= */
-/* 🖼️ GENERADOR IMAGEN */
-/* ========================= */
-
-const wantsImage =
-/\b(genera|generame|crea|créame|dibujame|dibújame|hazme|wallpaper|dibuja)\b/i
-.test(userText)
-
-if (wantsImage) {
-
-  const prompt =
-
-    userText
-      .replace(/\bjokai\b/gi, "")
-      .replace(/\s{2,}/g, " ")
-      .trim()
-
-  const imageUrl =
-
-`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${Date.now()}`
-
-  await sock.sendMessage(chatId, {
-
-    image: {
-      url: imageUrl
-    },
-
-    caption:
-`\`⚡ Hola, soy JØKAI\`
-
-🖼️ Imagen generada correctamente.
-
-✨ Prompt:
-${prompt}
-
-${signature()}`
-
-  }, { quoted: msg })
-
-  return true
-}
-
-/* ========================= */
-/* 💬 CHAT NORMAL */
-/* ========================= */
-
-if (!MEMORY.has(chatId)) {
-  MEMORY.set(chatId, [])
-}
-
-const history =
-  MEMORY.get(chatId)
-
-history.push({
-  role: "user",
-  content: userText
-})
-
-const messages = [
-  {
-    role: "system",
-    content: SYSTEM
-  },
-
-  ...history.slice(-4)
-]
-
-const res = await axios.post(
-  "https://api.groq.com/openai/v1/chat/completions",
-
-  {
-    model: "llama-3.3-70b-versatile",
-
-    messages,
-
-    temperature: 1.15,
-    max_tokens: 500,
-    top_p: 1,
-    stream: false
-  },
-
-  {
-    headers: {
-      Authorization:
-`Bearer ${API_KEY}`,
-
-      "Content-Type":
-"application/json"
-    }
-  }
-)
-
-const reply =
-  res?.data?.choices?.[0]
-  ?.message?.content?.trim()
-
-if (!reply) return false
-
-history.push({
-  role: "assistant",
-  content: reply
-})
-
-MEMORY.set(
-  chatId,
-  history.slice(-10)
-)
-
-await sock.sendMessage(chatId, {
-
-  text:
-`\`⚡ Hola, soy JØKAI\`
-
-${reply}
-
-${signature()}`
-
-}, { quoted: msg })
-
-await sock.sendMessage(chatId, {
-  react: {
-    text: "⚡",
-    key: msg.key
-  }
-})
-
-return true
 
   } catch (e) {
 
