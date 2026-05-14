@@ -274,27 +274,45 @@ export async function jokaiWatcher(sock, msg) {
       return false
     }
 
-    await sock.sendMessage(chatId, {
+    
+
+    let userText = text
+
+    if (isCalling) {
+
+  userText =
+    text
+      .replace(/\bjokai\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+
+  if (!userText) {
+    userText = "Hola"
+  }
+}
+
+// Evitar que comandos entren a JØKAI
+
+const blockedCommands = [
+  "on",
+  "off"
+]
+
+if (
+  blockedCommands.includes(
+    userText.toLowerCase()
+  )
+) {
+  return false
+}
+
+await sock.sendMessage(chatId, {
       react: {
         text: "🧠",
         key: msg.key
       }
     })
 
-    let userText = text
-
-    if (isCalling) {
-
-      userText =
-        text
-          .replace(/\bjokai\b/gi, "")
-          .replace(/\s{2,}/g, " ")
-          .trim()
-
-      if (!userText) {
-        userText = "Hola"
-      }
-    }
 
     const wantsImage =
 /\b(genera|generame|crea|créame|dibujame|dibújame|hazme|imagen|foto|wallpaper|dibuja)\b/i
