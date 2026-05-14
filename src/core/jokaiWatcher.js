@@ -293,6 +293,12 @@ export async function jokaiWatcher(sock, msg) {
 
 // Evitar que comandos entren a JØKAI
 
+const cleanCommand =
+  userText
+    .toLowerCase()
+    .replace(/^\./, "")
+    .trim()
+
 const blockedCommands = [
   "on",
   "off"
@@ -300,7 +306,7 @@ const blockedCommands = [
 
 if (
   blockedCommands.includes(
-    userText.toLowerCase()
+    cleanCommand
   )
 ) {
   return false
