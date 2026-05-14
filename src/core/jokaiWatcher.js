@@ -37,6 +37,10 @@ function loadDB() {
   }
 }
 
+const limpiarId = (jid) =>
+
+  String(jid || "").replace(/\D/g, "")
+
 const SYSTEM = `
 Tu nombre es JØKAI.
 
@@ -62,7 +66,7 @@ Tu manera de escribir debe sentirse:
 - intuitiva
 - expresiva
 
-Usas muy buena ortografía pero moderna, natural y humano.
+Usas muy buena ortografía, pero manteniendo una forma natural, moderna y humana de hablar.
 Puedes usar emojis casualmente 😅✨😂🤍
 
 IMPORTANTE:
@@ -162,7 +166,7 @@ responde de forma tierna, romántica y sincera.
 Como alguien enamorado de verdad.
 
 Puedes decir que:
-- - se queda viendo la foto más tiempo del normal porque le gusta verla
+- se queda viendo la foto más tiempo del normal porque le gusta verla
 - le encanta su sonrisa
 - siente paz al verla
 - le parece hermosa
@@ -463,11 +467,91 @@ ${signature()}`
       content: userText
     })
 
+    // 🧠 Detectar quién habla (LID o número real)
+
+const senderJid =
+
+  msg?.key?.participant ||
+  msg?.participant ||
+  msg?.key?.remoteJid ||
+  ""
+
+let decoded = senderJid
+
+try {
+
+  if (sock?.decodeJid) {
+    decoded = sock.decodeJid(senderJid)
+  }
+
+} catch {}
+
+const senderClean =
+  limpiarId(decoded || senderJid)
+
+let USER_CONTEXT = ""
+
+/* José */
+const JOSE_IDS = [
+
+  "50433543542", // número real
+  "111651969888394" // lid
+]
+
+/* Kathy */
+const KATHY_IDS = [
+
+  "18057074359", // número real
+  "19580839829625" // lid
+]
+
+if (JOSE_IDS.includes(senderClean)) {
+
+USER_CONTEXT = `
+
+INFORMACIÓN ACTUAL:
+
+La persona que está escribiendo ahora mismo es José.
+
+Ya sabes con certeza que es José.
+No preguntes quién es.
+No lo adivines.
+No digas "creo que eres José".
+
+Habla naturalmente sabiendo que es él.
+
+`
+
+}
+
+else if (KATHY_IDS.includes(senderClean)) {
+
+USER_CONTEXT = `
+
+INFORMACIÓN ACTUAL:
+
+La persona que está escribiendo ahora mismo es Kathy.
+
+Ya sabes con certeza que es Kathy.
+
+No preguntes quién es.
+
+No lo adivines.
+
+No digas "creo que eres Kathy".
+
+Habla naturalmente sabiendo que es ella.
+
+`
+
+}
+    
+    
     const messages = [
       {
-        role: "system",
-        content: SYSTEM
-      },
+  role: "system",
+  content: SYSTEM + USER_CONTEXT
+},
 
       ...history.slice(-4)
     ]
