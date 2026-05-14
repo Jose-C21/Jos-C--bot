@@ -67,7 +67,7 @@ async function analyzeImage(buffer, prompt = "") {
   "https://openrouter.ai/api/v1/chat/completions",
 
   {
-    model: "openrouter/free",
+    model: "google/gemini-2.5-flash-preview",
 
     messages: [
       {
