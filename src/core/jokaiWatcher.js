@@ -68,7 +68,7 @@ async function analyzeImage(buffer, prompt = "") {
 
       {
         model:
-"qwen/qwen2.5-vl-72b-instruct:free",
+"meta-llama/llama-4-maverick:free",
 
         messages: [
 
