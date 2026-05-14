@@ -12,23 +12,16 @@ const API_KEY = process.env.GROQ_API_KEY
 console.log("KEY EXISTS:", !!API_KEY)
 console.log("KEY START:", API_KEY?.slice(0, 8))
 
-const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN
-
-const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 
 console.log(
-  "CLOUDFLARE EXISTS:",
-  !!CLOUDFLARE_API_TOKEN
+  "OPENROUTER EXISTS:",
+  !!OPENROUTER_API_KEY
 )
 
 console.log(
-  "CLOUDFLARE START:",
-  CLOUDFLARE_API_TOKEN?.slice(0, 10)
-)
-
-console.log(
-  "ACCOUNT ID:",
-  CLOUDFLARE_ACCOUNT_ID
+  "OPENROUTER START:",
+  OPENROUTER_API_KEY?.slice(0, 10)
 )
 
 const DB =
@@ -59,7 +52,7 @@ function loadDB() {
 }
 
 /* ========================= */
-/* 👁️ CLOUDFLARE VISION */
+/* 👁️ OPENROUTER VISION */
 /* ========================= */
 
 async function analyzeImage(buffer, prompt = "") {
@@ -71,10 +64,14 @@ async function analyzeImage(buffer, prompt = "") {
 
     const res = await axios.post(
 
-      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
+      "https://openrouter.ai/api/v1/chat/completions",
 
       {
+        model:
+"qwen/qwen2.5-vl-72b-instruct:free",
+
         messages: [
+
           {
             role: "user",
 
@@ -102,42 +99,50 @@ Habla natural y humano.`
               },
 
               {
-                type: "image",
+                type: "image_url",
 
-                source: {
-                  type: "base64",
-                  media_type: "image/jpeg",
-                  data: base64
+                image_url: {
+                  url:
+`data:image/jpeg;base64,${base64}`
                 }
               }
 
             ]
           }
+
         ]
+
       },
 
       {
         headers: {
+
           Authorization:
-`Bearer ${CLOUDFLARE_API_TOKEN}`,
+`Bearer ${process.env.OPENROUTER_API_KEY}`,
 
           "Content-Type":
-"application/json"
+"application/json",
+
+          "HTTP-Referer":
+"https://localhost",
+
+          "X-Title":
+"JOKAI"
+
         }
       }
 
     )
 
     return (
-      res?.data?.result?.response ||
-      res?.data?.result?.description ||
-      null
+      res?.data?.choices?.[0]
+      ?.message?.content || null
     )
 
   } catch (e) {
 
     console.log(
-      "❌ CLOUDFLARE VISION ERROR:",
+      "❌ OPENROUTER VISION ERROR:",
       e?.response?.data || e
     )
 
