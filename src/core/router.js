@@ -71,7 +71,7 @@ const COMMANDS = {
   s: sticker,
   play,
   mute,
-  unmute,
+  unmute10,
   img,
   tourl,
   sumar,
