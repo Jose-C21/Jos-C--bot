@@ -14,7 +14,7 @@ import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
 import mute from "../commands/mute.js"
-import unmute10 from "../commands/unmute10.js"
+import unmute from "../commands/unmute.js"
 import img from "../commands/img.js"
 import addlista from "../commands/addlista.js"
 import textsticker from "../commands/textsticker.js"
@@ -71,7 +71,7 @@ const COMMANDS = {
   s: sticker,
   play,
   mute,
-  unmute10,
+  unmute,
   img,
   tourl,
   sumar,
