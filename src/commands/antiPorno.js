@@ -1,6 +1,20 @@
 import fs from "fs"
 import path from "path"
-import { execSync } from "child_process"
+
+import {
+  exec,
+  execSync
+} from "child_process"
+
+import {
+  downloadContentFromMessage
+} from "baileys"
+
+console.log("ANTI PORNO CARGADO")
+
+// =========================
+// VERIFICAR PYTHON
+// =========================
 
 try {
 
@@ -14,32 +28,47 @@ try {
 
 }
 
-import { downloadContentFromMessage } from "baileys"
-
 // =========================
-// CARPETAS AUTOMÁTICAS
+// CARPETAS
 // =========================
 
 const TEMP_DIR =
-  path.join(process.cwd(), "temp")
+  path.join(
+    process.cwd(),
+    "temp"
+  )
 
 const NSFW_DIR =
-  path.join(process.cwd(), "nsfw")
+  path.join(
+    process.cwd(),
+    "nsfw"
+  )
 
 if (!fs.existsSync(TEMP_DIR)) {
-  fs.mkdirSync(TEMP_DIR, { recursive: true })
+
+  fs.mkdirSync(
+    TEMP_DIR,
+    { recursive: true }
+  )
 }
 
 if (!fs.existsSync(NSFW_DIR)) {
-  fs.mkdirSync(NSFW_DIR, { recursive: true })
+
+  fs.mkdirSync(
+    NSFW_DIR,
+    { recursive: true }
+  )
 }
 
 // =========================
-// CREAR detector.py SOLO
+// CREAR detector.py
 // =========================
 
 const detectorPath =
-  path.join(NSFW_DIR, "detector.py")
+  path.join(
+    NSFW_DIR,
+    "detector.py"
+  )
 
 const detectorCode = `
 from nudenet import NudeDetector
@@ -62,15 +91,23 @@ if (!fs.existsSync(detectorPath)) {
 }
 
 // =========================
-// INSTALAR NUDENET SOLO
+// INSTALAR NUDENET
 // =========================
 
 const installedFlag =
-  path.join(NSFW_DIR, ".installed")
+  path.join(
+    NSFW_DIR,
+    ".installed"
+  )
 
 if (!fs.existsSync(installedFlag)) {
 
+  console.log(
+    "INSTALANDO NUDENET..."
+  )
+
   exec(
+
     "pip install nudenet",
 
     (err, stdout, stderr) => {
@@ -78,11 +115,24 @@ if (!fs.existsSync(installedFlag)) {
       console.log(stdout)
 
       if (err) {
+
+        console.log(
+          "ERROR INSTALANDO:"
+        )
+
         console.log(stderr)
+
         return
       }
 
-      fs.writeFileSync(installedFlag, "ok")
+      fs.writeFileSync(
+        installedFlag,
+        "ok"
+      )
+
+      console.log(
+        "NUDENET INSTALADO"
+      )
     }
   )
 }
@@ -91,7 +141,10 @@ if (!fs.existsSync(installedFlag)) {
 // DESCARGAR BUFFER
 // =========================
 
-async function toBuffer(mediaMsg, mediaType) {
+async function toBuffer(
+  mediaMsg,
+  mediaType
+) {
 
   const stream =
     await downloadContentFromMessage(
@@ -99,9 +152,12 @@ async function toBuffer(mediaMsg, mediaType) {
       mediaType
     )
 
-  let buffer = Buffer.alloc(0)
+  let buffer =
+    Buffer.alloc(0)
 
-  for await (const chunk of stream) {
+  for await (
+    const chunk of stream
+  ) {
 
     buffer = Buffer.concat([
       buffer,
@@ -113,33 +169,45 @@ async function toBuffer(mediaMsg, mediaType) {
 }
 
 // =========================
-// COMANDO PRINCIPAL
+// DETECTOR PRINCIPAL
 // =========================
 
-export default async function antiPorno(sock, msg) {
+export default async function antiPorno(
+  sock,
+  msg
+) {
 
   try {
 
     const chatId =
       msg?.key?.remoteJid
 
-    if (!chatId) return
+    if (!chatId) return false
 
-    // SOLO grupos
+    // SOLO GRUPOS
 
-    if (!chatId.endsWith("@g.us")) {
-      return
+    if (
+      !String(chatId)
+        .endsWith("@g.us")
+    ) {
+      return false
     }
 
-    // SOLO imágenes
+    // SOLO IMÁGENES
 
     const imageMsg =
       msg?.message?.imageMessage
 
-    if (!imageMsg) return
+    if (!imageMsg) {
+      return false
+    }
+
+    console.log(
+      "IMAGEN DETECTADA"
+    )
 
     // =========================
-    // DESCARGAR IMAGEN
+    // DESCARGAR
     // =========================
 
     const mediaBuffer =
@@ -149,11 +217,16 @@ export default async function antiPorno(sock, msg) {
       )
 
     if (!mediaBuffer?.length) {
-      return
+
+      console.log(
+        "NO SE PUDO DESCARGAR"
+      )
+
+      return false
     }
 
     // =========================
-    // GUARDAR TEMPORAL
+    // GUARDAR TEMP
     // =========================
 
     const filePath =
@@ -167,26 +240,46 @@ export default async function antiPorno(sock, msg) {
       mediaBuffer
     )
 
+    console.log(
+      "IMAGEN GUARDADA:",
+      filePath
+    )
+
     // =========================
-    // EJECUTAR NUDENET
+    // EJECUTAR PYTHON
     // =========================
 
     exec(
 
       `python3 "${detectorPath}" "${filePath}"`,
 
-      async (err, stdout, stderr) => {
+      async (
+        err,
+        stdout,
+        stderr
+      ) => {
 
         try {
 
-          // LIMPIAR SIEMPRE
+          // LIMPIAR ARCHIVO
 
-          if (fs.existsSync(filePath)) {
+          if (
+            fs.existsSync(filePath)
+          ) {
+
             fs.unlinkSync(filePath)
           }
 
+          // ERROR PYTHON
+
           if (err) {
+
+            console.log(
+              "ERROR PYTHON:"
+            )
+
             console.log(stderr)
+
             return
           }
 
@@ -198,6 +291,10 @@ export default async function antiPorno(sock, msg) {
               JSON.parse(stdout)
 
           } catch {
+
+            console.log(
+              "JSON INVALIDO"
+            )
 
             return
           }
@@ -231,21 +328,41 @@ export default async function antiPorno(sock, msg) {
                 x.score > 0.70
             )
 
-          if (!detected) return
+          console.log(
+            "NSFW DETECTADO:",
+            detected
+          )
+
+          if (!detected) {
+            return
+          }
 
           // =========================
           // BORRAR MENSAJE
           // =========================
 
           await sock.sendMessage(
+
             chatId,
+
             {
-              delete: msg.key
+              delete: {
+                remoteJid:
+                  chatId,
+
+                fromMe: false,
+
+                id: msg.key.id,
+
+                participant:
+                  msg.key.participant
+              }
             }
+
           ).catch(() => {})
 
           // =========================
-          // EXPULSAR USUARIO
+          // EXPULSAR
           // =========================
 
           const participant =
@@ -289,11 +406,15 @@ export default async function antiPorno(sock, msg) {
       }
     )
 
+    return false
+
   } catch (e) {
 
     console.log(
       "ERROR ANTIPORNO:",
       e
     )
+
+    return false
   }
 }
