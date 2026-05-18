@@ -27,7 +27,7 @@ import antiestado from "../commands/antiestado.js"
 import tourl from "../commands/tourl.js"
 import jokai from "../commands/jokai.js"
 import { jokaiWatcher } from "./jokaiWatcher.js"
-
+import antiPorno from "../commands/antiPorno.js"
 
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
 
@@ -953,6 +953,17 @@ try {
   console.error("[stickerAlert]", e)
 }
     
+    
+    // 🔞 ANTI PORNO
+try {
+
+  await antiPorno(sock, msg)
+
+} catch (e) {
+
+  console.log("[antiPorno]", e)
+
+}
     
     if (!text) {
       logRouter({
