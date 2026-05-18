@@ -1,6 +1,19 @@
 import fs from "fs"
 import path from "path"
-import { exec } from "child_process"
+import { execSync } from "child_process"
+
+try {
+
+  console.log(
+    execSync("python3 --version").toString()
+  )
+
+} catch (e) {
+
+  console.log("PYTHON NO INSTALADO")
+
+}
+
 import { downloadContentFromMessage } from "baileys"
 
 // =========================
