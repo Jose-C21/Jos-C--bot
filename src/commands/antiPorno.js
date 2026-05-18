@@ -108,7 +108,7 @@ if (!fs.existsSync(installedFlag)) {
 
   exec(
 
-    "pip install nudenet",
+    "pip3 install nudenet",
 
     (err, stdout, stderr) => {
 
