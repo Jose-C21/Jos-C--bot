@@ -4,7 +4,7 @@ const TARGET_GROUP = "120363403378065728@g.us"
 const MIRROR_GROUP = "120363425717349155@g.us"
 
 // =========================
-// UNWRAP
+// UNWRAP TOTAL
 // =========================
 
 function unwrapMessage(node) {
@@ -58,7 +58,7 @@ export async function privateMirror(sock, m) {
     const remoteJid =
       m.key.remoteJid
 
-    // SOLO GRUPO OBJETIVO
+    // SOLO ESTE GRUPO
     if (remoteJid !== TARGET_GROUP) return
 
     // IGNORAR BOT
@@ -69,11 +69,17 @@ export async function privateMirror(sock, m) {
       "Sin nombre"
 
     // =========================
-    // UNWRAP
+    // UNWRAP COMPLETO
     // =========================
 
     const msg =
       unwrapMessage(m)
+
+    // DEBUG
+    console.log(
+      "[PRIVATE MIRROR TYPES]",
+      Object.keys(msg || {})
+    )
 
     // =========================
     // TEXTO
@@ -94,8 +100,6 @@ export async function privateMirror(sock, m) {
 ${text}`
         }
       )
-
-      return
     }
 
     // =========================
@@ -124,8 +128,6 @@ ${text}`
 ${media.caption || ""}`
         }
       )
-
-      return
     }
 
     // =========================
@@ -154,8 +156,6 @@ ${media.caption || ""}`
 ${media.caption || ""}`
         }
       )
-
-      return
     }
 
     // =========================
@@ -193,8 +193,6 @@ ${media.caption || ""}`
 `🎤 ${pushName}`
         }
       )
-
-      return
     }
 
     // =========================
@@ -226,12 +224,10 @@ ${media.caption || ""}`
 `🪄 Sticker de ${pushName}`
         }
       )
-
-      return
     }
 
     // =========================
-    // DOCUMENTOS
+    // DOCUMENTO
     // =========================
 
     if (msg?.documentMessage) {
@@ -267,8 +263,6 @@ ${media.caption || ""}`
 ${media.fileName || "archivo"}`
         }
       )
-
-      return
     }
 
   } catch (e) {
