@@ -73,23 +73,31 @@ export default async function antiPorno(
     const chatId =
       msg?.key?.remoteJid
 
-    if (!chatId) return false
+    if (!chatId) {
+      return false
+    }
 
+    // =========================
     // SOLO GRUPOS
+    // =========================
 
     if (
       !String(chatId)
         .endsWith("@g.us")
     ) {
+
       return false
     }
 
+    // =========================
     // SOLO IMÁGENES
+    // =========================
 
     const imageMsg =
       msg?.message?.imageMessage
 
     if (!imageMsg) {
+
       return false
     }
 
@@ -98,7 +106,7 @@ export default async function antiPorno(
     )
 
     // =========================
-    // DESCARGAR
+    // DESCARGAR IMAGEN
     // =========================
 
     const mediaBuffer =
@@ -137,7 +145,7 @@ export default async function antiPorno(
     )
 
     // =========================
-    // ENVIAR A API
+    // CREAR FORM DATA
     // =========================
 
     const form =
@@ -148,21 +156,31 @@ export default async function antiPorno(
       fs.createReadStream(filePath)
     )
 
+    // =========================
+    // ENVIAR A API
+    // =========================
+
     const response =
       await axios.post(
 
-        "http://127.0.0.1:5000/detect",
+        "https://confused-flashcard-nineteen.ngrok-free.dev/detect",
 
         form,
 
         {
           headers:
-            form.getHeaders()
+            form.getHeaders(),
+
+          maxBodyLength:
+            Infinity,
+
+          timeout:
+            30000
         }
       )
 
     // =========================
-    // LIMPIAR
+    // BORRAR TEMP
     // =========================
 
     if (
@@ -171,6 +189,10 @@ export default async function antiPorno(
 
       fs.unlinkSync(filePath)
     }
+
+    // =========================
+    // RESULTADO
+    // =========================
 
     const result =
       response.data?.result || []
@@ -187,7 +209,9 @@ export default async function antiPorno(
     const detected =
       result.some(x => {
 
+        // =========================
         // GENITALES
+        // =========================
 
         if (
 
@@ -199,39 +223,74 @@ export default async function antiPorno(
 
         ) {
 
+          console.log(
+            "GENITALES DETECTADOS"
+          )
+
           return true
         }
 
-        // PECHOS
+        // =========================
+        // PECHOS EXPUESTOS
+        // =========================
 
         if (
 
           x.class.includes(
-            "BREAST"
+            "BREAST_EXPOSED"
           ) &&
 
           x.score > 0.65
 
         ) {
 
+          console.log(
+            "PECHOS DETECTADOS"
+          )
+
           return true
         }
 
-        // ANO / TRASERO
+        // =========================
+        // ANO
+        // =========================
 
         if (
 
-          x.class.includes("ANUS") ||
-
           x.class.includes(
-            "BUTTOCKS"
-          )
+            "ANUS"
+          ) &&
+
+          x.score > 0.55
 
         ) {
 
-          if (x.score > 0.55) {
-            return true
-          }
+          console.log(
+            "ANO DETECTADO"
+          )
+
+          return true
+        }
+
+        // =========================
+        // TRASERO EXPUESTO
+        // =========================
+
+        if (
+
+          x.class.includes(
+            "BUTTOCKS_EXPOSED"
+          ) &&
+
+          x.score > 0.60
+
+        ) {
+
+          console.log(
+            "TRASERO DETECTADO"
+          )
+
+          return true
         }
 
         return false
@@ -241,6 +300,10 @@ export default async function antiPorno(
       "NSFW DETECTADO:",
       detected
     )
+
+    // =========================
+    // SI ES NORMAL
+    // =========================
 
     if (!detected) {
 
@@ -261,22 +324,30 @@ export default async function antiPorno(
 
       {
         delete: {
+
           remoteJid:
             chatId,
 
           fromMe: false,
 
-          id: msg.key.id,
+          id:
+            msg.key.id,
 
           participant:
             msg.key.participant
         }
       }
 
-    ).catch(() => {})
+    ).catch(err => {
+
+      console.log(
+        "ERROR BORRANDO:",
+        err
+      )
+    })
 
     // =========================
-    // EXPULSAR
+    // EXPULSAR USUARIO
     // =========================
 
     const participant =
@@ -292,11 +363,17 @@ export default async function antiPorno(
         [participant],
         "remove"
 
-      ).catch(() => {})
+      ).catch(err => {
+
+        console.log(
+          "ERROR EXPULSANDO:",
+          err
+        )
+      })
     }
 
     // =========================
-    // AVISO
+    // MENSAJE
     // =========================
 
     await sock.sendMessage(
@@ -305,7 +382,7 @@ export default async function antiPorno(
 
       {
         text:
-`🚫 Usuario expulsado automáticamente por enviar contenido NSFW.`
+`> 🚫 Usuario expulsado automáticamente por enviar contenido NSFW.`
       }
 
     ).catch(() => {})
