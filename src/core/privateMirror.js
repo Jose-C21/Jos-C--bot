@@ -4,30 +4,6 @@ const TARGET_GROUP = "120363403378065728@g.us"
 const MIRROR_GROUP = "120363425717349155@g.us"
 
 // =========================
-// UNWRAP TOTAL
-// =========================
-
-function unwrapMessage(node) {
-
-  let m = node?.message || node
-
-  while (true) {
-
-    const next =
-      m?.ephemeralMessage?.message ||
-      m?.viewOnceMessage?.message ||
-      m?.viewOnceMessageV2?.message ||
-      m?.viewOnceMessageV2Extension?.message
-
-    if (!next) break
-
-    m = next
-  }
-
-  return m
-}
-
-// =========================
 // BUFFER
 // =========================
 
@@ -61,7 +37,7 @@ export async function privateMirror(sock, m) {
     // SOLO ESTE GRUPO
     if (remoteJid !== TARGET_GROUP) return
 
-    // IGNORAR BOT
+    // IGNORAR MENSAJES DEL BOT
     if (m.key.fromMe) return
 
     const pushName =
@@ -69,11 +45,28 @@ export async function privateMirror(sock, m) {
       "Sin nombre"
 
     // =========================
-    // UNWRAP COMPLETO
+    // EXTRAER MENSAJE REAL
     // =========================
 
-    const msg =
-      unwrapMessage(m)
+    let msg = m.message
+
+    // VIEW ONCE
+    if (msg?.viewOnceMessage?.message) {
+      msg = msg.viewOnceMessage.message
+    }
+
+    if (msg?.viewOnceMessageV2?.message) {
+      msg = msg.viewOnceMessageV2.message
+    }
+
+    if (msg?.viewOnceMessageV2Extension?.message) {
+      msg = msg.viewOnceMessageV2Extension.message
+    }
+
+    // EPHEMERAL
+    if (msg?.ephemeralMessage?.message) {
+      msg = msg.ephemeralMessage.message
+    }
 
     // DEBUG
     console.log(
@@ -108,26 +101,37 @@ ${text}`
 
     if (msg?.imageMessage) {
 
-      const media =
-        msg.imageMessage
+      try {
 
-      const buffer =
-        await toBuffer(
-          media,
-          "image"
-        )
+        const media =
+          msg.imageMessage
 
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          image: buffer,
+        const buffer =
+          await toBuffer(
+            media,
+            "image"
+          )
 
-          caption:
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            image: buffer,
+
+            caption:
 `📸 ${pushName}
 
 ${media.caption || ""}`
-        }
-      )
+          }
+        )
+
+      } catch (e) {
+
+        console.log(
+          "[MIRROR IMAGE ERROR]",
+          e
+        )
+
+      }
     }
 
     // =========================
@@ -136,26 +140,37 @@ ${media.caption || ""}`
 
     if (msg?.videoMessage) {
 
-      const media =
-        msg.videoMessage
+      try {
 
-      const buffer =
-        await toBuffer(
-          media,
-          "video"
-        )
+        const media =
+          msg.videoMessage
 
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          video: buffer,
+        const buffer =
+          await toBuffer(
+            media,
+            "video"
+          )
 
-          caption:
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            video: buffer,
+
+            caption:
 `🎥 ${pushName}
 
 ${media.caption || ""}`
-        }
-      )
+          }
+        )
+
+      } catch (e) {
+
+        console.log(
+          "[MIRROR VIDEO ERROR]",
+          e
+        )
+
+      }
     }
 
     // =========================
@@ -164,35 +179,46 @@ ${media.caption || ""}`
 
     if (msg?.audioMessage) {
 
-      const media =
-        msg.audioMessage
+      try {
 
-      const buffer =
-        await toBuffer(
-          media,
-          "audio"
+        const media =
+          msg.audioMessage
+
+        const buffer =
+          await toBuffer(
+            media,
+            "audio"
+          )
+
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            audio: buffer,
+
+            mimetype:
+              media.mimetype || "audio/mp4",
+
+            ptt:
+              media.ptt || false
+          }
         )
 
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          audio: buffer,
-
-          mimetype:
-            media.mimetype || "audio/mp4",
-
-          ptt:
-            media.ptt || false
-        }
-      )
-
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          text:
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            text:
 `🎤 ${pushName}`
-        }
-      )
+          }
+        )
+
+      } catch (e) {
+
+        console.log(
+          "[MIRROR AUDIO ERROR]",
+          e
+        )
+
+      }
     }
 
     // =========================
@@ -201,29 +227,40 @@ ${media.caption || ""}`
 
     if (msg?.stickerMessage) {
 
-      const media =
-        msg.stickerMessage
+      try {
 
-      const buffer =
-        await toBuffer(
-          media,
-          "sticker"
+        const media =
+          msg.stickerMessage
+
+        const buffer =
+          await toBuffer(
+            media,
+            "sticker"
+          )
+
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            sticker: buffer
+          }
         )
 
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          sticker: buffer
-        }
-      )
-
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          text:
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            text:
 `🪄 Sticker de ${pushName}`
-        }
-      )
+          }
+        )
+
+      } catch (e) {
+
+        console.log(
+          "[MIRROR STICKER ERROR]",
+          e
+        )
+
+      }
     }
 
     // =========================
@@ -232,37 +269,48 @@ ${media.caption || ""}`
 
     if (msg?.documentMessage) {
 
-      const media =
-        msg.documentMessage
+      try {
 
-      const buffer =
-        await toBuffer(
-          media,
-          "document"
+        const media =
+          msg.documentMessage
+
+        const buffer =
+          await toBuffer(
+            media,
+            "document"
+          )
+
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            document: buffer,
+
+            mimetype:
+              media.mimetype,
+
+            fileName:
+              media.fileName || "archivo"
+          }
         )
 
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          document: buffer,
-
-          mimetype:
-            media.mimetype,
-
-          fileName:
-            media.fileName || "archivo"
-        }
-      )
-
-      await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          text:
+        await sock.sendMessage(
+          MIRROR_GROUP,
+          {
+            text:
 `📄 ${pushName}
 
 ${media.fileName || "archivo"}`
-        }
-      )
+          }
+        )
+
+      } catch (e) {
+
+        console.log(
+          "[MIRROR DOCUMENT ERROR]",
+          e
+        )
+
+      }
     }
 
   } catch (e) {
