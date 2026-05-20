@@ -460,7 +460,7 @@ export async function routeMessage(sock, msg) {
   try {
     if (!msg?.message) return
     
-    await privateMirror(sock, msg, logger)
+    await privateMirror(sock, msg)
 
     const chatId = msg?.key?.remoteJid || "unknown"
     const isGroup = String(chatId).endsWith("@g.us")
