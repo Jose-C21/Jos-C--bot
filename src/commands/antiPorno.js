@@ -1,10 +1,8 @@
 import fs from "fs"
 import path from "path"
 
-import {
-  exec,
-  execSync
-} from "child_process"
+import axios from "axios"
+import FormData from "form-data"
 
 import {
   downloadContentFromMessage
@@ -13,23 +11,7 @@ import {
 console.log("ANTI PORNO CARGADO")
 
 // =========================
-// VERIFICAR PYTHON
-// =========================
-
-try {
-
-  console.log(
-    execSync("python3 --version").toString()
-  )
-
-} catch (e) {
-
-  console.log("PYTHON NO INSTALADO")
-
-}
-
-// =========================
-// CARPETAS
+// CARPETA TEMP
 // =========================
 
 const TEMP_DIR =
@@ -38,102 +20,11 @@ const TEMP_DIR =
     "temp"
   )
 
-const NSFW_DIR =
-  path.join(
-    process.cwd(),
-    "nsfw"
-  )
-
 if (!fs.existsSync(TEMP_DIR)) {
 
   fs.mkdirSync(
     TEMP_DIR,
     { recursive: true }
-  )
-}
-
-if (!fs.existsSync(NSFW_DIR)) {
-
-  fs.mkdirSync(
-    NSFW_DIR,
-    { recursive: true }
-  )
-}
-
-// =========================
-// CREAR detector.py
-// =========================
-
-const detectorPath =
-  path.join(
-    NSFW_DIR,
-    "detector.py"
-  )
-
-const detectorCode = `
-from nudenet import NudeDetector
-import sys
-import json
-
-detector = NudeDetector()
-
-result = detector.detect(sys.argv[1])
-
-print(json.dumps(result))
-`
-
-if (!fs.existsSync(detectorPath)) {
-
-  fs.writeFileSync(
-    detectorPath,
-    detectorCode
-  )
-}
-
-// =========================
-// INSTALAR NUDENET
-// =========================
-
-const installedFlag =
-  path.join(
-    NSFW_DIR,
-    ".installed"
-  )
-
-if (!fs.existsSync(installedFlag)) {
-
-  console.log(
-    "INSTALANDO NUDENET..."
-  )
-
-  exec(
-
-    "python3 -m pip install nudenet",
-
-    (err, stdout, stderr) => {
-
-      console.log(stdout)
-
-      if (err) {
-
-        console.log(
-          "ERROR INSTALANDO:"
-        )
-
-        console.log(stderr)
-
-        return
-      }
-
-      fs.writeFileSync(
-        installedFlag,
-        "ok"
-      )
-
-      console.log(
-        "NUDENET INSTALADO"
-      )
-    }
   )
 }
 
@@ -246,167 +137,180 @@ export default async function antiPorno(
     )
 
     // =========================
-    // EJECUTAR PYTHON
+    // ENVIAR A API
     // =========================
 
-    exec(
+    const form =
+      new FormData()
 
-      `python3 "${detectorPath}" "${filePath}"`,
-
-      async (
-        err,
-        stdout,
-        stderr
-      ) => {
-
-        try {
-
-          // LIMPIAR ARCHIVO
-
-          if (
-            fs.existsSync(filePath)
-          ) {
-
-            fs.unlinkSync(filePath)
-          }
-
-          // ERROR PYTHON
-
-          if (err) {
-
-            console.log(
-              "ERROR PYTHON:"
-            )
-
-            console.log(stderr)
-
-            return
-          }
-
-          let result = []
-
-          try {
-
-            result =
-              JSON.parse(stdout)
-
-          } catch {
-
-            console.log(
-              "JSON INVALIDO"
-            )
-
-            return
-          }
-
-          console.log(
-            "NSFW RESULT:",
-            result
-          )
-
-          // =========================
-          // CLASES PROHIBIDAS
-          // =========================
-
-          const forbidden = [
-
-            "EXPOSED_GENITALIA_F",
-            "EXPOSED_GENITALIA_M",
-            "EXPOSED_BREAST_F"
-
-          ]
-
-          const detected =
-            result.some(
-
-              x =>
-
-                forbidden.includes(
-                  x.class
-                ) &&
-
-                x.score > 0.70
-            )
-
-          console.log(
-            "NSFW DETECTADO:",
-            detected
-          )
-
-          if (!detected) {
-            return
-          }
-
-          // =========================
-          // BORRAR MENSAJE
-          // =========================
-
-          await sock.sendMessage(
-
-            chatId,
-
-            {
-              delete: {
-                remoteJid:
-                  chatId,
-
-                fromMe: false,
-
-                id: msg.key.id,
-
-                participant:
-                  msg.key.participant
-              }
-            }
-
-          ).catch(() => {})
-
-          // =========================
-          // EXPULSAR
-          // =========================
-
-          const participant =
-
-            msg?.key?.participant ||
-            msg?.participant
-
-          if (participant) {
-
-            await sock.groupParticipantsUpdate(
-
-              chatId,
-              [participant],
-              "remove"
-
-            ).catch(() => {})
-          }
-
-          // =========================
-          // AVISO
-          // =========================
-
-          await sock.sendMessage(
-
-            chatId,
-
-            {
-              text:
-`🚫 Usuario expulsado automáticamente por enviar contenido NSFW.`
-            }
-
-          ).catch(() => {})
-
-        } catch (e) {
-
-          console.log(
-            "ERROR NSFW:",
-            e
-          )
-        }
-      }
+    form.append(
+      "file",
+      fs.createReadStream(filePath)
     )
 
-    return false
+    const response =
+      await axios.post(
+
+        "http://127.0.0.1:5000/detect",
+
+        form,
+
+        {
+          headers:
+            form.getHeaders()
+        }
+      )
+
+    // =========================
+    // LIMPIAR
+    // =========================
+
+    if (
+      fs.existsSync(filePath)
+    ) {
+
+      fs.unlinkSync(filePath)
+    }
+
+    const result =
+      response.data?.result || []
+
+    console.log(
+      "NSFW RESULT:",
+      result
+    )
+
+    // =========================
+    // DETECCIÓN
+    // =========================
+
+    const detected =
+      result.some(x => {
+
+        // GENITALES
+
+        if (
+
+          x.class.includes(
+            "GENITALIA"
+          ) &&
+
+          x.score > 0.45
+
+        ) {
+
+          return true
+        }
+
+        // PECHOS
+
+        if (
+
+          x.class.includes(
+            "BREAST"
+          ) &&
+
+          x.score > 0.65
+
+        ) {
+
+          return true
+        }
+
+        // ANO / TRASERO
+
+        if (
+
+          x.class.includes("ANUS") ||
+
+          x.class.includes(
+            "BUTTOCKS"
+          )
+
+        ) {
+
+          if (x.score > 0.55) {
+            return true
+          }
+        }
+
+        return false
+      })
+
+    console.log(
+      "NSFW DETECTADO:",
+      detected
+    )
+
+    if (!detected) {
+
+      console.log(
+        "IMAGEN NORMAL"
+      )
+
+      return false
+    }
+
+    // =========================
+    // BORRAR MENSAJE
+    // =========================
+
+    await sock.sendMessage(
+
+      chatId,
+
+      {
+        delete: {
+          remoteJid:
+            chatId,
+
+          fromMe: false,
+
+          id: msg.key.id,
+
+          participant:
+            msg.key.participant
+        }
+      }
+
+    ).catch(() => {})
+
+    // =========================
+    // EXPULSAR
+    // =========================
+
+    const participant =
+
+      msg?.key?.participant ||
+      msg?.participant
+
+    if (participant) {
+
+      await sock.groupParticipantsUpdate(
+
+        chatId,
+        [participant],
+        "remove"
+
+      ).catch(() => {})
+    }
+
+    // =========================
+    // AVISO
+    // =========================
+
+    await sock.sendMessage(
+
+      chatId,
+
+      {
+        text:
+`🚫 Usuario expulsado automáticamente por enviar contenido NSFW.`
+      }
+
+    ).catch(() => {})
+
+    return true
 
   } catch (e) {
 
