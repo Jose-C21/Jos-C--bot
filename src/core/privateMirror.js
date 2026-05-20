@@ -60,6 +60,11 @@ export async function privateMirror(sock, msg) {
     // SOLO GRUPO OBJETIVO
     if (chatId !== TARGET_GROUP) return
 
+console.log(
+  "[PRIVATE MIRROR RAW]",
+  JSON.stringify(msg, null, 2)
+)
+
     // IGNORAR BOT
     if (msg.key?.fromMe) return
 
