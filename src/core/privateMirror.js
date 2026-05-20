@@ -188,12 +188,13 @@ media.caption
       )
 
       await sock.sendMessage(
-        MIRROR_GROUP,
-        {
-          text:
-`╭─〔 ${pushName} 〕`
-        }
-      )
+  MIRROR_GROUP,
+  {
+    text:
+`╭─〔 ${pushName} 〕
+╰► Audio de ${pushName}`
+  }
+)
 
       return
     }
