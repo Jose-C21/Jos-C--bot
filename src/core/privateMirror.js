@@ -66,7 +66,13 @@ console.log(
 )
 
     // IGNORAR BOT
-    if (msg.key?.fromMe) return
+    const participant =
+  msg.key?.participant || ""
+
+const isBot =
+  participant.includes(sock.user.id.split(":")[0])
+
+if (isBot) return
 
     const pushName =
       msg.pushName ||
