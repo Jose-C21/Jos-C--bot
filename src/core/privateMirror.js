@@ -1,6 +1,6 @@
 import { downloadContentFromMessage } from "baileys"
 
-const TARGET_GROUP = "120363403378065728@g.us"
+const TARGET_GROUP = "120363406459051556@g.us"
 const MIRROR_GROUP = "120363425717349155@g.us"
 
 // =========================
