@@ -460,16 +460,7 @@ function logRouter(data) {
 
 export async function routeMessage(sock, msg) {
   try {
-    if (
-  !msg?.message &&
-  !msg?.messageStubType &&
-  !msg?.messageStubParameters
-) return
-
-console.log(
-  "[ROUTER RAW EVENT]",
-  JSON.stringify(msg, null, 2)
-)
+    if (!msg?.message) return
     
     await privateMirror(sock, msg)
 
