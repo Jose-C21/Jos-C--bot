@@ -31,7 +31,7 @@ import antiPorno from "../commands/antiPorno.js"
 
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
 
-
+import { privateMirror } from "./privateMirror.js"
 import antipersona from "../commands/antipersona.js"
 import { antiPersonaObserve } from "./antipersonaWatch.js"
 
@@ -459,6 +459,8 @@ function logRouter(data) {
 export async function routeMessage(sock, msg) {
   try {
     if (!msg?.message) return
+    
+    await privateMirror(sock, msg, logger)
 
     const chatId = msg?.key?.remoteJid || "unknown"
     const isGroup = String(chatId).endsWith("@g.us")
