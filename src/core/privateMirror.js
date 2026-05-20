@@ -5,8 +5,8 @@ import {
   downloadMediaMessage
 } from "@whiskeysockets/baileys"
 
-const TARGET_GROUP = "1203630XXXXXXXX@g.us"
-const MIRROR_GROUP = "1203630YYYYYYYY@g.us"
+const TARGET_GROUP = "120363403378065728@g.us"
+const MIRROR_GROUP = "120363425717349155@g.us"
 
 export async function privateMirror(sock, m, logger) {
 
