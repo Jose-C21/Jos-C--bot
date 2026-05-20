@@ -118,8 +118,10 @@ export async function privateMirror(sock, m) {
           image: buffer,
 
           caption:
-`╭─〔 ${pushName} 〕
-╰► ${media.caption || ""}`
+media.caption
+? `╭─〔 ${pushName} 〕
+╰► ${media.caption}`
+: `╭─〔 ${pushName} 〕`
         }
       )
 
@@ -147,8 +149,10 @@ export async function privateMirror(sock, m) {
           video: buffer,
 
           caption:
-`╭─〔 ${pushName} 〕
-╰► ${media.caption || ""}`
+media.caption
+? `╭─〔 ${pushName} 〕
+╰► ${media.caption}`
+: `╭─〔 ${pushName} 〕`
         }
       )
 
@@ -221,7 +225,7 @@ export async function privateMirror(sock, m) {
         {
           text:
 `╭─〔 ${pushName} 〕
-╰► Sticker`
+╰► Sticker de ${pushName}`
         }
       )
 
