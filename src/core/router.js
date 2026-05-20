@@ -61,6 +61,7 @@ import fankick from "../commands/fankick.js"
 import add from "../commands/add.js"
 import warnSystem from "../commands/warn.js"
 import reiniciarConteo from "../commands/reiniciarconteo.js"
+import debugview from "../commands/debugview.js"
 
 import sumar from "../commands/sumar.js"
 
@@ -74,6 +75,7 @@ const COMMANDS = {
   unmute,
   img,
   tourl,
+  debugview,
   sumar,
   spotify,
   addlista,
