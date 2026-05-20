@@ -204,6 +204,7 @@ export async function startSock(onMessage) {
     printQRInTerminal: false,
     logger,
 
+    markOnlineOnConnect: false,
     
     browser: Browsers.macOS("Chrome"),
 
