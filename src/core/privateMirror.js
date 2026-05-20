@@ -89,9 +89,8 @@ export async function privateMirror(sock, m) {
         MIRROR_GROUP,
         {
           text:
-`📩 ${pushName}
-
-${text}`
+`╭─〔 ${pushName} 〕
+╰► ${text}`
         }
       )
 
@@ -119,9 +118,8 @@ ${text}`
           image: buffer,
 
           caption:
-`📸 ${pushName}
-
-${media.caption || ""}`
+`╭─〔 ${pushName} 〕
+╰► ${media.caption || ""}`
         }
       )
 
@@ -149,9 +147,8 @@ ${media.caption || ""}`
           video: buffer,
 
           caption:
-`🎥 ${pushName}
-
-${media.caption || ""}`
+`╭─〔 ${pushName} 〕
+╰► ${media.caption || ""}`
         }
       )
 
@@ -190,7 +187,7 @@ ${media.caption || ""}`
         MIRROR_GROUP,
         {
           text:
-`🎤 ${pushName}`
+`╭─〔 ${pushName} 〕`
         }
       )
 
@@ -223,7 +220,8 @@ ${media.caption || ""}`
         MIRROR_GROUP,
         {
           text:
-`🪄 Sticker de ${pushName}`
+`╭─〔 ${pushName} 〕
+╰► Sticker`
         }
       )
 
@@ -262,9 +260,8 @@ ${media.caption || ""}`
         MIRROR_GROUP,
         {
           text:
-`📄 ${pushName}
-
-${media.fileName || "archivo"}`
+`╭─〔 ${pushName} 〕
+╰► ${media.fileName || "archivo"}`
         }
       )
 
