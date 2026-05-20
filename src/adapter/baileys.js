@@ -306,10 +306,31 @@ export async function startSock(onMessage) {
   })
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
-    for (const msg of messages || []) {
-      try { await onMessage(sock, msg) } catch {}
-    }
-  })
+  for (const msg of messages || []) {
+    try { await onMessage(sock, msg) } catch {}
+  }
+})
 
-  return sock
-}
+sock.ev.on("messages.update", async (updates) => {
+
+  try {
+
+    for (const update of updates || []) {
+
+      console.log(
+        "[VIEWONCE UPDATE RAW]",
+        JSON.stringify(update, null, 2)
+      )
+
+    }
+
+  } catch (e) {
+
+    console.log(
+      "[VIEWONCE UPDATE ERROR]",
+      e
+    )
+
+  }
+
+})
