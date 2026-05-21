@@ -83,24 +83,31 @@ function unwrapMessage(m) {
 // =========================
 
 function getStickerMessage(
-  mUnwrapped
+  msg
 ) {
+
+  const m =
+    msg?.message || {}
 
   return (
 
-    mUnwrapped?.stickerMessage ||
+    m?.stickerMessage ||
 
-    mUnwrapped?.extendedTextMessage
+    m?.ephemeralMessage
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessageV2
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessage
+      ?.message
+      ?.stickerMessage ||
+
+    m?.extendedTextMessage
       ?.contextInfo
       ?.quotedMessage
-      ?.stickerMessage ||
-
-    mUnwrapped?.ephemeralMessage
-      ?.message
-      ?.stickerMessage ||
-
-    mUnwrapped?.viewOnceMessageV2
-      ?.message
       ?.stickerMessage ||
 
     null
@@ -146,61 +153,41 @@ function isNSFW(result = []) {
 
   return result.some(x => {
 
-    // GENITALES
-
     if (
-
       x.class.includes(
         "GENITALIA"
       ) &&
-
       x.score > 0.45
-
     ) {
 
       return true
     }
 
-    // PECHOS
-
     if (
-
       x.class.includes(
         "BREAST_EXPOSED"
       ) &&
-
       x.score > 0.65
-
     ) {
 
       return true
     }
 
-    // ANO
-
     if (
-
       x.class.includes(
         "ANUS"
       ) &&
-
       x.score > 0.55
-
     ) {
 
       return true
     }
 
-    // TRASERO
-
     if (
-
       x.class.includes(
         "BUTTOCKS_EXPOSED"
       ) &&
-
       x.score > 0.60
-
     ) {
 
       return true
@@ -383,19 +370,26 @@ export default async function antiPorno(
     const mUnwrapped =
       unwrapMessage(msg)
 
+    // =========================
+    // MEDIA
+    // =========================
+
     const imageMsg =
       mUnwrapped?.imageMessage
 
     const stickerMsg =
-      getStickerMessage(
-        mUnwrapped
-      )
+      getStickerMessage(msg)
 
     console.log(
       "UNWRAPPED KEYS:",
       Object.keys(
         mUnwrapped || {}
       )
+    )
+
+    console.log(
+      "IMAGE FOUND:",
+      !!imageMsg
     )
 
     console.log(
@@ -476,7 +470,7 @@ export default async function antiPorno(
     }
 
     // =========================
-    // STICKERS
+    // STICKER
     // =========================
 
     if (stickerMsg) {
@@ -507,42 +501,19 @@ export default async function antiPorno(
         mediaBuffer
       )
 
-      // =========================
-      // EXTRAER FRAMES
-      // =========================
-
-      const framesDir =
-        path.join(
-          TEMP_DIR,
-          `frames-${Date.now()}`
-        )
-
-      await extractFrames(
-        webpFile,
-        framesDir
-      )
-
-      const files =
-        fs.readdirSync(
-          framesDir
-        )
-
-      console.log(
-        "FRAMES:",
-        files.length
-      )
-
       let detected =
         false
 
       // =========================
-      // SIN FRAMES
+      // STICKER NORMAL
       // =========================
 
-      if (!files.length) {
+      if (
+        !stickerMsg?.isAnimated
+      ) {
 
         console.log(
-          "SIN FRAMES"
+          "STICKER NORMAL"
         )
 
         const jpgFile =
@@ -580,48 +551,80 @@ export default async function antiPorno(
       }
 
       // =========================
-      // ANALIZAR FRAMES
+      // STICKER ANIMADO
       // =========================
 
-      const selected =
-        files.slice(0, 6)
+      else {
 
-      for (
-        const frame of selected
-      ) {
+        console.log(
+          "STICKER ANIMADO"
+        )
 
-        const framePath =
+        const framesDir =
           path.join(
-            framesDir,
+            TEMP_DIR,
+            `frames-${Date.now()}`
+          )
+
+        await extractFrames(
+          webpFile,
+          framesDir
+        )
+
+        const files =
+          fs.readdirSync(
+            framesDir
+          )
+
+        console.log(
+          "FRAMES:",
+          files.length
+        )
+
+        const selected =
+          files.slice(0, 6)
+
+        for (
+          const frame of selected
+        ) {
+
+          const framePath =
+            path.join(
+              framesDir,
+              frame
+            )
+
+          console.log(
+            "ANALIZANDO:",
             frame
           )
 
-        console.log(
-          "ANALIZANDO:",
-          frame
-        )
-
-        const result =
-          await detectFile(
-            framePath
-          )
-
-        console.log(
-          "FRAME RESULT:",
-          result
-        )
-
-        if (
-          isNSFW(result)
-        ) {
+          const result =
+            await detectFile(
+              framePath
+            )
 
           console.log(
-            "NSFW EN FRAME"
+            "FRAME RESULT:",
+            result
           )
 
-          detected = true
-          break
+          if (
+            isNSFW(result)
+          ) {
+
+            console.log(
+              "NSFW EN FRAME"
+            )
+
+            detected = true
+            break
+          }
         }
+
+        safeDeleteDir(
+          framesDir
+        )
       }
 
       // =========================
@@ -632,9 +635,9 @@ export default async function antiPorno(
         webpFile
       )
 
-      safeDeleteDir(
-        framesDir
-      )
+      // =========================
+      // NO NSFW
+      // =========================
 
       if (!detected) {
 
