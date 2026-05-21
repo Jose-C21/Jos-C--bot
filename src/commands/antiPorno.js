@@ -217,25 +217,69 @@ function isNSFW(result = []) {
 
   return result.some(x => {
 
-    if (
-      x.class?.includes("GENITALIA") &&
-      x.score > 0.45
-    ) return true
+    const cls =
+      String(
+        x.class || ""
+      ).toUpperCase()
+
+    const score =
+      Number(
+        x.score || 0
+      )
+
+    console.log(
+      "CHECK:",
+      cls,
+      score
+    )
+
+    // =========================
+    // GENITALES
+    // =========================
 
     if (
-      x.class?.includes("BREAST_EXPOSED") &&
-      x.score > 0.65
-    ) return true
+      cls.includes("GENITALIA") &&
+      score > 0.20
+    ) {
+
+      return true
+    }
+
+    // =========================
+    // ANO
+    // =========================
 
     if (
-      x.class?.includes("ANUS") &&
-      x.score > 0.55
-    ) return true
+      cls.includes("ANUS") &&
+      score > 0.20
+    ) {
+
+      return true
+    }
+
+    // =========================
+    // PECHOS
+    // =========================
 
     if (
-      x.class?.includes("BUTTOCKS_EXPOSED") &&
-      x.score > 0.60
-    ) return true
+      cls.includes("BREAST_EXPOSED") &&
+      score > 0.35
+    ) {
+
+      return true
+    }
+
+    // =========================
+    // NALGAS
+    // =========================
+
+    if (
+      cls.includes("BUTTOCKS_EXPOSED") &&
+      score > 0.35
+    ) {
+
+      return true
+    }
 
     return false
   })
@@ -314,6 +358,10 @@ export default async function antiPorno(
     if (!chatId) {
       return false
     }
+
+    // =========================
+    // SOLO GRUPOS
+    // =========================
 
     if (
       !chatId.endsWith("@g.us")
@@ -404,6 +452,10 @@ export default async function antiPorno(
         isNSFW(result)
       ) {
 
+        console.log(
+          "NSFW IMAGE"
+        )
+
         detected = true
       }
     }
@@ -464,7 +516,7 @@ export default async function antiPorno(
         const totalFrames =
           Math.min(
             meta.pages || 1,
-            8
+            12
           )
 
         for (
@@ -491,13 +543,13 @@ export default async function antiPorno(
               background: "#ffffff"
             })
 
-            .jpeg({
-              quality: 100
+            .resize({
+              width: 1400,
+              withoutEnlargement: false
             })
 
-            .resize({
-              width: 1024,
-              withoutEnlargement: true
+            .jpeg({
+              quality: 100
             })
 
             .toFile(frameFile)
@@ -621,7 +673,10 @@ export default async function antiPorno(
         jidToNumber(decoded) ||
         jidToNumber(participant)
 
-      // ✅ NO ELIMINAR OWNERS
+      // =========================
+      // OWNER PROTECTION
+      // =========================
+
       if (
         isOwnerNumber(
           participantNum
