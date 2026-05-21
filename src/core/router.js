@@ -64,7 +64,7 @@ import reiniciarConteo from "../commands/reiniciarconteo.js"
 import debugview from "../commands/debugview.js"
 
 import sumar from "../commands/sumar.js"
-
+import detectarSticker from "../commands/detectarSticker.js"
 
 
 const COMMANDS = {
@@ -90,8 +90,10 @@ estadoconteo,
   golpear,
   reiniciarconteo: reiniciarConteo,
   kiss,
+  dsticker: detectarSticker,
   setstickeralert,
   detectar,
+  
   
   warn: warnSystem,
   warns: warnSystem,
