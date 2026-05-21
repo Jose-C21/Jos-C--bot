@@ -63,6 +63,16 @@ function unwrapMessage(m) {
     }
 
     if (
+      msgObj?.viewOnceMessageV2Extension?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessageV2Extension.message
+
+      continue
+    }
+
+    if (
       msgObj?.viewOnceMessage?.message
     ) {
 
@@ -101,6 +111,10 @@ function getStickerMessage(
       ?.message
       ?.stickerMessage ||
 
+    m?.viewOnceMessageV2Extension
+      ?.message
+      ?.stickerMessage ||
+
     m?.viewOnceMessage
       ?.message
       ?.stickerMessage ||
@@ -109,6 +123,48 @@ function getStickerMessage(
       ?.contextInfo
       ?.quotedMessage
       ?.stickerMessage ||
+
+    m?.messageContextInfo
+      ?.stickerMessage ||
+
+    m?.messageContextInfo
+      ?.quotedMessage
+      ?.stickerMessage ||
+
+    null
+  )
+}
+
+// =========================
+// OBTENER IMAGEN
+// =========================
+
+function getImageMessage(
+  msg
+) {
+
+  const m =
+    msg?.message || {}
+
+  return (
+
+    m?.imageMessage ||
+
+    m?.ephemeralMessage
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessageV2
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessageV2Extension
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessage
+      ?.message
+      ?.imageMessage ||
 
     null
   )
@@ -154,7 +210,7 @@ function isNSFW(result = []) {
   return result.some(x => {
 
     if (
-      x.class.includes(
+      x.class?.includes(
         "GENITALIA"
       ) &&
       x.score > 0.45
@@ -164,7 +220,7 @@ function isNSFW(result = []) {
     }
 
     if (
-      x.class.includes(
+      x.class?.includes(
         "BREAST_EXPOSED"
       ) &&
       x.score > 0.65
@@ -174,7 +230,7 @@ function isNSFW(result = []) {
     }
 
     if (
-      x.class.includes(
+      x.class?.includes(
         "ANUS"
       ) &&
       x.score > 0.55
@@ -184,7 +240,7 @@ function isNSFW(result = []) {
     }
 
     if (
-      x.class.includes(
+      x.class?.includes(
         "BUTTOCKS_EXPOSED"
       ) &&
       x.score > 0.60
@@ -375,7 +431,7 @@ export default async function antiPorno(
     // =========================
 
     const imageMsg =
-      mUnwrapped?.imageMessage
+      getImageMessage(msg)
 
     const stickerMsg =
       getStickerMessage(msg)
@@ -384,6 +440,15 @@ export default async function antiPorno(
       "UNWRAPPED KEYS:",
       Object.keys(
         mUnwrapped || {}
+      )
+    )
+
+    console.log(
+      "RAW MESSAGE:",
+      JSON.stringify(
+        msg.message,
+        null,
+        2
       )
     )
 
@@ -581,6 +646,47 @@ export default async function antiPorno(
           files.length
         )
 
+        // FALLBACK
+        if (!files.length) {
+
+          console.log(
+            "SIN FRAMES"
+          )
+
+          const jpgFile =
+            path.join(
+              TEMP_DIR,
+              `${Date.now()}.jpg`
+            )
+
+          await sharp(webpFile)
+
+            .jpeg()
+
+            .toFile(jpgFile)
+
+          const result =
+            await detectFile(
+              jpgFile
+            )
+
+          console.log(
+            "FALLBACK RESULT:",
+            result
+          )
+
+          safeDelete(
+            jpgFile
+          )
+
+          if (
+            isNSFW(result)
+          ) {
+
+            detected = true
+          }
+        }
+
         const selected =
           files.slice(0, 6)
 
@@ -642,7 +748,7 @@ export default async function antiPorno(
       if (!detected) {
 
         console.log(
-          "STICKER NORMAL"
+          "STICKER LIMPIO"
         )
 
         return false
