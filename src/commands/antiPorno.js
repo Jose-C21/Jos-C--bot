@@ -9,6 +9,9 @@ import {
   downloadContentFromMessage
 } from "baileys"
 
+import config from "../config.js"
+import { jidToNumber } from "../utils/jid.js"
+
 console.log("ANTI PORNO CARGADO")
 
 // =========================
@@ -26,6 +29,29 @@ if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(
     TEMP_DIR,
     { recursive: true }
+  )
+}
+
+// =========================
+// OWNER CHECK
+// =========================
+
+function isOwnerNumber(num) {
+
+  const owners =
+    (config.owners || [])
+      .map(String)
+
+  const ownersLid =
+    (config.ownersLid || [])
+      .map(String)
+
+  const s =
+    String(num)
+
+  return (
+    owners.includes(s) ||
+    ownersLid.includes(s)
   )
 }
 
@@ -465,7 +491,14 @@ export default async function antiPorno(
               background: "#ffffff"
             })
 
-            .jpeg()
+            .jpeg({
+              quality: 100
+            })
+
+            .resize({
+              width: 1024,
+              withoutEnlargement: true
+            })
 
             .toFile(frameFile)
 
@@ -569,13 +602,50 @@ export default async function antiPorno(
 
     if (participant) {
 
-      await sock.groupParticipantsUpdate(
+      let decoded =
+        participant
 
-        chatId,
-        [participant],
-        "remove"
+      try {
 
-      ).catch(() => {})
+        if (sock?.decodeJid) {
+
+          decoded =
+            sock.decodeJid(
+              participant
+            )
+        }
+
+      } catch {}
+
+      const participantNum =
+        jidToNumber(decoded) ||
+        jidToNumber(participant)
+
+      // ✅ NO ELIMINAR OWNERS
+      if (
+        isOwnerNumber(
+          participantNum
+        )
+      ) {
+
+        console.log(
+          "OWNER DETECTADO - NO ELIMINADO"
+        )
+
+      } else {
+
+        await sock.groupParticipantsUpdate(
+
+          chatId,
+          [participant],
+          "remove"
+
+        ).catch(() => {})
+
+        console.log(
+          "USUARIO ELIMINADO"
+        )
+      }
     }
 
     // =========================
