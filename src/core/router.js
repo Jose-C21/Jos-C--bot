@@ -480,11 +480,50 @@ export async function routeMessage(sock, msg) {
 
     const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
     const text = getText(msg)
+    
+    const m =
+  msg?.message || {}
+
+const hasSticker =
+  !!(
+    m?.stickerMessage ||
+    m?.ephemeralMessage?.message?.stickerMessage ||
+    m?.viewOnceMessageV2?.message?.stickerMessage ||
+    m?.viewOnceMessage?.message?.stickerMessage
+  )
+
+const hasImage =
+  !!(
+    m?.imageMessage ||
+    m?.ephemeralMessage?.message?.imageMessage ||
+    m?.viewOnceMessageV2?.message?.imageMessage ||
+    m?.viewOnceMessage?.message?.imageMessage
+  )
+
+console.log(
+  "[MEDIA CHECK]",
+  {
+    text,
+    hasSticker,
+    hasImage
+  }
+)
 
     const senderName = getDisplayName(sock, msg, decodedJid)
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
     const fromMe = !!msg.key?.fromMe
+    
+    // 🔞 ANTI PORNO
+try {
+
+  await antiPorno(sock, msg)
+
+} catch (e) {
+
+  console.log("[antiPorno]", e)
+
+}
     
     const blockedEstado = await antiEstadoHandler(sock, msg, chatId, isGroup, fromMe)
     if (blockedEstado) return
@@ -960,31 +999,28 @@ try {
 }
     
     
-    // 🔞 ANTI PORNO
-try {
-
-  await antiPorno(sock, msg)
-
-} catch (e) {
-
-  console.log("[antiPorno]", e)
-
-}
+  
     
-    if (!text) {
-      logRouter({
-        isGroup,
-        isOwner,
-        allowed: true,
-        senderNum: finalNum,
-        senderName,
-        groupName,
-        text: "",
-        action: "SKIP",
-        reason: "no text/caption"
-      })
-      return
-    }
+    if (
+  !text &&
+  !hasSticker &&
+  !hasImage
+) {
+
+  logRouter({
+    isGroup,
+    isOwner,
+    allowed: true,
+    senderNum: finalNum,
+    senderName,
+    groupName,
+    text: "",
+    action: "SKIP",
+    reason: "no text/media"
+  })
+
+  return
+}
 
     
     try {
