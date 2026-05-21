@@ -200,7 +200,6 @@ async function extractFrames(
 
     ffmpeg(inputFile)
 
-      // 5 FRAMES
       .outputOptions([
         "-vf fps=5"
       ])
@@ -227,7 +226,7 @@ async function extractFrames(
 }
 
 // =========================
-// CLEAN FILES
+// CLEAN FILE
 // =========================
 
 function safeDelete(
@@ -324,10 +323,14 @@ export default async function antiPorno(
     let mediaBuffer
 
     // =========================
-    // IMAGEN NORMAL
+    // IMAGEN
     // =========================
 
     if (imageMsg) {
+
+      console.log(
+        "IMAGEN DETECTADA"
+      )
 
       const imageFile =
         path.join(
@@ -365,6 +368,10 @@ export default async function antiPorno(
 
       if (!detected) {
 
+        console.log(
+          "IMAGEN NORMAL"
+        )
+
         return false
       }
     }
@@ -375,12 +382,8 @@ export default async function antiPorno(
 
     if (stickerMsg) {
 
-      const isAnimated =
-        !!stickerMsg?.isAnimated
-
       console.log(
-        "STICKER ANIMATED:",
-        isAnimated
+        "STICKER DETECTADO"
       )
 
       mediaBuffer =
@@ -401,10 +404,46 @@ export default async function antiPorno(
       )
 
       // =========================
-      // STICKER NORMAL
+      // EXTRAER FRAMES SIEMPRE
       // =========================
 
-      if (!isAnimated) {
+      const framesDir =
+        path.join(
+          TEMP_DIR,
+          `frames-${Date.now()}`
+        )
+
+      await extractFrames(
+        webpFile,
+        framesDir
+      )
+
+      safeDelete(
+        webpFile
+      )
+
+      const files =
+        fs.readdirSync(
+          framesDir
+        )
+
+      console.log(
+        "FRAMES:",
+        files.length
+      )
+
+      let detected =
+        false
+
+      // =========================
+      // SI NO HAY FRAMES
+      // =========================
+
+      if (!files.length) {
+
+        console.log(
+          "SIN FRAMES - USANDO SHARP"
+        )
 
         const jpgFile =
           path.join(
@@ -423,98 +462,74 @@ export default async function antiPorno(
             jpgFile
           )
 
-        console.log(
-          "NSFW RESULT:",
-          result
-        )
-
         safeDelete(
           jpgFile
         )
 
-        safeDelete(
-          webpFile
-        )
-
-        const detected =
+        if (
           isNSFW(result)
+        ) {
 
-        if (!detected) {
-
-          return false
+          detected = true
         }
       }
 
       // =========================
-      // STICKER ANIMADO
+      // ANALIZAR FRAMES
       // =========================
 
-      if (isAnimated) {
+      const selected =
+        files.slice(0, 6)
 
-        const framesDir =
+      for (
+        const frame of selected
+      ) {
+
+        const framePath =
           path.join(
-            TEMP_DIR,
-            `frames-${Date.now()}`
+            framesDir,
+            frame
           )
 
-        await extractFrames(
-          webpFile,
-          framesDir
+        console.log(
+          "ANALIZANDO:",
+          frame
         )
 
-        safeDelete(
-          webpFile
-        )
-
-        const files =
-          fs.readdirSync(
-            framesDir
+        const result =
+          await detectFile(
+            framePath
           )
 
-        let detected =
-          false
+        console.log(
+          "FRAME RESULT:",
+          result
+        )
 
-        // SOLO 5 FRAMES
-        const selected =
-          files.slice(0, 5)
-
-        for (
-          const frame of selected
+        if (
+          isNSFW(result)
         ) {
 
-          const framePath =
-            path.join(
-              framesDir,
-              frame
-            )
-
-          const result =
-            await detectFile(
-              framePath
-            )
-
           console.log(
-            "FRAME RESULT:",
-            result
+            "NSFW EN FRAME"
           )
 
-          if (
-            isNSFW(result)
-          ) {
-
-            detected = true
-            break
-          }
+          detected = true
+          break
         }
+      }
 
-        safeDeleteDir(
-          framesDir
+      safeDeleteDir(
+        framesDir
+      )
+
+      if (!detected) {
+
+        console.log(
+          "STICKER NORMAL"
         )
 
-        if (!detected) {
-
-          return false
-        }
+        return false
       }
     }
 
