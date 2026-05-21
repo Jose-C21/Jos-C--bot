@@ -3,6 +3,7 @@ import path from "path"
 
 import axios from "axios"
 import FormData from "form-data"
+import sharp from "sharp"
 
 import {
   downloadContentFromMessage
@@ -11,7 +12,7 @@ import {
 console.log("ANTI PORNO CARGADO")
 
 // =========================
-// CARPETA TEMP
+// TEMP
 // =========================
 
 const TEMP_DIR =
@@ -29,7 +30,7 @@ if (!fs.existsSync(TEMP_DIR)) {
 }
 
 // =========================
-// DESCARGAR BUFFER
+// BUFFER
 // =========================
 
 async function toBuffer(
@@ -60,7 +61,119 @@ async function toBuffer(
 }
 
 // =========================
-// DETECTOR PRINCIPAL
+// ANALIZAR RESULTADO
+// =========================
+
+function isNSFW(result = []) {
+
+  return result.some(x => {
+
+    // GENITALES
+
+    if (
+
+      x.class.includes(
+        "GENITALIA"
+      ) &&
+
+      x.score > 0.45
+
+    ) {
+
+      return true
+    }
+
+    // PECHOS
+
+    if (
+
+      x.class.includes(
+        "BREAST_EXPOSED"
+      ) &&
+
+      x.score > 0.65
+
+    ) {
+
+      return true
+    }
+
+    // ANO
+
+    if (
+
+      x.class.includes(
+        "ANUS"
+      ) &&
+
+      x.score > 0.55
+
+    ) {
+
+      return true
+    }
+
+    // TRASERO
+
+    if (
+
+      x.class.includes(
+        "BUTTOCKS_EXPOSED"
+      ) &&
+
+      x.score > 0.60
+
+    ) {
+
+      return true
+    }
+
+    return false
+  })
+}
+
+// =========================
+// API NSFW
+// =========================
+
+async function detectFile(
+  filePath
+) {
+
+  const form =
+    new FormData()
+
+  form.append(
+    "file",
+    fs.createReadStream(filePath)
+  )
+
+  const response =
+    await axios.post(
+
+      "https://confused-flashcard-nineteen.ngrok-free.dev/detect",
+
+      form,
+
+      {
+        headers:
+          form.getHeaders(),
+
+        maxBodyLength:
+          Infinity,
+
+        timeout:
+          30000
+      }
+    )
+
+  return (
+    response.data?.result || []
+  )
+}
+
+// =========================
+// MAIN
 // =========================
 
 export default async function antiPorno(
@@ -77,125 +190,126 @@ export default async function antiPorno(
       return false
     }
 
-    // =========================
     // SOLO GRUPOS
-    // =========================
 
     if (
-      !String(chatId)
-        .endsWith("@g.us")
+      !chatId.endsWith("@g.us")
     ) {
 
       return false
     }
 
     // =========================
-    // SOLO IMÁGENES
+    // DETECTAR TIPO
     // =========================
 
     const imageMsg =
       msg?.message?.imageMessage
 
-    if (!imageMsg) {
-
-      return false
-    }
-
-    console.log(
-      "IMAGEN DETECTADA"
-    )
-
-    // =========================
-    // DESCARGAR IMAGEN
-    // =========================
-
-    const mediaBuffer =
-      await toBuffer(
-        imageMsg,
-        "image"
-      )
-
-    if (!mediaBuffer?.length) {
-
-      console.log(
-        "NO SE PUDO DESCARGAR"
-      )
-
-      return false
-    }
-
-    // =========================
-    // GUARDAR TEMP
-    // =========================
-
-    const filePath =
-      path.join(
-        TEMP_DIR,
-        `${Date.now()}.jpg`
-      )
-
-    fs.writeFileSync(
-      filePath,
-      mediaBuffer
-    )
-
-    console.log(
-      "IMAGEN GUARDADA:",
-      filePath
-    )
-
-    // =========================
-    // CREAR FORM DATA
-    // =========================
-
-    const form =
-      new FormData()
-
-    form.append(
-      "file",
-      fs.createReadStream(filePath)
-    )
-
-    // =========================
-    // ENVIAR A API
-    // =========================
-
-    const response =
-      await axios.post(
-
-        "https://confused-flashcard-nineteen.ngrok-free.dev/detect",
-
-        form,
-
-        {
-          headers:
-            form.getHeaders(),
-
-          maxBodyLength:
-            Infinity,
-
-          timeout:
-            30000
-        }
-      )
-
-    // =========================
-    // BORRAR TEMP
-    // =========================
+    const stickerMsg =
+      msg?.message?.stickerMessage
 
     if (
-      fs.existsSync(filePath)
+      !imageMsg &&
+      !stickerMsg
     ) {
 
-      fs.unlinkSync(filePath)
+      return false
+    }
+
+    console.log(
+      "MEDIA DETECTADA"
+    )
+
+    // =========================
+    // DESCARGAR
+    // =========================
+
+    let mediaBuffer
+    let tempInput
+    let finalImage
+
+    // =========================
+    // IMAGEN
+    // =========================
+
+    if (imageMsg) {
+
+      mediaBuffer =
+        await toBuffer(
+          imageMsg,
+          "image"
+        )
+
+      finalImage =
+        path.join(
+          TEMP_DIR,
+          `${Date.now()}.jpg`
+        )
+
+      fs.writeFileSync(
+        finalImage,
+        mediaBuffer
+      )
     }
 
     // =========================
-    // RESULTADO
+    // STICKER
+    // =========================
+
+    if (stickerMsg) {
+
+      mediaBuffer =
+        await toBuffer(
+          stickerMsg,
+          "sticker"
+        )
+
+      tempInput =
+        path.join(
+          TEMP_DIR,
+          `${Date.now()}.webp`
+        )
+
+      finalImage =
+        path.join(
+          TEMP_DIR,
+          `${Date.now()}.jpg`
+        )
+
+      fs.writeFileSync(
+        tempInput,
+        mediaBuffer
+      )
+
+      // WEBP -> JPG
+
+      await sharp(tempInput)
+
+        .jpeg()
+
+        .toFile(finalImage)
+
+      // BORRAR WEBP
+
+      if (
+        fs.existsSync(tempInput)
+      ) {
+
+        fs.unlinkSync(
+          tempInput
+        )
+      }
+    }
+
+    // =========================
+    // ANALIZAR
     // =========================
 
     const result =
-      response.data?.result || []
+      await detectFile(
+        finalImage
+      )
 
     console.log(
       "NSFW RESULT:",
@@ -203,113 +317,31 @@ export default async function antiPorno(
     )
 
     // =========================
-    // DETECCIÓN
+    // LIMPIAR
+    // =========================
+
+    if (
+      fs.existsSync(finalImage)
+    ) {
+
+      fs.unlinkSync(
+        finalImage
+      )
+    }
+
+    // =========================
+    // DETECTAR
     // =========================
 
     const detected =
-      result.some(x => {
-
-        // =========================
-        // GENITALES
-        // =========================
-
-        if (
-
-          x.class.includes(
-            "GENITALIA"
-          ) &&
-
-          x.score > 0.45
-
-        ) {
-
-          console.log(
-            "GENITALES DETECTADOS"
-          )
-
-          return true
-        }
-
-        // =========================
-        // PECHOS EXPUESTOS
-        // =========================
-
-        if (
-
-          x.class.includes(
-            "BREAST_EXPOSED"
-          ) &&
-
-          x.score > 0.65
-
-        ) {
-
-          console.log(
-            "PECHOS DETECTADOS"
-          )
-
-          return true
-        }
-
-        // =========================
-        // ANO
-        // =========================
-
-        if (
-
-          x.class.includes(
-            "ANUS"
-          ) &&
-
-          x.score > 0.55
-
-        ) {
-
-          console.log(
-            "ANO DETECTADO"
-          )
-
-          return true
-        }
-
-        // =========================
-        // TRASERO EXPUESTO
-        // =========================
-
-        if (
-
-          x.class.includes(
-            "BUTTOCKS_EXPOSED"
-          ) &&
-
-          x.score > 0.60
-
-        ) {
-
-          console.log(
-            "TRASERO DETECTADO"
-          )
-
-          return true
-        }
-
-        return false
-      })
+      isNSFW(result)
 
     console.log(
-      "NSFW DETECTADO:",
+      "NSFW:",
       detected
     )
 
-    // =========================
-    // SI ES NORMAL
-    // =========================
-
     if (!detected) {
-
-      console.log(
-        "IMAGEN NORMAL"
-      )
 
       return false
     }
@@ -338,16 +370,10 @@ export default async function antiPorno(
         }
       }
 
-    ).catch(err => {
-
-      console.log(
-        "ERROR BORRANDO:",
-        err
-      )
-    })
+    ).catch(() => {})
 
     // =========================
-    // EXPULSAR USUARIO
+    // EXPULSAR
     // =========================
 
     const participant =
@@ -363,17 +389,11 @@ export default async function antiPorno(
         [participant],
         "remove"
 
-      ).catch(err => {
-
-        console.log(
-          "ERROR EXPULSANDO:",
-          err
-        )
-      })
+      ).catch(() => {})
     }
 
     // =========================
-    // MENSAJE
+    // AVISO
     // =========================
 
     await sock.sendMessage(
@@ -392,7 +412,7 @@ export default async function antiPorno(
   } catch (e) {
 
     console.log(
-      "ERROR ANTIPORNO:",
+      "ERROR NSFW:",
       e
     )
 
