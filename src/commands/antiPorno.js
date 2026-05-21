@@ -412,12 +412,6 @@ export default async function antiPorno(
           `${Date.now()}.webp`
         )
 
-      const jpgFile =
-        path.join(
-          TEMP_DIR,
-          `${Date.now()}.jpg`
-        )
-
       fs.writeFileSync(
         webpFile,
         mediaBuffer
@@ -425,56 +419,99 @@ export default async function antiPorno(
 
       try {
 
-        await sharp(
-          webpFile,
-          {
-            animated: true
-          }
-        )
-
-          .flatten({
-            background: "#ffffff"
-          })
-
-          .jpeg()
-
-          .toFile(jpgFile)
-
-        console.log(
-          "WEBP CONVERTIDO"
-        )
-
-        const result =
-          await detectFile(
-            jpgFile
+        const img =
+          sharp(
+            webpFile,
+            {
+              animated: true
+            }
           )
 
+        const meta =
+          await img.metadata()
+
         console.log(
-          "STICKER RESULT:",
-          result
+          "TOTAL FRAMES:",
+          meta.pages || 1
         )
 
-        if (
-          isNSFW(result)
+        const totalFrames =
+          Math.min(
+            meta.pages || 1,
+            8
+          )
+
+        for (
+          let i = 0;
+          i < totalFrames;
+          i++
         ) {
 
-          detected = true
+          const frameFile =
+            path.join(
+              TEMP_DIR,
+              `frame-${Date.now()}-${i}.jpg`
+            )
+
+          await sharp(
+            webpFile,
+            {
+              animated: true,
+              page: i
+            }
+          )
+
+            .flatten({
+              background: "#ffffff"
+            })
+
+            .jpeg()
+
+            .toFile(frameFile)
+
+          console.log(
+            "FRAME:",
+            i
+          )
+
+          const result =
+            await detectFile(
+              frameFile
+            )
+
+          console.log(
+            "FRAME RESULT:",
+            result
+          )
+
+          safeDelete(
+            frameFile
+          )
+
+          if (
+            isNSFW(result)
+          ) {
+
+            console.log(
+              "NSFW EN FRAME:",
+              i
+            )
+
+            detected = true
+            break
+          }
         }
 
       } catch (e) {
 
         console.log(
-          "ERROR SHARP:",
+          "ERROR STICKER:",
           e
         )
       }
 
       safeDelete(
         webpFile
-      )
-
-      safeDelete(
-        jpgFile
       )
     }
 
