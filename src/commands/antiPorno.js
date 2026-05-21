@@ -32,6 +32,53 @@ if (!fs.existsSync(TEMP_DIR)) {
 }
 
 // =========================
+// UNWRAP MENSAJES
+// =========================
+
+function unwrapMessage(m) {
+
+  let msgObj =
+    m?.message || {}
+
+  while (true) {
+
+    if (
+      msgObj?.ephemeralMessage?.message
+    ) {
+
+      msgObj =
+        msgObj.ephemeralMessage.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessageV2?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessageV2.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessage?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessage.message
+
+      continue
+    }
+
+    break
+  }
+
+  return msgObj
+}
+
+// =========================
 // BUFFER
 // =========================
 
@@ -289,7 +336,9 @@ export default async function antiPorno(
       return false
     }
 
+    // =========================
     // SOLO GRUPOS
+    // =========================
 
     if (
       !chatId.endsWith("@g.us")
@@ -299,14 +348,21 @@ export default async function antiPorno(
     }
 
     // =========================
-    // TIPOS
+    // UNWRAP
     // =========================
 
+    const mUnwrapped =
+      unwrapMessage(msg)
+
     const imageMsg =
-      msg?.message?.imageMessage
+      mUnwrapped?.imageMessage
 
     const stickerMsg =
-      msg?.message?.stickerMessage
+      mUnwrapped?.stickerMessage
+
+    // =========================
+    // VALIDAR
+    // =========================
 
     if (
       !imageMsg &&
@@ -386,6 +442,11 @@ export default async function antiPorno(
         "STICKER DETECTADO"
       )
 
+      console.log(
+        "ANIMATED:",
+        stickerMsg?.isAnimated
+      )
+
       mediaBuffer =
         await toBuffer(
           stickerMsg,
@@ -404,7 +465,7 @@ export default async function antiPorno(
       )
 
       // =========================
-      // EXTRAER FRAMES SIEMPRE
+      // EXTRAER FRAMES
       // =========================
 
       const framesDir =
@@ -416,10 +477,6 @@ export default async function antiPorno(
       await extractFrames(
         webpFile,
         framesDir
-      )
-
-      safeDelete(
-        webpFile
       )
 
       const files =
@@ -442,7 +499,7 @@ export default async function antiPorno(
       if (!files.length) {
 
         console.log(
-          "SIN FRAMES - USANDO SHARP"
+          "SIN FRAMES"
         )
 
         const jpgFile =
@@ -461,6 +518,11 @@ export default async function antiPorno(
           await detectFile(
             jpgFile
           )
+
+        console.log(
+          "SHARP RESULT:",
+          result
+        )
 
         safeDelete(
           jpgFile
@@ -519,9 +581,21 @@ export default async function antiPorno(
         }
       }
 
+      // =========================
+      // LIMPIAR
+      // =========================
+
+      safeDelete(
+        webpFile
+      )
+
       safeDeleteDir(
         framesDir
       )
+
+      // =========================
+      // NORMAL
+      // =========================
 
       if (!detected) {
 
@@ -538,7 +612,7 @@ export default async function antiPorno(
     )
 
     // =========================
-    // BORRAR MENSAJE
+    // BORRAR
     // =========================
 
     await sock.sendMessage(
