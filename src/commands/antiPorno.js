@@ -14,10 +14,6 @@ import { jidToNumber } from "../utils/jid.js"
 
 console.log("ANTI PORNO CARGADO")
 
-// =========================
-// TEMP
-// =========================
-
 const TEMP_DIR =
   path.join(
     process.cwd(),
@@ -210,82 +206,6 @@ async function toBuffer(
 }
 
 // =========================
-// NSFW CHECK
-// =========================
-
-function isNSFW(result = []) {
-
-  return result.some(x => {
-
-    const cls =
-      String(
-        x.class || ""
-      ).toUpperCase()
-
-    const score =
-      Number(
-        x.score || 0
-      )
-
-    console.log(
-      "CHECK:",
-      cls,
-      score
-    )
-
-    // =========================
-    // GENITALES
-    // =========================
-
-    if (
-      cls.includes("GENITALIA") &&
-      score > 0.20
-    ) {
-
-      return true
-    }
-
-    // =========================
-    // ANO
-    // =========================
-
-    if (
-      cls.includes("ANUS") &&
-      score > 0.20
-    ) {
-
-      return true
-    }
-
-    // =========================
-    // PECHOS
-    // =========================
-
-    if (
-      cls.includes("BREAST_EXPOSED") &&
-      score > 0.35
-    ) {
-
-      return true
-    }
-
-    // =========================
-    // NALGAS
-    // =========================
-
-    if (
-      cls.includes("BUTTOCKS_EXPOSED") &&
-      score > 0.35
-    ) {
-
-      return true
-    }
-
-    return false
-  })
-}
-
-// =========================
 // API DETECT
 // =========================
 
@@ -314,12 +234,12 @@ async function detectFile(filePath) {
           Infinity,
 
         timeout:
-          30000
+          60000
       }
     )
 
   return (
-    response.data?.result || []
+    response.data || {}
   )
 }
 
@@ -359,10 +279,6 @@ export default async function antiPorno(
       return false
     }
 
-    // =========================
-    // SOLO GRUPOS
-    // =========================
-
     if (
       !chatId.endsWith("@g.us")
     ) {
@@ -378,23 +294,6 @@ export default async function antiPorno(
 
     const stickerMsg =
       getStickerMessage(msg)
-
-    console.log(
-      "UNWRAPPED KEYS:",
-      Object.keys(
-        mUnwrapped || {}
-      )
-    )
-
-    console.log(
-      "IMAGE FOUND:",
-      !!imageMsg
-    )
-
-    console.log(
-      "STICKER FOUND:",
-      !!stickerMsg
-    )
 
     if (
       !imageMsg &&
@@ -440,7 +339,7 @@ export default async function antiPorno(
         )
 
       console.log(
-        "IMAGE RESULT:",
+        "API RESULT:",
         result
       )
 
@@ -449,12 +348,8 @@ export default async function antiPorno(
       )
 
       if (
-        isNSFW(result)
+        result?.nsfw === true
       ) {
-
-        console.log(
-          "NSFW IMAGE"
-        )
 
         detected = true
       }
@@ -471,11 +366,6 @@ export default async function antiPorno(
 
       console.log(
         "STICKER DETECTADO"
-      )
-
-      console.log(
-        "ANIMATED:",
-        stickerMsg?.isAnimated
       )
 
       const mediaBuffer =
@@ -508,16 +398,16 @@ export default async function antiPorno(
         const meta =
           await img.metadata()
 
-        console.log(
-          "TOTAL FRAMES:",
-          meta.pages || 1
-        )
-
         const totalFrames =
           Math.min(
             meta.pages || 1,
             12
           )
+
+        console.log(
+          "TOTAL FRAMES:",
+          totalFrames
+        )
 
         for (
           let i = 0;
@@ -544,8 +434,7 @@ export default async function antiPorno(
             })
 
             .resize({
-              width: 1400,
-              withoutEnlargement: false
+              width: 1400
             })
 
             .jpeg({
@@ -554,18 +443,14 @@ export default async function antiPorno(
 
             .toFile(frameFile)
 
-          console.log(
-            "FRAME:",
-            i
-          )
-
           const result =
             await detectFile(
               frameFile
             )
 
           console.log(
-            "FRAME RESULT:",
+            "FRAME:",
+            i,
             result
           )
 
@@ -573,12 +458,13 @@ export default async function antiPorno(
             frameFile
           )
 
+          // ✅ NUEVA LÓGICA
           if (
-            isNSFW(result)
+            result?.nsfw === true
           ) {
 
             console.log(
-              "NSFW EN FRAME:",
+              "NSFW DETECTADO EN FRAME:",
               i
             )
 
@@ -673,10 +559,7 @@ export default async function antiPorno(
         jidToNumber(decoded) ||
         jidToNumber(participant)
 
-      // =========================
-      // OWNER PROTECTION
-      // =========================
-
+      // ✅ PROTEGER SOLO OWNERS
       if (
         isOwnerNumber(
           participantNum
