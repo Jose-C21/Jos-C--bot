@@ -79,6 +79,35 @@ function unwrapMessage(m) {
 }
 
 // =========================
+// OBTENER STICKER
+// =========================
+
+function getStickerMessage(
+  mUnwrapped
+) {
+
+  return (
+
+    mUnwrapped?.stickerMessage ||
+
+    mUnwrapped?.extendedTextMessage
+      ?.contextInfo
+      ?.quotedMessage
+      ?.stickerMessage ||
+
+    mUnwrapped?.ephemeralMessage
+      ?.message
+      ?.stickerMessage ||
+
+    mUnwrapped?.viewOnceMessageV2
+      ?.message
+      ?.stickerMessage ||
+
+    null
+  )
+}
+
+// =========================
 // BUFFER
 // =========================
 
@@ -353,26 +382,26 @@ export default async function antiPorno(
 
     const mUnwrapped =
       unwrapMessage(msg)
-      
-      console.log(
-  "UNWRAPPED KEYS:",
-  Object.keys(mUnwrapped || {})
-)
-
-console.log(
-  "RAW MESSAGE:",
-  JSON.stringify(
-    msg.message,
-    null,
-    2
-  )
-)
 
     const imageMsg =
       mUnwrapped?.imageMessage
 
     const stickerMsg =
-      mUnwrapped?.stickerMessage
+      getStickerMessage(
+        mUnwrapped
+      )
+
+    console.log(
+      "UNWRAPPED KEYS:",
+      Object.keys(
+        mUnwrapped || {}
+      )
+    )
+
+    console.log(
+      "STICKER FOUND:",
+      !!stickerMsg
+    )
 
     // =========================
     // VALIDAR
@@ -507,7 +536,7 @@ console.log(
         false
 
       // =========================
-      // SI NO HAY FRAMES
+      // SIN FRAMES
       // =========================
 
       if (!files.length) {
@@ -606,10 +635,6 @@ console.log(
       safeDeleteDir(
         framesDir
       )
-
-      // =========================
-      // NORMAL
-      // =========================
 
       if (!detected) {
 
