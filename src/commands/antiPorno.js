@@ -5,6 +5,8 @@ import axios from "axios"
 import FormData from "form-data"
 import sharp from "sharp"
 
+import ffmpeg from "fluent-ffmpeg"
+
 import {
   downloadContentFromMessage
 } from "baileys"
@@ -61,7 +63,7 @@ async function toBuffer(
 }
 
 // =========================
-// ANALIZAR RESULTADO
+// NSFW CHECK
 // =========================
 
 function isNSFW(result = []) {
@@ -133,7 +135,7 @@ function isNSFW(result = []) {
 }
 
 // =========================
-// API NSFW
+// API DETECT
 // =========================
 
 async function detectFile(
@@ -173,6 +175,104 @@ async function detectFile(
 }
 
 // =========================
+// EXTRAER FRAMES
+// =========================
+
+async function extractFrames(
+  inputFile,
+  outputDir
+) {
+
+  return new Promise((
+    resolve,
+    reject
+  ) => {
+
+    if (
+      !fs.existsSync(outputDir)
+    ) {
+
+      fs.mkdirSync(
+        outputDir,
+        { recursive: true }
+      )
+    }
+
+    ffmpeg(inputFile)
+
+      // 5 FRAMES
+      .outputOptions([
+        "-vf fps=5"
+      ])
+
+      .output(
+        path.join(
+          outputDir,
+          "frame-%03d.jpg"
+        )
+      )
+
+      .on("end", () => {
+
+        resolve(true)
+      })
+
+      .on("error", err => {
+
+        reject(err)
+      })
+
+      .run()
+  })
+}
+
+// =========================
+// CLEAN FILES
+// =========================
+
+function safeDelete(
+  file
+) {
+
+  try {
+
+    if (
+      fs.existsSync(file)
+    ) {
+
+      fs.unlinkSync(file)
+    }
+
+  } catch {}
+}
+
+// =========================
+// CLEAN DIR
+// =========================
+
+function safeDeleteDir(
+  dir
+) {
+
+  try {
+
+    if (
+      fs.existsSync(dir)
+    ) {
+
+      fs.rmSync(
+        dir,
+        {
+          recursive: true,
+          force: true
+        }
+      )
+    }
+
+  } catch {}
+}
+
+// =========================
 // MAIN
 // =========================
 
@@ -200,7 +300,7 @@ export default async function antiPorno(
     }
 
     // =========================
-    // DETECTAR TIPO
+    // TIPOS
     // =========================
 
     const imageMsg =
@@ -221,19 +321,19 @@ export default async function antiPorno(
       "MEDIA DETECTADA"
     )
 
-    // =========================
-    // DESCARGAR
-    // =========================
-
     let mediaBuffer
-    let tempInput
-    let finalImage
 
     // =========================
-    // IMAGEN
+    // IMAGEN NORMAL
     // =========================
 
     if (imageMsg) {
+
+      const imageFile =
+        path.join(
+          TEMP_DIR,
+          `${Date.now()}.jpg`
+        )
 
       mediaBuffer =
         await toBuffer(
@@ -241,23 +341,47 @@ export default async function antiPorno(
           "image"
         )
 
-      finalImage =
-        path.join(
-          TEMP_DIR,
-          `${Date.now()}.jpg`
-        )
-
       fs.writeFileSync(
-        finalImage,
+        imageFile,
         mediaBuffer
       )
+
+      const result =
+        await detectFile(
+          imageFile
+        )
+
+      console.log(
+        "NSFW RESULT:",
+        result
+      )
+
+      safeDelete(
+        imageFile
+      )
+
+      const detected =
+        isNSFW(result)
+
+      if (!detected) {
+
+        return false
+      }
     }
 
     // =========================
-    // STICKER
+    // STICKERS
     // =========================
 
     if (stickerMsg) {
+
+      const isAnimated =
+        !!stickerMsg?.isAnimated
+
+      console.log(
+        "STICKER ANIMATED:",
+        isAnimated
+      )
 
       mediaBuffer =
         await toBuffer(
@@ -265,86 +389,138 @@ export default async function antiPorno(
           "sticker"
         )
 
-      tempInput =
+      const webpFile =
         path.join(
           TEMP_DIR,
           `${Date.now()}.webp`
         )
 
-      finalImage =
-        path.join(
-          TEMP_DIR,
-          `${Date.now()}.jpg`
-        )
-
       fs.writeFileSync(
-        tempInput,
+        webpFile,
         mediaBuffer
       )
 
-      // WEBP -> JPG
+      // =========================
+      // STICKER NORMAL
+      // =========================
 
-      await sharp(tempInput)
+      if (!isAnimated) {
 
-        .jpeg()
+        const jpgFile =
+          path.join(
+            TEMP_DIR,
+            `${Date.now()}.jpg`
+          )
 
-        .toFile(finalImage)
+        await sharp(webpFile)
 
-      // BORRAR WEBP
+          .jpeg()
 
-      if (
-        fs.existsSync(tempInput)
-      ) {
+          .toFile(jpgFile)
 
-        fs.unlinkSync(
-          tempInput
+        const result =
+          await detectFile(
+            jpgFile
+          )
+
+        console.log(
+          "NSFW RESULT:",
+          result
         )
+
+        safeDelete(
+          jpgFile
+        )
+
+        safeDelete(
+          webpFile
+        )
+
+        const detected =
+          isNSFW(result)
+
+        if (!detected) {
+
+          return false
+        }
+      }
+
+      // =========================
+      // STICKER ANIMADO
+      // =========================
+
+      if (isAnimated) {
+
+        const framesDir =
+          path.join(
+            TEMP_DIR,
+            `frames-${Date.now()}`
+          )
+
+        await extractFrames(
+          webpFile,
+          framesDir
+        )
+
+        safeDelete(
+          webpFile
+        )
+
+        const files =
+          fs.readdirSync(
+            framesDir
+          )
+
+        let detected =
+          false
+
+        // SOLO 5 FRAMES
+        const selected =
+          files.slice(0, 5)
+
+        for (
+          const frame of selected
+        ) {
+
+          const framePath =
+            path.join(
+              framesDir,
+              frame
+            )
+
+          const result =
+            await detectFile(
+              framePath
+            )
+
+          console.log(
+            "FRAME RESULT:",
+            result
+          )
+
+          if (
+            isNSFW(result)
+          ) {
+
+            detected = true
+            break
+          }
+        }
+
+        safeDeleteDir(
+          framesDir
+        )
+
+        if (!detected) {
+
+          return false
+        }
       }
     }
 
-    // =========================
-    // ANALIZAR
-    // =========================
-
-    const result =
-      await detectFile(
-        finalImage
-      )
-
     console.log(
-      "NSFW RESULT:",
-      result
+      "NSFW DETECTADO"
     )
-
-    // =========================
-    // LIMPIAR
-    // =========================
-
-    if (
-      fs.existsSync(finalImage)
-    ) {
-
-      fs.unlinkSync(
-        finalImage
-      )
-    }
-
-    // =========================
-    // DETECTAR
-    // =========================
-
-    const detected =
-      isNSFW(result)
-
-    console.log(
-      "NSFW:",
-      detected
-    )
-
-    if (!detected) {
-
-      return false
-    }
 
     // =========================
     // BORRAR MENSAJE
