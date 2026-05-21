@@ -353,6 +353,20 @@ export default async function antiPorno(
 
     const mUnwrapped =
       unwrapMessage(msg)
+      
+      console.log(
+  "UNWRAPPED KEYS:",
+  Object.keys(mUnwrapped || {})
+)
+
+console.log(
+  "RAW MESSAGE:",
+  JSON.stringify(
+    msg.message,
+    null,
+    2
+  )
+)
 
     const imageMsg =
       mUnwrapped?.imageMessage
