@@ -428,10 +428,6 @@ export default async function antiPorno(
         mediaBuffer
       )
 
-      // =========================
-      // SIZE CHECK
-      // =========================
-
       const stats =
         fs.statSync(
           webpFile
@@ -472,10 +468,6 @@ export default async function antiPorno(
           pages
         )
 
-        // =========================
-        // FRAMES INTELIGENTES
-        // =========================
-
         let uniqueFrames = []
 
         if (pages <= 3) {
@@ -511,10 +503,6 @@ export default async function antiPorno(
           "FRAMES IMPORTANTES:",
           uniqueFrames
         )
-
-        // =========================
-        // ANALIZAR FRAMES
-        // =========================
 
         for (
           const realFrame of uniqueFrames
@@ -676,44 +664,101 @@ export default async function antiPorno(
               )
             })
 
+          const hasButtocks =
+            nudenet.some(x => {
+
+              const cls =
+                String(
+                  x?.class || ""
+                ).toUpperCase()
+
+              const score =
+                Number(
+                  x?.score || 0
+                )
+
+              return (
+
+                cls.includes(
+                  "BUTTOCKS_EXPOSED"
+                )
+
+                &&
+
+                score >= 0.55
+              )
+            })
+
+          // =========================
+          // ÚLTIMO FRAME
+          // =========================
+
+          const isLastFrame =
+
+            realFrame ===
+            pages - 1
+
+          const lastFramePorn =
+
+            isLastFrame &&
+
+            result?.nsfw === true &&
+
+            openScore >= 0.80
+
           // =========================
           // DETECCIÓN FINAL
           // =========================
 
           if (
 
-  hasStrongGenitalia ||
+            hasStrongGenitalia ||
 
-  (
+            (
+              openScore >= 0.985
+            ) ||
 
-    openScore >= 0.985
+            (
+              openScore >= 0.90 &&
+              result?.nsfw === true
+            ) ||
 
-  ) ||
+            (
+              hasBreast &&
+              openScore >= 0.55
+            ) ||
 
-  (
+            (
+              hasButtocks &&
+              openScore >= 0.88
+            ) ||
 
-    openScore >= 0.90 &&
-    result?.nsfw === true
+            (
+              lastFramePorn &&
 
-  ) ||
+              (
 
-  (
+                hasButtocks ||
 
-    hasBreast &&
-    openScore >= 0.55
+                hasBreast ||
 
-  )
+                hasStrongGenitalia ||
 
-) {
+                openScore >= 0.92
 
-  console.log(
-    "NSFW DETECTADO EN FRAME:",
-    realFrame
-  )
+              )
+            )
 
-  detected = true
-  break
-}
+          ) {
+
+            console.log(
+              "NSFW DETECTADO EN FRAME:",
+              realFrame
+            )
+
+            detected = true
+            break
+          }
         }
 
       } catch (e) {
@@ -801,10 +846,6 @@ export default async function antiPorno(
       const participantNum =
         jidToNumber(decoded) ||
         jidToNumber(participant)
-
-      // =========================
-      // OWNER PROTECTION
-      // =========================
 
       if (
         isOwnerNumber(
