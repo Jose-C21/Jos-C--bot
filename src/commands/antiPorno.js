@@ -12,6 +12,78 @@ import {
 import config from "../config.js"
 import { jidToNumber } from "../utils/jid.js"
 
+// =========================
+// ACTIVOS
+// =========================
+
+const DATA_DIR =
+  path.join(
+    process.cwd(),
+    "data"
+  )
+
+const ACTIVOS_PATH =
+  path.join(
+    DATA_DIR,
+    "activos.json"
+  )
+
+function readActivosSafe() {
+
+  try {
+
+    if (!fs.existsSync(DATA_DIR)) {
+
+      fs.mkdirSync(
+        DATA_DIR,
+        {
+          recursive: true
+        }
+      )
+    }
+
+    if (!fs.existsSync(ACTIVOS_PATH)) {
+
+      fs.writeFileSync(
+
+        ACTIVOS_PATH,
+
+        JSON.stringify({
+
+          antiporno: {}
+
+        }, null, 2)
+
+      )
+    }
+
+    const j =
+      JSON.parse(
+
+        fs.readFileSync(
+          ACTIVOS_PATH,
+          "utf8"
+        ) || "{}"
+
+      )
+
+    if (!j.antiporno) {
+
+      j.antiporno = {}
+    }
+
+    return j
+
+  } catch {
+
+    return {
+
+      antiporno: {}
+
+    }
+  }
+}
+
 console.log("ANTI PORNO CARGADO")
 
 // =========================
@@ -259,6 +331,23 @@ export default async function antiPorno(
     if (
       !chatId.endsWith("@g.us")
     ) {
+
+      return false
+    }
+
+    // =========================
+    // ACTIVADO SOLO EN
+    // GRUPOS ESPECÍFICOS
+    // =========================
+
+    const activos =
+      readActivosSafe()
+
+    const antipornoActivo =
+
+      activos?.antiporno?.[chatId] === true
+
+    if (!antipornoActivo) {
 
       return false
     }
@@ -596,10 +685,6 @@ export default async function antiPorno(
             openScore
           )
 
-          // =========================
-          // NUDENET
-          // =========================
-
           const hasStrongGenitalia =
             nudenet.some(x => {
 
@@ -689,10 +774,6 @@ export default async function antiPorno(
               )
             })
 
-          // =========================
-          // ÚLTIMO FRAME
-          // =========================
-
           const isLastFrame =
 
             realFrame ===
@@ -705,10 +786,6 @@ export default async function antiPorno(
             result?.nsfw === true &&
 
             openScore >= 0.80
-
-          // =========================
-          // DETECCIÓN FINAL
-          // =========================
 
           if (
 
@@ -774,10 +851,6 @@ export default async function antiPorno(
       )
     }
 
-    // =========================
-    // CLEAN
-    // =========================
-
     if (!detected) {
 
       console.log(
@@ -790,10 +863,6 @@ export default async function antiPorno(
     console.log(
       "NSFW DETECTADO"
     )
-
-    // =========================
-    // DELETE MESSAGE
-    // =========================
 
     await sock.sendMessage(
 
@@ -816,10 +885,6 @@ export default async function antiPorno(
       }
 
     ).catch(() => {})
-
-    // =========================
-    // REMOVE USER
-    // =========================
 
     const participant =
 
@@ -872,10 +937,6 @@ export default async function antiPorno(
         )
       }
     }
-
-    // =========================
-    // ALERT
-    // =========================
 
     await sock.sendMessage(
 
