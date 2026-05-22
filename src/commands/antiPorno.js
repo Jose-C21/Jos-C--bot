@@ -513,13 +513,6 @@ export default async function antiPorno(
         )
 
         // =========================
-        // MULTI FRAME
-        // =========================
-
-        let highFrames = 0
-        let extremeFrames = 0
-
-        // =========================
         // ANALIZAR FRAMES
         // =========================
 
@@ -616,7 +609,7 @@ export default async function antiPorno(
           )
 
           // =========================
-          // NUDEDET
+          // NUDENET
           // =========================
 
           const hasStrongGenitalia =
@@ -645,6 +638,10 @@ export default async function antiPorno(
 
                   cls.includes(
                     "FEMALE_GENITALIA_EXPOSED"
+                  ) ||
+
+                  cls.includes(
+                    "ANUS_EXPOSED"
                   )
                 )
 
@@ -654,67 +651,69 @@ export default async function antiPorno(
               )
             })
 
-          if (hasStrongGenitalia) {
+          const hasBreast =
+            nudenet.some(x => {
+
+              const cls =
+                String(
+                  x?.class || ""
+                ).toUpperCase()
+
+              const score =
+                Number(
+                  x?.score || 0
+                )
+
+              return (
+
+                cls.includes(
+                  "BREAST_EXPOSED"
+                )
+
+                &&
+
+                score >= 0.80
+              )
+            })
+
+          // =========================
+          // DETECCIÓN FINAL
+          // =========================
+
+          if (
+
+            hasStrongGenitalia ||
+
+            (
+
+              openScore >= 0.96
+
+            ) ||
+
+            (
+
+              openScore >= 0.82 &&
+              result?.nsfw === true
+
+            ) ||
+
+            (
+
+              hasBreast &&
+              openScore >= 0.55
+
+            )
+
+          ) {
 
             console.log(
-              "NUDENET DETECTÓ GENITALES"
+              "NSFW DETECTADO EN FRAME:",
+              realFrame
             )
 
             detected = true
             break
           }
-
-          // =========================
-          // OPENNSFW2
-          // =========================
-
-          if (
-            openScore >= 0.62
-          ) {
-
-            highFrames++
-
-          }
-
-          if (
-            openScore >= 0.85
-          ) {
-
-            extremeFrames++
-
-          }
-
-          console.log({
-
-            highFrames,
-            extremeFrames
-
-          })
-        }
-
-        // =========================
-        // FINAL MULTI FRAME
-        // =========================
-
-        if (
-
-          !detected &&
-
-          (
-
-            highFrames >= 2 ||
-
-            extremeFrames >= 2
-
-          )
-
-        ) {
-
-          console.log(
-            "OPENNSFW2 MULTI FRAME NSFW"
-          )
-
-          detected = true
         }
 
       } catch (e) {
