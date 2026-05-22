@@ -28,9 +28,17 @@ if (!fs.existsSync(TEMP_DIR)) {
 
   fs.mkdirSync(
     TEMP_DIR,
-    { recursive: true }
+    { recursive: true
+    }
   )
 }
+
+// =========================
+// LIMITS
+// =========================
+
+const MAX_STICKER_SIZE =
+  15 * 1024 * 1024
 
 // =========================
 // OWNER CHECK
@@ -143,10 +151,11 @@ async function toBuffer(
     const chunk of stream
   ) {
 
-    buffer = Buffer.concat([
-      buffer,
-      chunk
-    ])
+    buffer =
+      Buffer.concat([
+        buffer,
+        chunk
+      ])
   }
 
   return buffer
@@ -158,34 +167,62 @@ async function toBuffer(
 
 async function detectFile(filePath) {
 
-  const form =
-    new FormData()
+  try {
 
-  form.append(
-    "file",
-    fs.createReadStream(filePath)
-  )
+    const form =
+      new FormData()
 
-  const response =
-    await axios.post(
-
-      "https://confused-flashcard-nineteen.ngrok-free.dev/detect",
-
-      form,
-
-      {
-        headers:
-          form.getHeaders(),
-
-        maxBodyLength:
-          Infinity,
-
-        timeout:
-          60000
-      }
+    form.append(
+      "file",
+      fs.createReadStream(filePath)
     )
 
-  return response.data
+    const response =
+      await axios.post(
+
+        // 🔥 TU URL NGROK
+        "https://confused-flashcard-nineteen.ngrok-free.dev/detect",
+
+        form,
+
+        {
+          headers:
+            form.getHeaders(),
+
+          maxBodyLength:
+            Infinity,
+
+          timeout:
+            60000
+        }
+      )
+
+    if (
+      typeof response.data !== "object"
+    ) {
+
+      return {
+        nsfw: false,
+        nudenet: [],
+        open_nsfw_score: 0
+      }
+    }
+
+    return response.data
+
+  } catch (e) {
+
+    console.log(
+      "ERROR API:",
+      e?.message || e
+    )
+
+    return {
+      nsfw: false,
+      nudenet: [],
+      open_nsfw_score: 0
+    }
+  }
 }
 
 // =========================
@@ -224,6 +261,10 @@ export default async function antiPorno(
       return false
     }
 
+    // =========================
+    // SOLO GRUPOS
+    // =========================
+
     if (
       !chatId.endsWith("@g.us")
     ) {
@@ -240,8 +281,11 @@ export default async function antiPorno(
     console.log(
       "[MEDIA CHECK]",
       {
-        hasSticker: !!stickerMsg,
-        hasImage: !!imageMsg
+        hasSticker:
+          !!stickerMsg,
+
+        hasImage:
+          !!imageMsg
       }
     )
 
@@ -322,6 +366,11 @@ export default async function antiPorno(
         "STICKER DETECTADO"
       )
 
+      console.log(
+        "ANIMATED:",
+        stickerMsg?.isAnimated
+      )
+
       const mediaBuffer =
         await toBuffer(
           stickerMsg,
@@ -338,6 +387,31 @@ export default async function antiPorno(
         webpFile,
         mediaBuffer
       )
+
+      // =========================
+      // SIZE CHECK
+      // =========================
+
+      const stats =
+        fs.statSync(
+          webpFile
+        )
+
+      if (
+        stats.size >
+        MAX_STICKER_SIZE
+      ) {
+
+        console.log(
+          "STICKER DEMASIADO PESADO"
+        )
+
+        safeDelete(
+          webpFile
+        )
+
+        return false
+      }
 
       try {
 
@@ -359,7 +433,7 @@ export default async function antiPorno(
         )
 
         // =========================
-        // FRAMES INTELIGENTES
+        // FRAMES
         // =========================
 
         const totalFrames =
@@ -405,7 +479,9 @@ export default async function antiPorno(
               .resize({
                 width: 512,
                 height: 512,
-                fit: "inside"
+                fit: "contain",
+                background: "#ffffff",
+                withoutEnlargement: false
               })
 
               .flatten({
@@ -416,7 +492,9 @@ export default async function antiPorno(
                 quality: 90
               })
 
-              .toFile(frameFile)
+              .toFile(
+                frameFile
+              )
 
           } catch (e) {
 
@@ -428,28 +506,10 @@ export default async function antiPorno(
             continue
           }
 
-          let result = null
-
-          try {
-
-            result =
-              await detectFile(
-                frameFile
-              )
-
-          } catch (e) {
-
-            console.log(
-              "ERROR API:",
-              e?.message || e
-            )
-
-            safeDelete(
+          const result =
+            await detectFile(
               frameFile
             )
-
-            continue
-          }
 
           console.log(
             `FRAME ${realFrame}:`,
@@ -505,7 +565,7 @@ export default async function antiPorno(
     )
 
     // =========================
-    // DELETE MSG
+    // DELETE MESSAGE
     // =========================
 
     await sock.sendMessage(
