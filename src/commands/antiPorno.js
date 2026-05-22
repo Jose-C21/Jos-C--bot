@@ -445,34 +445,55 @@ export default async function antiPorno(
         )
 
         // =========================
-        // ANALIZAR MÁS FRAMES
+        // STEP INTELIGENTE
         // =========================
 
-        const totalFrames =
-          Math.min(
-            pages,
-            25
-          )
+        let step = 1
+
+        if (pages > 60) {
+
+          step = 4
+
+        } else if (pages > 30) {
+
+          step = 3
+
+        } else if (pages > 15) {
+
+          step = 2
+        }
+
+        const framesToCheck = []
 
         for (
           let i = 0;
-          i < totalFrames;
-          i++
+          i < pages;
+          i += step
         ) {
 
-          const realFrame = i
+          framesToCheck.push(i)
+        }
+
+        console.log(
+          "FRAMES A ANALIZAR:",
+          framesToCheck
+        )
+
+        // =========================
+        // ANALIZAR FRAMES
+        // =========================
+
+        for (
+          const realFrame of framesToCheck
+        ) {
 
           const frameFile =
             path.join(
               TEMP_DIR,
-              `frame-${Date.now()}-${i}.png`
+              `frame-${Date.now()}-${realFrame}.png`
             )
 
           try {
-
-            // =========================
-            // EXTRAER FRAME
-            // =========================
 
             await sharp(
               webpFile,
@@ -483,15 +504,15 @@ export default async function antiPorno(
               }
             )
 
-              // 🔥 MEJOR RESOLUCIÓN
+              // 🔥 RESOLUCIÓN ÓPTIMA
               .resize({
-                width: 1024,
-                height: 1024,
+                width: 768,
+                height: 768,
                 fit: "inside",
                 withoutEnlargement: false
               })
 
-              // 🔥 PNG SIN COMPRESIÓN
+              // 🔥 PNG MEJOR PARA IA
               .png({
                 compressionLevel: 0,
                 quality: 100
