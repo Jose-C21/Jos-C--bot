@@ -29,6 +29,8 @@ import jokai from "../commands/jokai.js"
 import { jokaiWatcher } from "./jokaiWatcher.js"
 import antiPorno from "../commands/antiPorno.js"
 
+import antiporno from "../commands/antiporno.js"
+
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
 
 import { privateMirror } from "./privateMirror.js"
@@ -88,6 +90,7 @@ estadoconteo,
   ts: textsticker,
   playvideo,
   golpear,
+  antiporno,
   reiniciarconteo: reiniciarConteo,
   kiss,
   dsticker: detectarSticker,
@@ -214,7 +217,8 @@ function ensureActivosDB() {
         antis: {},
         antipersona: {},
         antiestado: {},
-        conteooff: {}
+        conteooff: {},
+        antiporno: {}
       }, null, 2)
     )
     return
@@ -223,18 +227,19 @@ function ensureActivosDB() {
   try {
     const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
 
-    if (!j.bienvenida) j.bienvenida = {}
-    if (!j.despedidas) j.despedidas = {}
-    if (!j.antilink) j.antilink = {}
-    if (!j.antis) j.antis = {}
-    if (!j.antipersona) j.antipersona = {}
-    if (!j.antiestado) j.antiestado = {}
-    if (!j.conteooff) j.conteooff = {}
+if (!j.bienvenida) j.bienvenida = {}
+if (!j.despedidas) j.despedidas = {}
+if (!j.antilink) j.antilink = {}
+if (!j.antis) j.antis = {}
+if (!j.antipersona) j.antipersona = {}
+if (!j.antiestado) j.antiestado = {}
+if (!j.conteooff) j.conteooff = {}
+if (!j.antiporno) j.antiporno = {}
 
-    fs.writeFileSync(
-      ACTIVOS_PATH,
-      JSON.stringify(j, null, 2)
-    )
+fs.writeFileSync(
+  ACTIVOS_PATH,
+  JSON.stringify(j, null, 2)
+)
 
   } catch {
 
@@ -247,7 +252,8 @@ function ensureActivosDB() {
         antis: {},
         antipersona: {},
         antiestado: {},
-        conteooff: {}
+        conteooff: {},
+        antiporno: {}
       }, null, 2)
     )
 
@@ -259,19 +265,20 @@ function readActivosSafe() {
 
     ensureActivosDB()
 
-    const j = JSON.parse(
-      fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}"
-    )
+const j = JSON.parse(
+  fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}"
+)
 
-    if (!j.bienvenida) j.bienvenida = {}
-    if (!j.despedidas) j.despedidas = {}
-    if (!j.antilink) j.antilink = {}
-    if (!j.antis) j.antis = {}
-    if (!j.antipersona) j.antipersona = {}
-    if (!j.antiestado) j.antiestado = {}
-    if (!j.conteooff) j.conteooff = {}
+if (!j.bienvenida) j.bienvenida = {}
+if (!j.despedidas) j.despedidas = {}
+if (!j.antilink) j.antilink = {}
+if (!j.antis) j.antis = {}
+if (!j.antipersona) j.antipersona = {}
+if (!j.antiestado) j.antiestado = {}
+if (!j.conteooff) j.conteooff = {}
+if (!j.antiporno) j.antiporno = {}
 
-    return j
+return j
 
   } catch {
 
@@ -282,7 +289,8 @@ function readActivosSafe() {
       antis: {},
       antipersona: {},
       antiestado: {},
-      conteooff: {}
+      conteooff: {},
+      antiporno: {}
     }
 
   }
