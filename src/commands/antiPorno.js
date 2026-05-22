@@ -172,7 +172,7 @@ async function detectFile(filePath) {
     const response =
       await axios.post(
 
-        "https://TU-NGROK.ngrok-free.app/detect",
+        "https://confused-flashcard-nineteen.ngrok-free.dev/detect",
 
         form,
 
