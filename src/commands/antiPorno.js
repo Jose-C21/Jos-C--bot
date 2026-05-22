@@ -1,4 +1,4 @@
- import fs from "fs"
+import fs from "fs"
 import path from "path"
 
 import axios from "axios"
@@ -448,45 +448,11 @@ export default async function antiPorno(
         // FRAMES IMPORTANTES
         // =========================
 
-        const importantFrames = []
-
-        importantFrames.push(0)
-
-        if (pages > 4) {
-
-          importantFrames.push(
-            Math.floor(
-              pages * 0.25
-            )
-          )
-        }
-
-        if (pages > 8) {
-
-          importantFrames.push(
-            Math.floor(
-              pages * 0.50
-            )
-          )
-        }
-
-        if (pages > 12) {
-
-          importantFrames.push(
-            Math.floor(
-              pages * 0.75
-            )
-          )
-        }
-
-        importantFrames.push(
+        const uniqueFrames = [
+          0,
+          Math.floor(pages / 2),
           pages - 1
-        )
-
-        const uniqueFrames =
-          [...new Set(
-            importantFrames
-          )]
+        ]
 
         console.log(
           "FRAMES IMPORTANTES:",
@@ -504,7 +470,7 @@ export default async function antiPorno(
           const frameFile =
             path.join(
               TEMP_DIR,
-              `frame-${Date.now()}-${realFrame}.png`
+              `frame-${Date.now()}-${realFrame}.jpg`
             )
 
           try {
@@ -514,24 +480,23 @@ export default async function antiPorno(
               {
                 animated: true,
                 page: realFrame,
-                limitInputPixels: false
+                limitInputPixels: false,
+                sequentialRead: true
               }
             )
 
               .resize({
-                width: 640,
-                height: 640,
+                width: 448,
+                height: 448,
                 fit: "inside",
-                withoutEnlargement: false
+                withoutEnlargement: true
               })
 
-              .png({
-                compressionLevel: 0
+              .jpeg({
+                quality: 82
               })
 
-              .toFile(
-                frameFile
-              )
+              .toFile(frameFile)
 
           } catch (e) {
 
