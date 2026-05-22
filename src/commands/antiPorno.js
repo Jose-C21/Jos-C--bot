@@ -744,7 +744,7 @@ export default async function antiPorno(
 
                 hasStrongGenitalia ||
 
-                openScore >= 0.80
+              
 
               )
             )
