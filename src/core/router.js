@@ -486,18 +486,46 @@ export async function routeMessage(sock, msg) {
 
 const hasSticker =
   !!(
+
     m?.stickerMessage ||
-    m?.ephemeralMessage?.message?.stickerMessage ||
-    m?.viewOnceMessageV2?.message?.stickerMessage ||
-    m?.viewOnceMessage?.message?.stickerMessage
+
+    m?.ephemeralMessage
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessage
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessageV2
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessageV2Extension
+      ?.message
+      ?.stickerMessage
   )
 
 const hasImage =
   !!(
+
     m?.imageMessage ||
-    m?.ephemeralMessage?.message?.imageMessage ||
-    m?.viewOnceMessageV2?.message?.imageMessage ||
-    m?.viewOnceMessage?.message?.imageMessage
+
+    m?.ephemeralMessage
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessage
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessageV2
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessageV2Extension
+      ?.message
+      ?.imageMessage
   )
 
 console.log(
@@ -573,15 +601,57 @@ try {
       const antisOn = !!activos?.antis?.[chatId]
 
       function unwrapMessage(m) {
-        let msgObj = m?.message || {}
-        while (true) {
-          if (msgObj?.ephemeralMessage?.message) { msgObj = msgObj.ephemeralMessage.message; continue }
-          if (msgObj?.viewOnceMessageV2?.message) { msgObj = msgObj.viewOnceMessageV2.message; continue }
-          if (msgObj?.viewOnceMessageV2Extension?.message) { msgObj = msgObj.viewOnceMessageV2Extension.message; continue }
-          break
-        }
-        return msgObj
-      }
+
+  let msgObj =
+    m?.message || {}
+
+  while (true) {
+
+    if (
+      msgObj?.ephemeralMessage?.message
+    ) {
+
+      msgObj =
+        msgObj.ephemeralMessage.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessage?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessage.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessageV2?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessageV2.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessageV2Extension?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessageV2Extension.message
+
+      continue
+    }
+
+    break
+  }
+
+  return msgObj
+}
 
       const mUnwrapped = unwrapMessage(msg)
 
@@ -947,10 +1017,23 @@ try {
   const m = msg?.message || {}
 
   const sticker =
-    m.stickerMessage ||
-    m.ephemeralMessage?.message?.stickerMessage ||
-    m.viewOnceMessageV2?.message?.stickerMessage ||
-    m.viewOnceMessage?.message?.stickerMessage
+  m.stickerMessage ||
+
+  m.ephemeralMessage
+    ?.message
+    ?.stickerMessage ||
+
+  m.viewOnceMessage
+    ?.message
+    ?.stickerMessage ||
+
+  m.viewOnceMessageV2
+    ?.message
+    ?.stickerMessage ||
+
+  m.viewOnceMessageV2Extension
+    ?.message
+    ?.stickerMessage
 
   if (sticker) {
 
