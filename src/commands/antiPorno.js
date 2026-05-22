@@ -1,4 +1,4 @@
- import fs from "fs"
+import fs from "fs"
 import path from "path"
 
 import axios from "axios"
@@ -734,16 +734,20 @@ export default async function antiPorno(
             ) ||
 
             (
-  lastFramePorn && (
+              lastFramePorn &&
 
-    hasButtocks ||
+              (
 
-    hasBreast ||
+                hasButtocks ||
 
-    hasStrongGenitalia
+                hasBreast ||
 
-  )
-)
+                hasStrongGenitalia ||
+
+                openScore >= 0.92
+
+              )
+            )
 
           ) {
 
