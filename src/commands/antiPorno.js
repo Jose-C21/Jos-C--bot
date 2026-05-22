@@ -1,4 +1,4 @@
-import fs from "fs"
+ import fs from "fs"
 import path from "path"
 
 import axios from "axios"
@@ -193,7 +193,7 @@ async function detectFile(filePath) {
             Infinity,
 
           timeout:
-            60000
+            15000
         }
       )
 
@@ -445,38 +445,52 @@ export default async function antiPorno(
         )
 
         // =========================
-        // STEP INTELIGENTE
+        // FRAMES IMPORTANTES
         // =========================
 
-        let step = 1
+        const importantFrames = []
 
-        if (pages > 60) {
+        importantFrames.push(0)
 
-          step = 4
+        if (pages > 4) {
 
-        } else if (pages > 30) {
-
-          step = 3
-
-        } else if (pages > 15) {
-
-          step = 2
+          importantFrames.push(
+            Math.floor(
+              pages * 0.25
+            )
+          )
         }
 
-        const framesToCheck = []
+        if (pages > 8) {
 
-        for (
-          let i = 0;
-          i < pages;
-          i += step
-        ) {
-
-          framesToCheck.push(i)
+          importantFrames.push(
+            Math.floor(
+              pages * 0.50
+            )
+          )
         }
+
+        if (pages > 12) {
+
+          importantFrames.push(
+            Math.floor(
+              pages * 0.75
+            )
+          )
+        }
+
+        importantFrames.push(
+          pages - 1
+        )
+
+        const uniqueFrames =
+          [...new Set(
+            importantFrames
+          )]
 
         console.log(
-          "FRAMES A ANALIZAR:",
-          framesToCheck
+          "FRAMES IMPORTANTES:",
+          uniqueFrames
         )
 
         // =========================
@@ -484,7 +498,7 @@ export default async function antiPorno(
         // =========================
 
         for (
-          const realFrame of framesToCheck
+          const realFrame of uniqueFrames
         ) {
 
           const frameFile =
@@ -504,18 +518,15 @@ export default async function antiPorno(
               }
             )
 
-              // 🔥 RESOLUCIÓN ÓPTIMA
               .resize({
-                width: 768,
-                height: 768,
+                width: 640,
+                height: 640,
                 fit: "inside",
                 withoutEnlargement: false
               })
 
-              // 🔥 PNG MEJOR PARA IA
               .png({
-                compressionLevel: 0,
-                quality: 100
+                compressionLevel: 0
               })
 
               .toFile(
