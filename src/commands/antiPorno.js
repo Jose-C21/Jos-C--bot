@@ -56,63 +56,6 @@ function isOwnerNumber(num) {
 }
 
 // =========================
-// UNWRAP
-// =========================
-
-function unwrapMessage(m) {
-
-  let msgObj =
-    m?.message || {}
-
-  while (true) {
-
-    if (
-      msgObj?.ephemeralMessage?.message
-    ) {
-
-      msgObj =
-        msgObj.ephemeralMessage.message
-
-      continue
-    }
-
-    if (
-      msgObj?.viewOnceMessageV2?.message
-    ) {
-
-      msgObj =
-        msgObj.viewOnceMessageV2.message
-
-      continue
-    }
-
-    if (
-      msgObj?.viewOnceMessageV2Extension?.message
-    ) {
-
-      msgObj =
-        msgObj.viewOnceMessageV2Extension.message
-
-      continue
-    }
-
-    if (
-      msgObj?.viewOnceMessage?.message
-    ) {
-
-      msgObj =
-        msgObj.viewOnceMessage.message
-
-      continue
-    }
-
-    break
-  }
-
-  return msgObj
-}
-
-// =========================
 // GET STICKER
 // =========================
 
@@ -294,6 +237,14 @@ export default async function antiPorno(
     const stickerMsg =
       getStickerMessage(msg)
 
+    console.log(
+      "[MEDIA CHECK]",
+      {
+        hasSticker: !!stickerMsg,
+        hasImage: !!imageMsg
+      }
+    )
+
     if (
       !imageMsg &&
       !stickerMsg
@@ -350,6 +301,10 @@ export default async function antiPorno(
         result?.nsfw === true
       ) {
 
+        console.log(
+          "NSFW IMAGE"
+        )
+
         detected = true
       }
     }
@@ -390,19 +345,35 @@ export default async function antiPorno(
           await sharp(
             webpFile,
             {
-              animated: true
+              animated: true,
+              limitInputPixels: false
             }
           ).metadata()
 
+        const pages =
+          meta.pages || 1
+
         console.log(
           "TOTAL FRAMES:",
-          meta.pages || 1
+          pages
         )
+
+        // =========================
+        // FRAMES INTELIGENTES
+        // =========================
 
         const totalFrames =
           Math.min(
-            meta.pages || 1,
-            10
+            pages,
+            12
+          )
+
+        const step =
+          Math.max(
+            1,
+            Math.floor(
+              pages / totalFrames
+            )
           )
 
         for (
@@ -411,44 +382,77 @@ export default async function antiPorno(
           i++
         ) {
 
+          const realFrame =
+            i * step
+
           const frameFile =
             path.join(
               TEMP_DIR,
               `frame-${Date.now()}-${i}.jpg`
             )
 
-          await sharp(
-            webpFile,
-            {
-              animated: true,
-              page: i,
-              limitInputPixels: false
-            }
-          )
+          try {
 
-            .resize({
-              width: 512,
-              height: 512,
-              fit: "inside"
-            })
+            await sharp(
+              webpFile,
+              {
+                animated: true,
+                page: realFrame,
+                limitInputPixels: false
+              }
+            )
 
-            .flatten({
-              background: "#ffffff"
-            })
+              .resize({
+                width: 512,
+                height: 512,
+                fit: "inside"
+              })
 
-            .jpeg({
-              quality: 90
-            })
+              .flatten({
+                background: "#ffffff"
+              })
 
-            .toFile(frameFile)
+              .jpeg({
+                quality: 90
+              })
 
-          const result =
-            await detectFile(
+              .toFile(frameFile)
+
+          } catch (e) {
+
+            console.log(
+              "ERROR FRAME:",
+              e
+            )
+
+            continue
+          }
+
+          let result = null
+
+          try {
+
+            result =
+              await detectFile(
+                frameFile
+              )
+
+          } catch (e) {
+
+            console.log(
+              "ERROR API:",
+              e?.message || e
+            )
+
+            safeDelete(
               frameFile
             )
 
+            continue
+          }
+
           console.log(
-            `FRAME: ${i}`,
+            `FRAME ${realFrame}:`,
             result
           )
 
@@ -462,7 +466,7 @@ export default async function antiPorno(
 
             console.log(
               "NSFW DETECTADO EN FRAME:",
-              i
+              realFrame
             )
 
             detected = true
@@ -555,6 +559,10 @@ export default async function antiPorno(
       const participantNum =
         jidToNumber(decoded) ||
         jidToNumber(participant)
+
+      // =========================
+      // OWNER PROTECTION
+      // =========================
 
       if (
         isOwnerNumber(
