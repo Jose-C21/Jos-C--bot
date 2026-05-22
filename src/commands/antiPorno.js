@@ -14,6 +14,10 @@ import { jidToNumber } from "../utils/jid.js"
 
 console.log("ANTI PORNO CARGADO")
 
+// =========================
+// TEMP
+// =========================
+
 const TEMP_DIR =
   path.join(
     process.cwd(),
@@ -238,9 +242,7 @@ async function detectFile(filePath) {
       }
     )
 
-  return (
-    response.data || {}
-  )
+  return response.data
 }
 
 // =========================
@@ -285,9 +287,6 @@ export default async function antiPorno(
 
       return false
     }
-
-    const mUnwrapped =
-      unwrapMessage(msg)
 
     const imageMsg =
       getImageMessage(msg)
@@ -339,7 +338,7 @@ export default async function antiPorno(
         )
 
       console.log(
-        "API RESULT:",
+        "IMAGE RESULT:",
         result
       )
 
@@ -387,27 +386,24 @@ export default async function antiPorno(
 
       try {
 
-        const img =
-          sharp(
+        const meta =
+          await sharp(
             webpFile,
             {
               animated: true
             }
-          )
+          ).metadata()
 
-        const meta =
-          await img.metadata()
+        console.log(
+          "TOTAL FRAMES:",
+          meta.pages || 1
+        )
 
         const totalFrames =
           Math.min(
             meta.pages || 1,
-            12
+            10
           )
-
-        console.log(
-          "TOTAL FRAMES:",
-          totalFrames
-        )
 
         for (
           let i = 0;
@@ -425,20 +421,23 @@ export default async function antiPorno(
             webpFile,
             {
               animated: true,
-              page: i
+              page: i,
+              limitInputPixels: false
             }
           )
+
+            .resize({
+              width: 512,
+              height: 512,
+              fit: "inside"
+            })
 
             .flatten({
               background: "#ffffff"
             })
 
-            .resize({
-              width: 1400
-            })
-
             .jpeg({
-              quality: 100
+              quality: 90
             })
 
             .toFile(frameFile)
@@ -449,8 +448,7 @@ export default async function antiPorno(
             )
 
           console.log(
-            "FRAME:",
-            i,
+            `FRAME: ${i}`,
             result
           )
 
@@ -458,7 +456,6 @@ export default async function antiPorno(
             frameFile
           )
 
-          // ✅ NUEVA LÓGICA
           if (
             result?.nsfw === true
           ) {
@@ -559,7 +556,6 @@ export default async function antiPorno(
         jidToNumber(decoded) ||
         jidToNumber(participant)
 
-      // ✅ PROTEGER SOLO OWNERS
       if (
         isOwnerNumber(
           participantNum
