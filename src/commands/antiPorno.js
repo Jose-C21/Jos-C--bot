@@ -938,26 +938,48 @@ export default async function antiPorno(
       }
     }
 
-    await sock.sendMessage(
+    const userTag =
+  participant
+    ? `@${jidToNumber(participant || "")}`
+    : "Usuario"
 
-      chatId,
+await sock.sendMessage(
 
-      {
-        text:
-`> 🚫 Usuario expulsado automáticamente por enviar contenido NSFW.`
-      }
+  chatId,
 
-    ).catch(() => {})
+  {
+    text:
+`╭━🚫 𝗔𝗡𝗧𝗜-𝗣𝗢𝗥𝗡𝗢
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+┃    ${userTag}
+┃
+┃ 🔞 𝗠𝗼𝘁𝗶𝘃𝗼:
+┃    Contenido NSFW detectado
+┃
+┃ 🛡️ 𝗔𝗰𝗰𝗶𝗼́𝗻:
+┃    Expulsión automática
+╰━━━━━━━━━━━━
 
-    return true
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
 
-  } catch (e) {
-
-    console.log(
-      "ERROR NSFW:",
-      e
-    )
-
-    return false
+    mentions:
+      participant
+        ? [String(participant)]
+        : []
   }
+
+).catch(() => {})
+
+return true
+
+} catch (e) {
+
+  console.log(
+    "ERROR NSFW:",
+    e
+  )
+
+  return false
+}
 }
