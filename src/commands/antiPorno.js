@@ -323,6 +323,13 @@ export default async function antiPorno(
     if (!chatId) {
       return false
     }
+    
+    const fromMe =
+  !!msg?.key?.fromMe
+
+if (fromMe) {
+  return false
+}
 
     // =========================
     // SOLO GRUPOS
