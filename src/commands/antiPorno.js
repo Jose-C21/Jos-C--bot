@@ -682,38 +682,38 @@ export default async function antiPorno(
 
           if (
 
-            hasStrongGenitalia ||
+  hasStrongGenitalia ||
 
-            (
+  (
 
-              openScore >= 0.96
+    openScore >= 0.985
 
-            ) ||
+  ) ||
 
-            (
+  (
 
-              openScore >= 0.82 &&
-              result?.nsfw === true
+    openScore >= 0.90 &&
+    result?.nsfw === true
 
-            ) ||
+  ) ||
 
-            (
+  (
 
-              hasBreast &&
-              openScore >= 0.55
+    hasBreast &&
+    openScore >= 0.55
 
-            )
+  )
 
-          ) {
+) {
 
-            console.log(
-              "NSFW DETECTADO EN FRAME:",
-              realFrame
-            )
+  console.log(
+    "NSFW DETECTADO EN FRAME:",
+    realFrame
+  )
 
-            detected = true
-            break
-          }
+  detected = true
+  break
+}
         }
 
       } catch (e) {
