@@ -65,69 +65,64 @@ function isOwnerNumber(num) {
 }
 
 // =========================
-// GET STICKER
+// UNWRAP MESSAGE
+// SOPORTE:
+// - VIEW ONCE
+// - EPHEMERAL
+// - V2
 // =========================
 
-function getStickerMessage(msg) {
+function unwrapMessage(msg) {
 
-  const m =
+  let m =
     msg?.message || {}
 
-  return (
+  while (true) {
 
-    m?.stickerMessage ||
+    if (
+      m?.ephemeralMessage?.message
+    ) {
 
-    m?.ephemeralMessage
-      ?.message
-      ?.stickerMessage ||
+      m =
+        m.ephemeralMessage.message
 
-    m?.viewOnceMessageV2
-      ?.message
-      ?.stickerMessage ||
+      continue
+    }
 
-    m?.viewOnceMessageV2Extension
-      ?.message
-      ?.stickerMessage ||
+    if (
+      m?.viewOnceMessage?.message
+    ) {
 
-    m?.viewOnceMessage
-      ?.message
-      ?.stickerMessage ||
+      m =
+        m.viewOnceMessage.message
 
-    null
-  )
-}
+      continue
+    }
 
-// =========================
-// GET IMAGE
-// =========================
+    if (
+      m?.viewOnceMessageV2?.message
+    ) {
 
-function getImageMessage(msg) {
+      m =
+        m.viewOnceMessageV2.message
 
-  const m =
-    msg?.message || {}
+      continue
+    }
 
-  return (
+    if (
+      m?.viewOnceMessageV2Extension?.message
+    ) {
 
-    m?.imageMessage ||
+      m =
+        m.viewOnceMessageV2Extension.message
 
-    m?.ephemeralMessage
-      ?.message
-      ?.imageMessage ||
+      continue
+    }
 
-    m?.viewOnceMessageV2
-      ?.message
-      ?.imageMessage ||
+    break
+  }
 
-    m?.viewOnceMessageV2Extension
-      ?.message
-      ?.imageMessage ||
-
-    m?.viewOnceMessage
-      ?.message
-      ?.imageMessage ||
-
-    null
-  )
+  return m
 }
 
 // =========================
@@ -272,11 +267,18 @@ export default async function antiPorno(
       return false
     }
 
+    // =========================
+    // UNWRAP
+    // =========================
+
+    const cleanMsg =
+      unwrapMessage(msg)
+
     const imageMsg =
-      getImageMessage(msg)
+      cleanMsg?.imageMessage || null
 
     const stickerMsg =
-      getStickerMessage(msg)
+      cleanMsg?.stickerMessage || null
 
     console.log(
       "[MEDIA CHECK]",
@@ -448,11 +450,14 @@ export default async function antiPorno(
         // FRAMES IMPORTANTES
         // =========================
 
-        const uniqueFrames = [
-          0,
-          Math.floor(pages / 2),
-          pages - 1
-        ]
+        const uniqueFrames =
+          [...new Set([
+            0,
+            Math.floor(
+              pages / 2
+            ),
+            pages - 1
+          ])]
 
         console.log(
           "FRAMES IMPORTANTES:",
@@ -496,7 +501,9 @@ export default async function antiPorno(
                 quality: 82
               })
 
-              .toFile(frameFile)
+              .toFile(
+                frameFile
+              )
 
           } catch (e) {
 
