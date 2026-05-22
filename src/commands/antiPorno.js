@@ -734,18 +734,16 @@ export default async function antiPorno(
             ) ||
 
             (
-              lastFramePorn &&
+  lastFramePorn && (
 
-              (
+    hasButtocks ||
 
-                hasButtocks ||
+    hasBreast ||
 
-                hasBreast ||
+    hasStrongGenitalia
 
-                hasStrongGenitalia ||
-
-               
-            )
+  )
+)
 
           ) {
 
