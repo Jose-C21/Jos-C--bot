@@ -28,7 +28,8 @@ if (!fs.existsSync(TEMP_DIR)) {
 
   fs.mkdirSync(
     TEMP_DIR,
-    { recursive: true
+    {
+      recursive: true
     }
   )
 }
@@ -180,7 +181,6 @@ async function detectFile(filePath) {
     const response =
       await axios.post(
 
-        // 🔥 TU URL NGROK
         "https://confused-flashcard-nineteen.ngrok-free.dev/detect",
 
         form,
@@ -316,40 +316,52 @@ export default async function antiPorno(
           `${Date.now()}.jpg`
         )
 
-      const mediaBuffer =
-        await toBuffer(
-          imageMsg,
-          "image"
+      try {
+
+        const mediaBuffer =
+          await toBuffer(
+            imageMsg,
+            "image"
+          )
+
+        fs.writeFileSync(
+          imageFile,
+          mediaBuffer
         )
 
-      fs.writeFileSync(
-        imageFile,
-        mediaBuffer
-      )
-
-      const result =
-        await detectFile(
-          imageFile
-        )
-
-      console.log(
-        "IMAGE RESULT:",
-        result
-      )
-
-      safeDelete(
-        imageFile
-      )
-
-      if (
-        result?.nsfw === true
-      ) {
+        const result =
+          await detectFile(
+            imageFile
+          )
 
         console.log(
-          "NSFW IMAGE"
+          "IMAGE RESULT:",
+          result
         )
 
-        detected = true
+        if (
+          result?.nsfw === true
+        ) {
+
+          console.log(
+            "NSFW IMAGE"
+          )
+
+          detected = true
+        }
+
+      } catch (e) {
+
+        console.log(
+          "ERROR IMAGE:",
+          e
+        )
+
+      } finally {
+
+        safeDelete(
+          imageFile
+        )
       }
     }
 
@@ -403,7 +415,7 @@ export default async function antiPorno(
       ) {
 
         console.log(
-          "STICKER DEMASIADO PESADO"
+          "STICKER MUY PESADO"
         )
 
         safeDelete(
@@ -433,21 +445,13 @@ export default async function antiPorno(
         )
 
         // =========================
-        // FRAMES
+        // ANALIZAR MÁS FRAMES
         // =========================
 
         const totalFrames =
           Math.min(
             pages,
-            12
-          )
-
-        const step =
-          Math.max(
-            1,
-            Math.floor(
-              pages / totalFrames
-            )
+            25
           )
 
         for (
@@ -456,16 +460,19 @@ export default async function antiPorno(
           i++
         ) {
 
-          const realFrame =
-            i * step
+          const realFrame = i
 
           const frameFile =
             path.join(
               TEMP_DIR,
-              `frame-${Date.now()}-${i}.jpg`
+              `frame-${Date.now()}-${i}.png`
             )
 
           try {
+
+            // =========================
+            // EXTRAER FRAME
+            // =========================
 
             await sharp(
               webpFile,
@@ -476,20 +483,18 @@ export default async function antiPorno(
               }
             )
 
+              // 🔥 MEJOR RESOLUCIÓN
               .resize({
-                width: 512,
-                height: 512,
-                fit: "contain",
-                background: "#ffffff",
+                width: 1024,
+                height: 1024,
+                fit: "inside",
                 withoutEnlargement: false
               })
 
-              .flatten({
-                background: "#ffffff"
-              })
-
-              .jpeg({
-                quality: 90
+              // 🔥 PNG SIN COMPRESIÓN
+              .png({
+                compressionLevel: 0,
+                quality: 100
               })
 
               .toFile(
@@ -506,10 +511,28 @@ export default async function antiPorno(
             continue
           }
 
-          const result =
-            await detectFile(
+          let result = null
+
+          try {
+
+            result =
+              await detectFile(
+                frameFile
+              )
+
+          } catch (e) {
+
+            console.log(
+              "ERROR API FRAME:",
+              e
+            )
+
+            safeDelete(
               frameFile
             )
+
+            continue
+          }
 
           console.log(
             `FRAME ${realFrame}:`,
