@@ -66,10 +66,6 @@ function isOwnerNumber(num) {
 
 // =========================
 // UNWRAP MESSAGE
-// SOPORTE:
-// - VIEW ONCE
-// - EPHEMERAL
-// - V2
 // =========================
 
 function unwrapMessage(msg) {
@@ -274,11 +270,25 @@ export default async function antiPorno(
     const cleanMsg =
       unwrapMessage(msg)
 
+    // =========================
+    // FALLBACKS
+    // =========================
+
     const imageMsg =
-      cleanMsg?.imageMessage || null
+
+      cleanMsg?.imageMessage ||
+
+      msg?.message?.imageMessage ||
+
+      null
 
     const stickerMsg =
-      cleanMsg?.stickerMessage || null
+
+      cleanMsg?.stickerMessage ||
+
+      msg?.message?.stickerMessage ||
+
+      null
 
     console.log(
       "[MEDIA CHECK]",
@@ -341,8 +351,10 @@ export default async function antiPorno(
           result
         )
 
+        // 🔥 MÁS ESTRICTO SOLO SI SCORE ALTO
         if (
-          result?.nsfw === true
+          result?.nsfw === true ||
+          result?.open_nsfw_score >= 0.75
         ) {
 
           console.log(
@@ -447,17 +459,39 @@ export default async function antiPorno(
         )
 
         // =========================
-        // FRAMES IMPORTANTES
+        // FRAMES INTELIGENTES
         // =========================
 
-        const uniqueFrames =
-          [...new Set([
-            0,
-            Math.floor(
-              pages / 2
-            ),
-            pages - 1
-          ])]
+        let uniqueFrames = []
+
+        if (pages <= 3) {
+
+          uniqueFrames =
+            [0]
+
+        } else {
+
+          uniqueFrames =
+            [...new Set([
+
+              0,
+
+              Math.floor(
+                pages * 0.25
+              ),
+
+              Math.floor(
+                pages * 0.50
+              ),
+
+              Math.floor(
+                pages * 0.75
+              ),
+
+              pages - 1
+
+            ])]
+        }
 
         console.log(
           "FRAMES IMPORTANTES:",
@@ -547,8 +581,93 @@ export default async function antiPorno(
             frameFile
           )
 
+          // 🔥 LÓGICA MEJORADA
+          // evita falsos positivos
+          // detecta porno real
+
+          const openScore =
+            Number(
+              result?.open_nsfw_score || 0
+            )
+
+          const nudenet =
+            result?.nudenet || []
+
+          const hasStrongGenitalia =
+            nudenet.some(x => {
+
+              const cls =
+                String(
+                  x?.class || ""
+                ).toUpperCase()
+
+              const score =
+                Number(
+                  x?.score || 0
+                )
+
+              return (
+
+                (
+                  cls.includes(
+                    "GENITALIA_EXPOSED"
+                  ) ||
+
+                  cls.includes(
+                    "MALE_GENITALIA_EXPOSED"
+                  ) ||
+
+                  cls.includes(
+                    "FEMALE_GENITALIA_EXPOSED"
+                  )
+                )
+
+                &&
+
+                score >= 0.45
+              )
+            })
+
+          const hasBreast =
+            nudenet.some(x => {
+
+              const cls =
+                String(
+                  x?.class || ""
+                ).toUpperCase()
+
+              const score =
+                Number(
+                  x?.score || 0
+                )
+
+              return (
+
+                cls.includes(
+                  "BREAST_EXPOSED"
+                )
+
+                &&
+
+                score >= 0.80
+              )
+            })
+
+          // =========================
+          // DETECCIÓN FINAL
+          // =========================
+
           if (
-            result?.nsfw === true
+
+            hasStrongGenitalia ||
+
+            openScore >= 0.82 ||
+
+            (
+              hasBreast &&
+              openScore >= 0.55
+            )
+
           ) {
 
             console.log(
