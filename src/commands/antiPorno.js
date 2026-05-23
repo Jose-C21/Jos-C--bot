@@ -409,85 +409,167 @@ if (fromMe) {
       false
 
     // =========================
-    // IMAGE
-    // =========================
+// IMAGE
+// =========================
 
-    if (imageMsg) {
+if (imageMsg) {
 
-      console.log(
-        "IMAGEN DETECTADA"
+  console.log(
+    "IMAGEN DETECTADA"
+  )
+
+  const imageFile =
+    path.join(
+      TEMP_DIR,
+      `${Date.now()}.jpg`
+    )
+
+  try {
+
+    const mediaBuffer =
+      await toBuffer(
+        imageMsg,
+        "image"
       )
 
-      const imageFile =
-        path.join(
-          TEMP_DIR,
-          `${Date.now()}.jpg`
-        )
+    fs.writeFileSync(
+      imageFile,
+      mediaBuffer
+    )
 
-      try {
+    const result =
+      await detectFile(
+        imageFile
+      )
 
-        const mediaBuffer =
-          await toBuffer(
-            imageMsg,
-            "image"
-          )
+    console.log(
+      "IMAGE RESULT:",
+      result
+    )
 
-        fs.writeFileSync(
-          imageFile,
-          mediaBuffer
-        )
+    const openScore =
+      Number(
+        result?.open_nsfw_score || 0
+      )
 
-        const result =
-          await detectFile(
-            imageFile
-          )
+    const nudenet =
+      Array.isArray(result?.nudenet)
+        ? result.nudenet
+        : []
 
-        console.log(
-          "IMAGE RESULT:",
-          result
-        )
+    // =========================
+    // SOLO CLASES EXPLÍCITAS
+    // =========================
 
-        const openScore =
+    const hasMaleGenitalia =
+      nudenet.some(x => {
+
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
+
+        const score =
           Number(
-            result?.open_nsfw_score || 0
+            x?.score || 0
           )
 
-        const nudenet =
-          result?.nudenet || []
+        return (
+          cls ===
+            "MALE_GENITALIA_EXPOSED"
+          &&
+          score >= 0.45
+        )
+      })
 
-        const hasNudeNet =
-          Array.isArray(nudenet) &&
-          nudenet.length > 0
+    const hasFemaleGenitalia =
+      nudenet.some(x => {
 
-        if (
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
 
-          hasNudeNet ||
-
-          openScore >= 0.75
-
-        ) {
-
-          console.log(
-            "NSFW IMAGE"
+        const score =
+          Number(
+            x?.score || 0
           )
 
-          detected = true
-        }
-
-      } catch (e) {
-
-        console.log(
-          "ERROR IMAGE:",
-          e
+        return (
+          cls ===
+            "FEMALE_GENITALIA_EXPOSED"
+          &&
+          score >= 0.45
         )
+      })
 
-      } finally {
+    const hasBreastExposed =
+      nudenet.some(x => {
 
-        safeDelete(
-          imageFile
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
+
+        const score =
+          Number(
+            x?.score || 0
+          )
+
+        return (
+          cls ===
+            "FEMALE_BREAST_EXPOSED"
+          &&
+          score >= 0.70
         )
-      }
+      })
+
+    // =========================
+    // DETECCIÓN REAL
+    // =========================
+
+    if (
+
+      hasMaleGenitalia ||
+
+      hasFemaleGenitalia ||
+
+      hasBreastExposed ||
+
+      (
+        result?.nsfw === true &&
+        openScore >= 0.98
+      )
+
+    ) {
+
+      console.log(
+        "NSFW IMAGE"
+      )
+
+      detected = true
+
+    } else {
+
+      console.log(
+        "IMAGEN NORMAL"
+      )
     }
+
+  } catch (e) {
+
+    console.log(
+      "ERROR IMAGE:",
+      e
+    )
+
+  } finally {
+
+    safeDelete(
+      imageFile
+    )
+  }
+}
 
     // =========================
     // STICKER
