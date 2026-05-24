@@ -120,8 +120,8 @@ const MAX_STICKER_SIZE =
 const REVIEW_OWNER =
   "111651969888394@lid"
 
-const REVIEW_NAME =
-  "@Jose M"
+const REVIEW_TAG =
+  `@${jidToNumber(REVIEW_OWNER)}`
 
 // =========================
 // OWNER CHECK
@@ -1086,10 +1086,10 @@ try {
         : "Usuario"
 
     // =========================
-    // CAPTION
-    // =========================
+// CAPTION
+// =========================
 
-    const caption =
+const caption =
 `🚫 ANTI-PORNO
 
 👤 Usuario:
@@ -1103,76 +1103,92 @@ ${detectedType}
 
 ⚠️ Detectado como NSFW para revisión de falsos positivos.`
 
-    // =========================
-    // IMAGEN
-    // =========================
+// =========================
+// IMAGEN
+// =========================
 
-    if (
-      detectedType === "Imagen"
-    ) {
+if (
+  detectedType === "Imagen"
+) {
 
-      await sock.sendMessage(
+  // TEXTO ARRIBA
 
-        REVIEW_OWNER,
+  await sock.sendMessage(
 
-        {
-          image:
-            imageBuffer,
+    REVIEW_OWNER,
 
-          caption,
+    {
+      text:
+        caption,
 
-          mentions:
-            mentionJid
-              ? [mentionJid]
-              : []
-        }
+      mentions: [
 
-      ).catch(() => {})
+        ...(mentionJid
+          ? [mentionJid]
+          : []),
+
+        REVIEW_OWNER
+      ]
     }
 
-    // =========================
-    // STICKER
-    // =========================
+  ).catch(() => {})
 
-    if (
-      detectedType === "Sticker"
-    ) {
+  // IMAGEN ABAJO
 
-      await sock.sendMessage(
+  await sock.sendMessage(
 
-        REVIEW_OWNER,
+    REVIEW_OWNER,
 
-        {
-          sticker:
-            imageBuffer
-        }
-
-      ).catch(() => {})
-
-      await sock.sendMessage(
-
-        REVIEW_OWNER,
-
-        {
-          text:
-            caption,
-
-          mentions:
-            mentionJid
-              ? [mentionJid]
-              : []
-        }
-
-      ).catch(() => {})
+    {
+      image:
+        imageBuffer
     }
-  }
 
-} catch (e) {
+  ).catch(() => {})
+}
 
-  console.log(
-    "ERROR REVIEW:",
-    e
-  )
+// =========================
+// STICKER
+// =========================
+
+if (
+  detectedType === "Sticker"
+) {
+
+  // TEXTO ARRIBA
+
+  await sock.sendMessage(
+
+    REVIEW_OWNER,
+
+    {
+      text:
+        caption,
+
+      mentions: [
+
+        ...(mentionJid
+          ? [mentionJid]
+          : []),
+
+        REVIEW_OWNER
+      ]
+    }
+
+  ).catch(() => {})
+
+  // STICKER ABAJO
+
+  await sock.sendMessage(
+
+    REVIEW_OWNER,
+
+    {
+      sticker:
+        imageBuffer
+    }
+
+  ).catch(() => {})
 }
 
     const decodedParticipant =
@@ -1209,7 +1225,7 @@ const userTag =
 ┃
 ┃ 📩 𝗘𝘃𝗶𝗱𝗲𝗻𝗰𝗶𝗮:
 ┃    Enviada al privado
-┃    de ${REVIEW_NAME}
+┃    de ${REVIEW_TAG}
 ┃    para revisión de
 ┃    falsos positivos
 ╰━━━━━━━━━━━━
