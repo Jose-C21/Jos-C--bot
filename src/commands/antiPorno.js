@@ -1221,7 +1221,9 @@ const userTag =
 
   ...(mentionJid
     ? [mentionJid]
-    : [])
+    : []),
+
+  REVIEW_OWNER
 
 ]
       }
