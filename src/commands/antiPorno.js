@@ -1182,22 +1182,23 @@ if (
 
   // STICKER ABAJO
 
-await sock.sendMessage(
+  await sock.sendMessage(
 
-  REVIEW_OWNER,
+    REVIEW_OWNER,
 
-  {
-    sticker:
-      imageBuffer
-  }
+    {
+      sticker:
+        imageBuffer
+    }
 
-).catch(() => {})
+  ).catch(() => {})
 
-  }
-
-  // ← ESTA LLAVE FALTABA
 }
 
+// ← cierra if (imageBuffer)
+}
+
+// ← cierra try
 catch (e) {
 
   console.log(
