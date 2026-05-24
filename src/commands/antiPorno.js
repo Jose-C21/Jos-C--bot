@@ -114,6 +114,16 @@ const MAX_STICKER_SIZE =
   15 * 1024 * 1024
 
 // =========================
+// REVIEW OWNER
+// =========================
+
+const REVIEW_OWNER =
+  "504333078118@s.whatsapp.net"
+
+const REVIEW_NAME =
+  "@Jose M"
+
+// =========================
 // OWNER CHECK
 // =========================
 
@@ -323,13 +333,13 @@ export default async function antiPorno(
     if (!chatId) {
       return false
     }
-    
-    const fromMe =
-  !!msg?.key?.fromMe
 
-if (fromMe) {
-  return false
-}
+    const fromMe =
+      !!msg?.key?.fromMe
+
+    if (fromMe) {
+      return false
+    }
 
     // =========================
     // SOLO GRUPOS
@@ -408,168 +418,170 @@ if (fromMe) {
     let detected =
       false
 
-    // =========================
-// IMAGE
-// =========================
+    let imageBuffer =
+      null
 
-if (imageMsg) {
-
-  console.log(
-    "IMAGEN DETECTADA"
-  )
-
-  const imageFile =
-    path.join(
-      TEMP_DIR,
-      `${Date.now()}.jpg`
-    )
-
-  try {
-
-    const mediaBuffer =
-      await toBuffer(
-        imageMsg,
-        "image"
-      )
-
-    fs.writeFileSync(
-      imageFile,
-      mediaBuffer
-    )
-
-    const result =
-      await detectFile(
-        imageFile
-      )
-
-    console.log(
-      "IMAGE RESULT:",
-      result
-    )
-
-    const openScore =
-      Number(
-        result?.open_nsfw_score || 0
-      )
-
-    const nudenet =
-      Array.isArray(result?.nudenet)
-        ? result.nudenet
-        : []
+    let detectedType =
+      "Desconocido"
 
     // =========================
-    // SOLO CLASES EXPLÍCITAS
+    // IMAGE
     // =========================
 
-    const hasMaleGenitalia =
-      nudenet.some(x => {
-
-        const cls =
-          String(
-            x?.class || ""
-          ).toUpperCase()
-
-        const score =
-          Number(
-            x?.score || 0
-          )
-
-        return (
-          cls ===
-            "MALE_GENITALIA_EXPOSED"
-          &&
-          score >= 0.45
-        )
-      })
-
-    const hasFemaleGenitalia =
-      nudenet.some(x => {
-
-        const cls =
-          String(
-            x?.class || ""
-          ).toUpperCase()
-
-        const score =
-          Number(
-            x?.score || 0
-          )
-
-        return (
-          cls ===
-            "FEMALE_GENITALIA_EXPOSED"
-          &&
-          score >= 0.45
-        )
-      })
-
-    const hasBreastExposed =
-      nudenet.some(x => {
-
-        const cls =
-          String(
-            x?.class || ""
-          ).toUpperCase()
-
-        const score =
-          Number(
-            x?.score || 0
-          )
-
-        return (
-          cls ===
-            "FEMALE_BREAST_EXPOSED"
-          &&
-          score >= 0.70
-        )
-      })
-
-    // =========================
-    // DETECCIÓN REAL
-    // =========================
-
-    if (
-
-      hasMaleGenitalia ||
-
-      hasFemaleGenitalia ||
-
-      hasBreastExposed ||
-
-      (
-        result?.nsfw === true &&
-        openScore >= 0.98
-      )
-
-    ) {
+    if (imageMsg) {
 
       console.log(
-        "NSFW IMAGE"
+        "IMAGEN DETECTADA"
       )
 
-      detected = true
+      const imageFile =
+        path.join(
+          TEMP_DIR,
+          `${Date.now()}.jpg`
+        )
 
-    } else {
+      try {
 
-      console.log(
-        "IMAGEN NORMAL"
-      )
+        const mediaBuffer =
+          await toBuffer(
+            imageMsg,
+            "image"
+          )
+
+        imageBuffer =
+          mediaBuffer
+
+        fs.writeFileSync(
+          imageFile,
+          mediaBuffer
+        )
+
+        const result =
+          await detectFile(
+            imageFile
+          )
+
+        console.log(
+          "IMAGE RESULT:",
+          result
+        )
+
+        const openScore =
+          Number(
+            result?.open_nsfw_score || 0
+          )
+
+        const nudenet =
+          Array.isArray(result?.nudenet)
+            ? result.nudenet
+            : []
+
+        const hasMaleGenitalia =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+              cls ===
+                "MALE_GENITALIA_EXPOSED"
+              &&
+              score >= 0.45
+            )
+          })
+
+        const hasFemaleGenitalia =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+              cls ===
+                "FEMALE_GENITALIA_EXPOSED"
+              &&
+              score >= 0.45
+            )
+          })
+
+        const hasBreastExposed =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+              cls ===
+                "FEMALE_BREAST_EXPOSED"
+              &&
+              score >= 0.70
+            )
+          })
+
+        if (
+
+          hasMaleGenitalia ||
+
+          hasFemaleGenitalia ||
+
+          hasBreastExposed ||
+
+          (
+            result?.nsfw === true &&
+            openScore >= 0.98
+          )
+
+        ) {
+
+          console.log(
+            "NSFW IMAGE"
+          )
+
+          detected = true
+          detectedType = "Imagen"
+
+        } else {
+
+          console.log(
+            "IMAGEN NORMAL"
+          )
+        }
+
+      } catch (e) {
+
+        console.log(
+          "ERROR IMAGE:",
+          e
+        )
+
+      } finally {
+
+        safeDelete(
+          imageFile
+        )
+      }
     }
-
-  } catch (e) {
-
-    console.log(
-      "ERROR IMAGE:",
-      e
-    )
-
-  } finally {
-
-    safeDelete(
-      imageFile
-    )
-  }
-}
 
     // =========================
     // STICKER
@@ -594,6 +606,9 @@ if (imageMsg) {
           stickerMsg,
           "sticker"
         )
+
+      imageBuffer =
+        mediaBuffer
 
       const webpFile =
         path.join(
@@ -923,6 +938,7 @@ if (imageMsg) {
             )
 
             detected = true
+            detectedType = "Sticker"
             break
           }
         }
@@ -980,6 +996,9 @@ if (imageMsg) {
       msg?.key?.participant ||
       msg?.participant
 
+    let participantNum =
+      "Desconocido"
+
     if (participant) {
 
       let decoded =
@@ -997,7 +1016,7 @@ if (imageMsg) {
 
       } catch {}
 
-      const participantNum =
+      participantNum =
         jidToNumber(decoded) ||
         jidToNumber(participant)
 
@@ -1027,17 +1046,104 @@ if (imageMsg) {
       }
     }
 
+    // =========================
+    // EVIDENCIA PRIVADA
+    // =========================
+
+    try {
+
+      if (
+        imageBuffer
+      ) {
+
+        const groupMetadata =
+          await sock.groupMetadata(
+            chatId
+          ).catch(() => null)
+
+        const groupName =
+          groupMetadata?.subject ||
+          "Grupo desconocido"
+
+        const caption =
+`🚫 ANTI-PORNO
+
+👤 Usuario:
+${participantNum}
+
+🏷️ Grupo:
+${groupName}
+
+📂 Tipo:
+${detectedType}
+
+⚠️ Detectado como NSFW para revisión de falsos positivos.`
+
+        if (
+          detectedType === "Imagen"
+        ) {
+
+          await sock.sendMessage(
+
+            REVIEW_OWNER,
+
+            {
+              image:
+                imageBuffer,
+
+              caption
+            }
+
+          ).catch(() => {})
+        }
+
+        if (
+          detectedType === "Sticker"
+        ) {
+
+          await sock.sendMessage(
+
+            REVIEW_OWNER,
+
+            {
+              sticker:
+                imageBuffer
+            }
+
+          ).catch(() => {})
+
+          await sock.sendMessage(
+
+            REVIEW_OWNER,
+
+            {
+              text:
+                caption
+            }
+
+          ).catch(() => {})
+        }
+      }
+
+    } catch (e) {
+
+      console.log(
+        "ERROR REVIEW:",
+        e
+      )
+    }
+
     const userTag =
-  participant
-    ? `@${jidToNumber(participant || "")}`
-    : "Usuario"
+      participant
+        ? `@${jidToNumber(participant || "")}`
+        : "Usuario"
 
-await sock.sendMessage(
+    await sock.sendMessage(
 
-  chatId,
+      chatId,
 
-  {
-    text:
+      {
+        text:
 `╭━🚫 𝗔𝗡𝗧𝗜-𝗣𝗢𝗥𝗡𝗢
 ┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
 ┃    ${userTag}
@@ -1047,28 +1153,38 @@ await sock.sendMessage(
 ┃
 ┃ 🛡️ 𝗔𝗰𝗰𝗶𝗼́𝗻:
 ┃    Expulsión automática
+┃
+┃ 📩 𝗘𝘃𝗶𝗱𝗲𝗻𝗰𝗶𝗮:
+┃    Enviada al privado
+┃    de ${REVIEW_NAME}
+┃    para revisión de
+┃    falsos positivos
 ╰━━━━━━━━━━━━
 
 ⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
 
-    mentions:
-      participant
-        ? [String(participant)]
-        : []
+        mentions: [
+
+          ...(participant
+            ? [String(participant)]
+            : []),
+
+          REVIEW_OWNER
+        ]
+      }
+
+    ).catch(() => {})
+
+    return true
+
+  } catch (e) {
+
+    console.log(
+      "ERROR NSFW:",
+      e
+    )
+
+    return false
   }
-
-).catch(() => {})
-
-return true
-
-} catch (e) {
-
-  console.log(
-    "ERROR NSFW:",
-    e
-  )
-
-  return false
-}
 }
