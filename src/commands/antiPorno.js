@@ -1195,7 +1195,10 @@ await sock.sendMessage(
 
   }
 
-} catch (e) {
+  // ← ESTA LLAVE FALTABA
+}
+
+catch (e) {
 
   console.log(
     "ERROR REVIEW:",
