@@ -1047,29 +1047,53 @@ export default async function antiPorno(
     }
 
     // =========================
-    // EVIDENCIA PRIVADA
+// EVIDENCIA PRIVADA
+// =========================
+
+try {
+
+  if (
+    imageBuffer
+  ) {
+
+    const groupMetadata =
+      await sock.groupMetadata(
+        chatId
+      ).catch(() => null)
+
+    const groupName =
+      groupMetadata?.subject ||
+      "Grupo desconocido"
+
+    // =========================
+    // MENTION REAL
     // =========================
 
-    try {
+    const decodedParticipant =
+      participant && sock?.decodeJid
+        ? sock.decodeJid(participant)
+        : participant
 
-      if (
-        imageBuffer
-      ) {
+    const mentionJid =
+      decodedParticipant || participant
 
-        const groupMetadata =
-          await sock.groupMetadata(
-            chatId
-          ).catch(() => null)
+    const mentionNumber =
+      jidToNumber(mentionJid || "")
 
-        const groupName =
-          groupMetadata?.subject ||
-          "Grupo desconocido"
+    const userTag =
+      mentionNumber
+        ? `@${mentionNumber}`
+        : "Usuario"
 
-        const caption =
+    // =========================
+    // CAPTION
+    // =========================
+
+    const caption =
 `🚫 ANTI-PORNO
 
 👤 Usuario:
-${participantNum}
+${userTag}
 
 🏷️ Grupo:
 ${groupName}
@@ -1079,64 +1103,93 @@ ${detectedType}
 
 ⚠️ Detectado como NSFW para revisión de falsos positivos.`
 
-        if (
-          detectedType === "Imagen"
-        ) {
+    // =========================
+    // IMAGEN
+    // =========================
 
-          await sock.sendMessage(
+    if (
+      detectedType === "Imagen"
+    ) {
 
-            REVIEW_OWNER,
+      await sock.sendMessage(
 
-            {
-              image:
-                imageBuffer,
+        REVIEW_OWNER,
 
-              caption
-            }
+        {
+          image:
+            imageBuffer,
 
-          ).catch(() => {})
+          caption,
+
+          mentions:
+            mentionJid
+              ? [mentionJid]
+              : []
         }
 
-        if (
-          detectedType === "Sticker"
-        ) {
-
-          await sock.sendMessage(
-
-            REVIEW_OWNER,
-
-            {
-              sticker:
-                imageBuffer
-            }
-
-          ).catch(() => {})
-
-          await sock.sendMessage(
-
-            REVIEW_OWNER,
-
-            {
-              text:
-                caption
-            }
-
-          ).catch(() => {})
-        }
-      }
-
-    } catch (e) {
-
-      console.log(
-        "ERROR REVIEW:",
-        e
-      )
+      ).catch(() => {})
     }
 
-    const userTag =
-      participant
-        ? `@${jidToNumber(participant || "")}`
-        : "Usuario"
+    // =========================
+    // STICKER
+    // =========================
+
+    if (
+      detectedType === "Sticker"
+    ) {
+
+      await sock.sendMessage(
+
+        REVIEW_OWNER,
+
+        {
+          sticker:
+            imageBuffer
+        }
+
+      ).catch(() => {})
+
+      await sock.sendMessage(
+
+        REVIEW_OWNER,
+
+        {
+          text:
+            caption,
+
+          mentions:
+            mentionJid
+              ? [mentionJid]
+              : []
+        }
+
+      ).catch(() => {})
+    }
+  }
+
+} catch (e) {
+
+  console.log(
+    "ERROR REVIEW:",
+    e
+  )
+}
+
+    const decodedParticipant =
+  participant && sock?.decodeJid
+    ? sock.decodeJid(participant)
+    : participant
+
+const mentionJid =
+  decodedParticipant || participant
+
+const mentionNumber =
+  jidToNumber(mentionJid || "")
+
+const userTag =
+  mentionNumber
+    ? `@${mentionNumber}`
+    : "Usuario"
 
     await sock.sendMessage(
 
@@ -1166,8 +1219,8 @@ ${detectedType}
 
         mentions: [
 
-  ...(participant
-    ? [String(participant)]
+  ...(mentionJid
+    ? [mentionJid]
     : [])
 
 ]
