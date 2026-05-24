@@ -1182,7 +1182,7 @@ if (
 
   // STICKER ABAJO
 
-  await sock.sendMessage(
+    await sock.sendMessage(
 
     REVIEW_OWNER,
 
@@ -1199,7 +1199,7 @@ if (
 }
 
 // ← cierra try
-catch (e) {
+} catch (e) {
 
   console.log(
     "ERROR REVIEW:",
