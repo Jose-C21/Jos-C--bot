@@ -118,7 +118,7 @@ const MAX_STICKER_SIZE =
 // =========================
 
 const REVIEW_OWNER =
-  "504333078118@s.whatsapp.net"
+  "111651969888394@lid"
 
 const REVIEW_NAME =
   "@Jose M"
@@ -1166,12 +1166,11 @@ ${detectedType}
 
         mentions: [
 
-          ...(participant
-            ? [String(participant)]
-            : []),
+  ...(participant
+    ? [String(participant)]
+    : [])
 
-          REVIEW_OWNER
-        ]
+]
       }
 
     ).catch(() => {})
