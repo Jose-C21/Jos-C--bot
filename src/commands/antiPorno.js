@@ -1046,6 +1046,27 @@ export default async function antiPorno(
       }
     }
 
+    
+    // =========================
+// MENTION REAL
+// =========================
+
+const decodedParticipant =
+  participant && sock?.decodeJid
+    ? sock.decodeJid(participant)
+    : participant
+
+const mentionJid =
+  decodedParticipant || participant
+
+const mentionNumber =
+  jidToNumber(mentionJid || "")
+
+const userTag =
+  mentionNumber
+    ? `@${mentionNumber}`
+    : "Usuario"
+    
     // =========================
 // EVIDENCIA PRIVADA
 // =========================
@@ -1065,25 +1086,7 @@ try {
       groupMetadata?.subject ||
       "Grupo desconocido"
 
-    // =========================
-    // MENTION REAL
-    // =========================
-
-    const decodedParticipant =
-      participant && sock?.decodeJid
-        ? sock.decodeJid(participant)
-        : participant
-
-    const mentionJid =
-      decodedParticipant || participant
-
-    const mentionNumber =
-      jidToNumber(mentionJid || "")
-
-    const userTag =
-      mentionNumber
-        ? `@${mentionNumber}`
-        : "Usuario"
+    
 
     // =========================
 // CAPTION
@@ -1179,35 +1182,28 @@ if (
 
   // STICKER ABAJO
 
-  await sock.sendMessage(
+await sock.sendMessage(
 
-    REVIEW_OWNER,
+  REVIEW_OWNER,
 
-    {
-      sticker:
-        imageBuffer
-    }
+  {
+    sticker:
+      imageBuffer
+  }
 
-  ).catch(() => {})
+).catch(() => {})
+
+  }
+
+} catch (e) {
+
+  console.log(
+    "ERROR REVIEW:",
+    e
+  )
 }
 
-    const decodedParticipant =
-  participant && sock?.decodeJid
-    ? sock.decodeJid(participant)
-    : participant
-
-const mentionJid =
-  decodedParticipant || participant
-
-const mentionNumber =
-  jidToNumber(mentionJid || "")
-
-const userTag =
-  mentionNumber
-    ? `@${mentionNumber}`
-    : "Usuario"
-
-    await sock.sendMessage(
+await sock.sendMessage(
 
       chatId,
 
