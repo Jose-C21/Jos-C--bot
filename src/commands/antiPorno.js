@@ -729,7 +729,7 @@ if (
           openScore
         )
 
-        const hasStrongGenitalia =
+        const hasMaleGenitalia =
           nudenet.some(x => {
 
             const cls =
@@ -744,15 +744,8 @@ if (
 
             return (
 
-              (
-                cls ===
-                  "MALE_GENITALIA_EXPOSED"
-
-                ||
-
-                cls ===
-                  "FEMALE_GENITALIA_EXPOSED"
-              )
+              cls ===
+                "MALE_GENITALIA_EXPOSED"
 
               &&
 
@@ -760,7 +753,31 @@ if (
             )
           })
 
-        const hasStrongBreast =
+        const hasFemaleGenitalia =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+
+              cls ===
+                "FEMALE_GENITALIA_EXPOSED"
+
+              &&
+
+              score >= 0.60
+            )
+          })
+
+        const hasBreastExposed =
           nudenet.some(x => {
 
             const cls =
@@ -784,56 +801,42 @@ if (
             )
           })
 
-        const hasStrongButtocks =
-          nudenet.some(x => {
-
-            const cls =
-              String(
-                x?.class || ""
-              ).toUpperCase()
-
-            const score =
-              Number(
-                x?.score || 0
-              )
-
-            return (
-
-              cls ===
-                "BUTTOCKS_EXPOSED"
-
-              &&
-
-              score >= 0.70
-            )
-          })
-
         if (
 
           (
-            openScore >= 0.92 &&
-            result?.nsfw === true
+
+            (
+
+              hasMaleGenitalia ||
+
+              hasFemaleGenitalia
+
+            )
+
+            &&
+
+            openScore >= 0.70
+
           )
 
           ||
 
           (
-            openScore >= 0.80 &&
-            hasStrongGenitalia
+
+            hasBreastExposed &&
+
+            openScore >= 0.75
+
           )
 
           ||
 
           (
-            hasStrongBreast &&
-            openScore >= 0.90
-          )
 
-          ||
+            result?.nsfw === true &&
 
-          (
-            hasStrongButtocks &&
-            openScore >= 0.95
+            openScore >= 0.985
+
           )
 
         ) {
