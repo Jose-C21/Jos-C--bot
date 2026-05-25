@@ -583,378 +583,595 @@ export default async function antiPorno(
       }
     }
 
+  // =========================
+// STICKER
+// =========================
+
+if (
+  stickerMsg &&
+  !detected
+) {
+
+  console.log(
+    "STICKER DETECTADO"
+  )
+
+  console.log(
+    "ANIMATED:",
+    stickerMsg?.isAnimated
+  )
+
+  const mediaBuffer =
+    await toBuffer(
+      stickerMsg,
+      "sticker"
+    )
+
+  imageBuffer =
+    mediaBuffer
+
+  const webpFile =
+    path.join(
+      TEMP_DIR,
+      `${Date.now()}.webp`
+    )
+
+  fs.writeFileSync(
+    webpFile,
+    mediaBuffer
+  )
+
+  const stats =
+    fs.statSync(
+      webpFile
+    )
+
+  if (
+    stats.size >
+    MAX_STICKER_SIZE
+  ) {
+
+    console.log(
+      "STICKER MUY PESADO"
+    )
+
+    safeDelete(
+      webpFile
+    )
+
+    return false
+  }
+
+  try {
+
+    const meta =
+      await sharp(
+        webpFile,
+        {
+          animated: true,
+          limitInputPixels: false
+        }
+      ).metadata()
+
+    const pages =
+      meta.pages || 1
+
+    console.log(
+      "TOTAL FRAMES:",
+      pages
+    )
+
     // =========================
-    // STICKER
+    // STICKER ESTÁTICO
     // =========================
 
-    if (
-      stickerMsg &&
-      !detected
-    ) {
+    if (pages <= 1) {
 
       console.log(
-        "STICKER DETECTADO"
+        "STICKER ESTATICO"
       )
 
-      console.log(
-        "ANIMATED:",
-        stickerMsg?.isAnimated
-      )
-
-      const mediaBuffer =
-        await toBuffer(
-          stickerMsg,
-          "sticker"
-        )
-
-      imageBuffer =
-        mediaBuffer
-
-      const webpFile =
+      const frameFile =
         path.join(
           TEMP_DIR,
-          `${Date.now()}.webp`
+          `static-${Date.now()}.jpg`
         )
-
-      fs.writeFileSync(
-        webpFile,
-        mediaBuffer
-      )
-
-      const stats =
-        fs.statSync(
-          webpFile
-        )
-
-      if (
-        stats.size >
-        MAX_STICKER_SIZE
-      ) {
-
-        console.log(
-          "STICKER MUY PESADO"
-        )
-
-        safeDelete(
-          webpFile
-        )
-
-        return false
-      }
 
       try {
 
-        const meta =
+        await sharp(
+          webpFile,
+          {
+            animated: false,
+            limitInputPixels: false
+          }
+        )
+
+          .resize({
+            width: 448,
+            height: 448,
+            fit: "inside",
+            withoutEnlargement: true
+          })
+
+          .jpeg({
+            quality: 82
+          })
+
+          .toFile(
+            frameFile
+          )
+
+        const result =
+          await detectFile(
+            frameFile
+          )
+
+        console.log(
+          "STATIC RESULT:",
+          result
+        )
+
+        const openScore =
+          Number(
+            result?.open_nsfw_score || 0
+          )
+
+        const nudenet =
+          Array.isArray(
+            result?.nudenet
+          )
+            ? result.nudenet
+            : []
+
+        console.log(
+          "STATIC SCORE:",
+          openScore
+        )
+
+        const hasStrongGenitalia =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+
+              (
+                cls ===
+                  "MALE_GENITALIA_EXPOSED"
+
+                ||
+
+                cls ===
+                  "FEMALE_GENITALIA_EXPOSED"
+              )
+
+              &&
+
+              score >= 0.60
+            )
+          })
+
+        const hasStrongBreast =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+
+              cls ===
+                "FEMALE_BREAST_EXPOSED"
+
+              &&
+
+              score >= 0.78
+            )
+          })
+
+        const hasStrongButtocks =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+
+              cls ===
+                "BUTTOCKS_EXPOSED"
+
+              &&
+
+              score >= 0.70
+            )
+          })
+
+        if (
+
+          (
+            openScore >= 0.92 &&
+            result?.nsfw === true
+          )
+
+          ||
+
+          (
+            openScore >= 0.80 &&
+            hasStrongGenitalia
+          )
+
+          ||
+
+          (
+            hasStrongBreast &&
+            openScore >= 0.90
+          )
+
+          ||
+
+          (
+            hasStrongButtocks &&
+            openScore >= 0.95
+          )
+
+        ) {
+
+          console.log(
+            "NSFW STICKER ESTATICO"
+          )
+
+          detected = true
+          detectedType = "Sticker"
+
+        } else {
+
+          console.log(
+            "STICKER ESTATICO LIMPIO"
+          )
+        }
+
+      } catch (e) {
+
+        console.log(
+          "ERROR STATIC STICKER:",
+          e
+        )
+
+      } finally {
+
+        safeDelete(
+          frameFile
+        )
+      }
+    }
+
+    // =========================
+    // STICKER ANIMADO
+    // =========================
+
+    else {
+
+      console.log(
+        "STICKER ANIMADO"
+      )
+
+      let uniqueFrames = []
+
+      if (pages <= 3) {
+
+        uniqueFrames =
+          [0]
+
+      } else {
+
+        uniqueFrames =
+          [...new Set([
+
+            0,
+
+            Math.floor(
+              pages * 0.25
+            ),
+
+            Math.floor(
+              pages * 0.50
+            ),
+
+            Math.floor(
+              pages * 0.75
+            ),
+
+            pages - 1
+
+          ])]
+      }
+
+      console.log(
+        "FRAMES IMPORTANTES:",
+        uniqueFrames
+      )
+
+      for (
+        const realFrame of uniqueFrames
+      ) {
+
+        const frameFile =
+          path.join(
+            TEMP_DIR,
+            `frame-${Date.now()}-${realFrame}.jpg`
+          )
+
+        try {
+
           await sharp(
             webpFile,
             {
               animated: true,
-              limitInputPixels: false
+              page: realFrame,
+              limitInputPixels: false,
+              sequentialRead: true
             }
-          ).metadata()
+          )
 
-        const pages =
-          meta.pages || 1
+            .resize({
+              width: 448,
+              height: 448,
+              fit: "inside",
+              withoutEnlargement: true
+            })
 
-        console.log(
-          "TOTAL FRAMES:",
-          pages
-        )
+            .jpeg({
+              quality: 82
+            })
 
-        let uniqueFrames = []
-
-        if (pages <= 3) {
-
-          uniqueFrames =
-            [0]
-
-        } else {
-
-          uniqueFrames =
-            [...new Set([
-
-              0,
-
-              Math.floor(
-                pages * 0.25
-              ),
-
-              Math.floor(
-                pages * 0.50
-              ),
-
-              Math.floor(
-                pages * 0.75
-              ),
-
-              pages - 1
-
-            ])]
-        }
-
-        console.log(
-          "FRAMES IMPORTANTES:",
-          uniqueFrames
-        )
-
-        for (
-          const realFrame of uniqueFrames
-        ) {
-
-          const frameFile =
-            path.join(
-              TEMP_DIR,
-              `frame-${Date.now()}-${realFrame}.jpg`
-            )
-
-          try {
-
-            await sharp(
-              webpFile,
-              {
-                animated: true,
-                page: realFrame,
-                limitInputPixels: false,
-                sequentialRead: true
-              }
-            )
-
-              .resize({
-                width: 448,
-                height: 448,
-                fit: "inside",
-                withoutEnlargement: true
-              })
-
-              .jpeg({
-                quality: 82
-              })
-
-              .toFile(
-                frameFile
-              )
-
-          } catch (e) {
-
-            console.log(
-              "ERROR FRAME:",
-              e
-            )
-
-            continue
-          }
-
-          let result = null
-
-          try {
-
-            result =
-              await detectFile(
-                frameFile
-              )
-
-          } catch (e) {
-
-            console.log(
-              "ERROR API FRAME:",
-              e
-            )
-
-            safeDelete(
+            .toFile(
               frameFile
             )
 
-            continue
-          }
+        } catch (e) {
 
           console.log(
-            `FRAME ${realFrame}:`,
-            result
+            "ERROR FRAME:",
+            e
+          )
+
+          continue
+        }
+
+        let result = null
+
+        try {
+
+          result =
+            await detectFile(
+              frameFile
+            )
+
+        } catch (e) {
+
+          console.log(
+            "ERROR API FRAME:",
+            e
           )
 
           safeDelete(
             frameFile
           )
 
-          const openScore =
-            Number(
-              result?.open_nsfw_score || 0
-            )
-
-          const nudenet =
-            result?.nudenet || []
-
-          console.log(
-            "FRAME SCORE:",
-            openScore
-          )
-
-          const hasStrongGenitalia =
-            nudenet.some(x => {
-
-              const cls =
-                String(
-                  x?.class || ""
-                ).toUpperCase()
-
-              const score =
-                Number(
-                  x?.score || 0
-                )
-
-              return (
-
-                (
-                  cls.includes(
-                    "GENITALIA_EXPOSED"
-                  ) ||
-
-                  cls.includes(
-                    "MALE_GENITALIA_EXPOSED"
-                  ) ||
-
-                  cls.includes(
-                    "FEMALE_GENITALIA_EXPOSED"
-                  ) ||
-
-                  cls.includes(
-                    "ANUS_EXPOSED"
-                  )
-                )
-
-                &&
-
-                score >= 0.45
-              )
-            })
-
-          const hasBreast =
-            nudenet.some(x => {
-
-              const cls =
-                String(
-                  x?.class || ""
-                ).toUpperCase()
-
-              const score =
-                Number(
-                  x?.score || 0
-                )
-
-              return (
-
-                cls.includes(
-                  "BREAST_EXPOSED"
-                )
-
-                &&
-
-                score >= 0.80
-              )
-            })
-
-          const hasButtocks =
-            nudenet.some(x => {
-
-              const cls =
-                String(
-                  x?.class || ""
-                ).toUpperCase()
-
-              const score =
-                Number(
-                  x?.score || 0
-                )
-
-              return (
-
-                cls.includes(
-                  "BUTTOCKS_EXPOSED"
-                )
-
-                &&
-
-                score >= 0.55
-              )
-            })
-
-          const isLastFrame =
-
-            realFrame ===
-            pages - 1
-
-          const lastFramePorn =
-
-            isLastFrame &&
-
-            result?.nsfw === true &&
-
-            openScore >= 0.80
-
-          if (
-
-            hasStrongGenitalia ||
-
-            (
-              openScore >= 0.985
-            ) ||
-
-            (
-              openScore >= 0.90 &&
-              result?.nsfw === true
-            ) ||
-
-            (
-              hasBreast &&
-              openScore >= 0.55
-            ) ||
-
-            (
-              hasButtocks &&
-              openScore >= 0.88
-            ) ||
-
-            (
-              lastFramePorn &&
-
-              (
-
-                hasButtocks ||
-
-                hasBreast ||
-
-                hasStrongGenitalia ||
-
-                openScore >= 0.92
-
-              )
-            )
-
-          ) {
-
-            console.log(
-              "NSFW DETECTADO EN FRAME:",
-              realFrame
-            )
-
-            detected = true
-            detectedType = "Sticker"
-            break
-          }
+          continue
         }
 
-      } catch (e) {
+        console.log(
+          `FRAME ${realFrame}:`,
+          result
+        )
+
+        safeDelete(
+          frameFile
+        )
+
+        const openScore =
+          Number(
+            result?.open_nsfw_score || 0
+          )
+
+        const nudenet =
+          result?.nudenet || []
 
         console.log(
-          "ERROR STICKER:",
-          e
+          "FRAME SCORE:",
+          openScore
         )
-      }
 
-      safeDelete(
-        webpFile
-      )
+        const hasStrongGenitalia =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+
+              (
+                cls.includes(
+                  "GENITALIA_EXPOSED"
+                ) ||
+
+                cls.includes(
+                  "MALE_GENITALIA_EXPOSED"
+                ) ||
+
+                cls.includes(
+                  "FEMALE_GENITALIA_EXPOSED"
+                ) ||
+
+                cls.includes(
+                  "ANUS_EXPOSED"
+                )
+              )
+
+              &&
+
+              score >= 0.45
+            )
+          })
+
+        const hasBreast =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+
+              cls.includes(
+                "BREAST_EXPOSED"
+              )
+
+              &&
+
+              score >= 0.80
+            )
+          })
+
+        const hasButtocks =
+          nudenet.some(x => {
+
+            const cls =
+              String(
+                x?.class || ""
+              ).toUpperCase()
+
+            const score =
+              Number(
+                x?.score || 0
+              )
+
+            return (
+
+              cls.includes(
+                "BUTTOCKS_EXPOSED"
+              )
+
+              &&
+
+              score >= 0.55
+            )
+          })
+
+        const isLastFrame =
+
+          realFrame ===
+          pages - 1
+
+        const lastFramePorn =
+
+          isLastFrame &&
+
+          result?.nsfw === true &&
+
+          openScore >= 0.80
+
+        if (
+
+          hasStrongGenitalia ||
+
+          (
+            openScore >= 0.985
+          ) ||
+
+          (
+            openScore >= 0.90 &&
+            result?.nsfw === true
+          ) ||
+
+          (
+            hasBreast &&
+            openScore >= 0.55
+          ) ||
+
+          (
+            hasButtocks &&
+            openScore >= 0.88
+          ) ||
+
+          (
+            lastFramePorn &&
+
+            (
+
+              hasButtocks ||
+
+              hasBreast ||
+
+              hasStrongGenitalia ||
+
+              openScore >= 0.92
+
+            )
+          )
+
+        ) {
+
+          console.log(
+            "NSFW DETECTADO EN FRAME:",
+            realFrame
+          )
+
+          detected = true
+          detectedType = "Sticker"
+          break
+        }
+      }
     }
+
+  } catch (e) {
+
+    console.log(
+      "ERROR STICKER:",
+      e
+    )
+  }
+
+  safeDelete(
+    webpFile
+  )
+}
 
     if (!detected) {
 
