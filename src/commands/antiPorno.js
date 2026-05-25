@@ -1060,51 +1060,50 @@ else {
     if (
 
   (
- 
-   (
-    hasMaleGenitalia ||
 
-    hasFemaleGenitalia
+    (
+      hasMaleGenitalia ||
+
+      hasFemaleGenitalia
+    )
+
+    &&
+
+    openScore >= 0.55
 
   )
 
-  &&
+  ||
 
-  openScore >= 0.55
+  (
 
-)
+    hasBreastExposed &&
 
-||
+    openScore >= 0.55
 
-(
+  )
 
-  hasBreastExposed &&
+  ||
 
-  openScore >= 0.55
+  (
 
-)
+    result?.nsfw === true &&
 
+    openScore >= 0.93
 
+  )
 
-(
+) {
 
-  result?.nsfw === true &&
+  console.log(
+    "NSFW DETECTADO EN FRAME:",
+    realFrame
+  )
 
-  openScore >= 0.93
-
-)
-
-    ) {
-
-      console.log(
-        "NSFW DETECTADO EN FRAME:",
-        realFrame
-      )
-
-      detected = true
-      detectedType = "Sticker"
-      break
-    }
+  detected = true
+  detectedType = "Sticker"
+  break
+}
   }
 }
 
