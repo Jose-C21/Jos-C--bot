@@ -1059,30 +1059,29 @@ else {
 
     if (
 
-      hasMaleGenitalia ||
+  (
 
-      hasFemaleGenitalia ||
+    hasMaleGenitalia ||
 
-      (
+    hasFemaleGenitalia
 
-        hasBreastExposed &&
+  )
 
-        openScore >= 0.55
+  &&
 
-      )
+  openScore >= 0.75
 
-      ||
+)
 
-      (
-        openScore >= 0.985
-      )
+||
 
-      ||
+(
 
-      (
-        openScore >= 0.90 &&
-        result?.nsfw === true
-      )
+  hasBreastExposed &&
+
+  openScore >= 0.70
+
+)
 
     ) {
 
