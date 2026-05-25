@@ -662,503 +662,441 @@ if (
     )
 
     // =========================
-    // STICKER ESTÁTICO
-    // =========================
+// STICKER ESTÁTICO
+// =========================
 
-    if (pages <= 1) {
+if (pages <= 1) {
 
-      console.log(
-        "STICKER ESTATICO"
+  console.log(
+    "STICKER ESTATICO"
+  )
+
+  const frameFile =
+    path.join(
+      TEMP_DIR,
+      `static-${Date.now()}.jpg`
+    )
+
+  try {
+
+    await sharp(
+      webpFile,
+      {
+        animated: false,
+        limitInputPixels: false
+      }
+    )
+
+      .resize({
+        width: 448,
+        height: 448,
+        fit: "inside",
+        withoutEnlargement: true
+      })
+
+      .jpeg({
+        quality: 82
+      })
+
+      .toFile(
+        frameFile
       )
 
-      const frameFile =
-        path.join(
-          TEMP_DIR,
-          `static-${Date.now()}.jpg`
-        )
+    const result =
+      await detectFile(
+        frameFile
+      )
 
-      try {
+    console.log(
+      "STATIC RESULT:",
+      result
+    )
 
-        await sharp(
-          webpFile,
-          {
-            animated: false,
-            limitInputPixels: false
-          }
-        )
+    const openScore =
+      Number(
+        result?.open_nsfw_score || 0
+      )
 
-          .resize({
-            width: 448,
-            height: 448,
-            fit: "inside",
-            withoutEnlargement: true
-          })
+    const nudenet =
+      Array.isArray(
+        result?.nudenet
+      )
+        ? result.nudenet
+        : []
 
-          .jpeg({
-            quality: 82
-          })
+    console.log(
+      "STATIC SCORE:",
+      openScore
+    )
 
-          .toFile(
-            frameFile
-          )
+    const hasMaleGenitalia =
+      nudenet.some(x => {
 
-        const result =
-          await detectFile(
-            frameFile
-          )
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
 
-        console.log(
-          "STATIC RESULT:",
-          result
-        )
-
-        const openScore =
+        const score =
           Number(
-            result?.open_nsfw_score || 0
+            x?.score || 0
           )
 
-        const nudenet =
-          Array.isArray(
-            result?.nudenet
-          )
-            ? result.nudenet
-            : []
+        return (
+          cls ===
+            "MALE_GENITALIA_EXPOSED"
 
-        console.log(
-          "STATIC SCORE:",
-          openScore
+          &&
+
+          score >= 0.60
         )
+      })
 
-        const hasStrongGenitalia =
-          nudenet.some(x => {
+    const hasFemaleGenitalia =
+      nudenet.some(x => {
 
-            const cls =
-              String(
-                x?.class || ""
-              ).toUpperCase()
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
 
-            const score =
-              Number(
-                x?.score || 0
-              )
-
-            return (
-
-              (
-                cls ===
-                  "MALE_GENITALIA_EXPOSED"
-
-                ||
-
-                cls ===
-                  "FEMALE_GENITALIA_EXPOSED"
-              )
-
-              &&
-
-              score >= 0.60
-            )
-          })
-
-        const hasStrongBreast =
-          nudenet.some(x => {
-
-            const cls =
-              String(
-                x?.class || ""
-              ).toUpperCase()
-
-            const score =
-              Number(
-                x?.score || 0
-              )
-
-            return (
-
-              cls ===
-                "FEMALE_BREAST_EXPOSED"
-
-              &&
-
-              score >= 0.78
-            )
-          })
-
-        const hasStrongButtocks =
-          nudenet.some(x => {
-
-            const cls =
-              String(
-                x?.class || ""
-              ).toUpperCase()
-
-            const score =
-              Number(
-                x?.score || 0
-              )
-
-            return (
-
-              cls ===
-                "BUTTOCKS_EXPOSED"
-
-              &&
-
-              score >= 0.70
-            )
-          })
-
-        if (
-
-          (
-            openScore >= 0.92 &&
-            result?.nsfw === true
+        const score =
+          Number(
+            x?.score || 0
           )
 
-          ||
+        return (
+          cls ===
+            "FEMALE_GENITALIA_EXPOSED"
 
-          (
-            openScore >= 0.80 &&
-            hasStrongGenitalia
-          )
+          &&
 
-          ||
-
-          (
-            hasStrongBreast &&
-            openScore >= 0.90
-          )
-
-          ||
-
-          (
-            hasStrongButtocks &&
-            openScore >= 0.95
-          )
-
-        ) {
-
-          console.log(
-            "NSFW STICKER ESTATICO"
-          )
-
-          detected = true
-          detectedType = "Sticker"
-
-        } else {
-
-          console.log(
-            "STICKER ESTATICO LIMPIO"
-          )
-        }
-
-      } catch (e) {
-
-        console.log(
-          "ERROR STATIC STICKER:",
-          e
+          score >= 0.60
         )
+      })
 
-      } finally {
+    const hasBreastExposed =
+      nudenet.some(x => {
 
-        safeDelete(
-          frameFile
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
+
+        const score =
+          Number(
+            x?.score || 0
+          )
+
+        return (
+          cls ===
+            "FEMALE_BREAST_EXPOSED"
+
+          &&
+
+          score >= 0.78
         )
-      }
+      })
+
+    if (
+
+      (
+
+        result?.nsfw === true &&
+
+        openScore >= 0.92
+
+      )
+
+      ||
+
+      hasMaleGenitalia ||
+
+      hasFemaleGenitalia ||
+
+      hasBreastExposed
+
+    ) {
+
+      console.log(
+        "NSFW STICKER ESTATICO"
+      )
+
+      detected = true
+      detectedType = "Sticker"
+
+    } else {
+
+      console.log(
+        "STICKER ESTATICO LIMPIO"
+      )
     }
 
-    // =========================
-    // STICKER ANIMADO
-    // =========================
+  } catch (e) {
 
-    else {
+    console.log(
+      "ERROR STATIC STICKER:",
+      e
+    )
 
-      console.log(
-        "STICKER ANIMADO"
+  } finally {
+
+    safeDelete(
+      frameFile
+    )
+  }
+}
+
+    // =========================
+// STICKER ANIMADO
+// =========================
+
+else {
+
+  console.log(
+    "STICKER ANIMADO"
+  )
+
+  let uniqueFrames = []
+
+  if (pages <= 3) {
+
+    uniqueFrames =
+      [0]
+
+  } else {
+
+    uniqueFrames =
+      [...new Set([
+
+        0,
+
+        Math.floor(
+          pages * 0.25
+        ),
+
+        Math.floor(
+          pages * 0.50
+        ),
+
+        Math.floor(
+          pages * 0.75
+        ),
+
+        pages - 1
+
+      ])]
+  }
+
+  console.log(
+    "FRAMES IMPORTANTES:",
+    uniqueFrames
+  )
+
+  for (
+    const realFrame of uniqueFrames
+  ) {
+
+    const frameFile =
+      path.join(
+        TEMP_DIR,
+        `frame-${Date.now()}-${realFrame}.jpg`
       )
 
-      let uniqueFrames = []
+    try {
 
-      if (pages <= 3) {
-
-        uniqueFrames =
-          [0]
-
-      } else {
-
-        uniqueFrames =
-          [...new Set([
-
-            0,
-
-            Math.floor(
-              pages * 0.25
-            ),
-
-            Math.floor(
-              pages * 0.50
-            ),
-
-            Math.floor(
-              pages * 0.75
-            ),
-
-            pages - 1
-
-          ])]
-      }
-
-      console.log(
-        "FRAMES IMPORTANTES:",
-        uniqueFrames
+      await sharp(
+        webpFile,
+        {
+          animated: true,
+          page: realFrame,
+          limitInputPixels: false,
+          sequentialRead: true
+        }
       )
 
-      for (
-        const realFrame of uniqueFrames
-      ) {
+        .resize({
+          width: 448,
+          height: 448,
+          fit: "inside",
+          withoutEnlargement: true
+        })
 
-        const frameFile =
-          path.join(
-            TEMP_DIR,
-            `frame-${Date.now()}-${realFrame}.jpg`
-          )
+        .jpeg({
+          quality: 82
+        })
 
-        try {
-
-          await sharp(
-            webpFile,
-            {
-              animated: true,
-              page: realFrame,
-              limitInputPixels: false,
-              sequentialRead: true
-            }
-          )
-
-            .resize({
-              width: 448,
-              height: 448,
-              fit: "inside",
-              withoutEnlargement: true
-            })
-
-            .jpeg({
-              quality: 82
-            })
-
-            .toFile(
-              frameFile
-            )
-
-        } catch (e) {
-
-          console.log(
-            "ERROR FRAME:",
-            e
-          )
-
-          continue
-        }
-
-        let result = null
-
-        try {
-
-          result =
-            await detectFile(
-              frameFile
-            )
-
-        } catch (e) {
-
-          console.log(
-            "ERROR API FRAME:",
-            e
-          )
-
-          safeDelete(
-            frameFile
-          )
-
-          continue
-        }
-
-        console.log(
-          `FRAME ${realFrame}:`,
-          result
-        )
-
-        safeDelete(
+        .toFile(
           frameFile
         )
 
-        const openScore =
-          Number(
-            result?.open_nsfw_score || 0
-          )
+    } catch (e) {
 
-        const nudenet =
-          result?.nudenet || []
+      console.log(
+        "ERROR FRAME:",
+        e
+      )
 
-        console.log(
-          "FRAME SCORE:",
-          openScore
+      continue
+    }
+
+    let result = null
+
+    try {
+
+      result =
+        await detectFile(
+          frameFile
         )
 
-        const hasStrongGenitalia =
-          nudenet.some(x => {
+    } catch (e) {
 
-            const cls =
-              String(
-                x?.class || ""
-              ).toUpperCase()
+      console.log(
+        "ERROR API FRAME:",
+        e
+      )
 
-            const score =
-              Number(
-                x?.score || 0
-              )
+      safeDelete(
+        frameFile
+      )
 
-            return (
-
-              (
-                cls.includes(
-                  "GENITALIA_EXPOSED"
-                ) ||
-
-                cls.includes(
-                  "MALE_GENITALIA_EXPOSED"
-                ) ||
-
-                cls.includes(
-                  "FEMALE_GENITALIA_EXPOSED"
-                ) ||
-
-                cls.includes(
-                  "ANUS_EXPOSED"
-                )
-              )
-
-              &&
-
-              score >= 0.45
-            )
-          })
-
-        const hasBreast =
-          nudenet.some(x => {
-
-            const cls =
-              String(
-                x?.class || ""
-              ).toUpperCase()
-
-            const score =
-              Number(
-                x?.score || 0
-              )
-
-            return (
-
-              cls.includes(
-                "BREAST_EXPOSED"
-              )
-
-              &&
-
-              score >= 0.80
-            )
-          })
-
-        const hasButtocks =
-          nudenet.some(x => {
-
-            const cls =
-              String(
-                x?.class || ""
-              ).toUpperCase()
-
-            const score =
-              Number(
-                x?.score || 0
-              )
-
-            return (
-
-              cls.includes(
-                "BUTTOCKS_EXPOSED"
-              )
-
-              &&
-
-              score >= 0.55
-            )
-          })
-
-        const isLastFrame =
-
-          realFrame ===
-          pages - 1
-
-        const lastFramePorn =
-
-          isLastFrame &&
-
-          result?.nsfw === true &&
-
-          openScore >= 0.80
-
-        if (
-
-          hasStrongGenitalia ||
-
-          (
-            openScore >= 0.985
-          ) ||
-
-          (
-            openScore >= 0.90 &&
-            result?.nsfw === true
-          ) ||
-
-          (
-            hasBreast &&
-            openScore >= 0.55
-          ) ||
-
-          (
-            hasButtocks &&
-            openScore >= 0.88
-          ) ||
-
-          (
-            lastFramePorn &&
-
-            (
-
-              hasButtocks ||
-
-              hasBreast ||
-
-              hasStrongGenitalia ||
-
-              openScore >= 0.92
-
-            )
-          )
-
-        ) {
-
-          console.log(
-            "NSFW DETECTADO EN FRAME:",
-            realFrame
-          )
-
-          detected = true
-          detectedType = "Sticker"
-          break
-        }
-      }
+      continue
     }
+
+    console.log(
+      `FRAME ${realFrame}:`,
+      result
+    )
+
+    safeDelete(
+      frameFile
+    )
+
+    const openScore =
+      Number(
+        result?.open_nsfw_score || 0
+      )
+
+    const nudenet =
+      result?.nudenet || []
+
+    console.log(
+      "FRAME SCORE:",
+      openScore
+    )
+
+    const hasMaleGenitalia =
+      nudenet.some(x => {
+
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
+
+        const score =
+          Number(
+            x?.score || 0
+          )
+
+        return (
+
+          cls ===
+            "MALE_GENITALIA_EXPOSED"
+
+          &&
+
+          score >= 0.45
+        )
+      })
+
+    const hasFemaleGenitalia =
+      nudenet.some(x => {
+
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
+
+        const score =
+          Number(
+            x?.score || 0
+          )
+
+        return (
+
+          cls ===
+            "FEMALE_GENITALIA_EXPOSED"
+
+          &&
+
+          score >= 0.45
+        )
+      })
+
+    const hasBreastExposed =
+      nudenet.some(x => {
+
+        const cls =
+          String(
+            x?.class || ""
+          ).toUpperCase()
+
+        const score =
+          Number(
+            x?.score || 0
+          )
+
+        return (
+
+          cls ===
+            "FEMALE_BREAST_EXPOSED"
+
+          &&
+
+          score >= 0.80
+        )
+      })
+
+    if (
+
+      hasMaleGenitalia ||
+
+      hasFemaleGenitalia ||
+
+      (
+
+        hasBreastExposed &&
+
+        openScore >= 0.55
+
+      )
+
+      ||
+
+      (
+        openScore >= 0.985
+      )
+
+      ||
+
+      (
+        openScore >= 0.90 &&
+        result?.nsfw === true
+      )
+
+    ) {
+
+      console.log(
+        "NSFW DETECTADO EN FRAME:",
+        realFrame
+      )
+
+      detected = true
+      detectedType = "Sticker"
+      break
+    }
+  }
+}
 
   } catch (e) {
 
