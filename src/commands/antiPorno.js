@@ -1240,31 +1240,55 @@ if (
         jidToNumber(decoded) ||
         jidToNumber(participant)
 
-      if (
-        isOwnerNumber(
-          participantNum
-        )
-      ) {
+      const groupMetadata =
+  await sock.groupMetadata(
+    chatId
+  ).catch(() => null)
 
-        console.log(
-          "OWNER DETECTADO - NO ELIMINADO"
-        )
+const participants =
+  groupMetadata?.participants || []
 
-      } else {
+const participantData =
+  participants.find(
+    p =>
+      p.id === participant ||
+      p.id === decoded
+  )
 
-        await sock.groupParticipantsUpdate(
+const isAdmin =
+  participantData?.admin === "admin" ||
+  participantData?.admin === "superadmin"
 
-          chatId,
-          [participant],
-          "remove"
+if (
+  isOwnerNumber(
+    participantNum
+  )
+) {
 
-        ).catch(() => {})
+  console.log(
+    "OWNER DETECTADO - NO ELIMINADO"
+  )
 
-        console.log(
-          "USUARIO ELIMINADO"
-        )
-      }
-    }
+} else if (isAdmin) {
+
+  console.log(
+    "ADMIN DETECTADO - NO ELIMINADO"
+  )
+
+} else {
+
+  await sock.groupParticipantsUpdate(
+
+    chatId,
+    [participant],
+    "remove"
+
+  ).catch(() => {})
+
+  console.log(
+    "USUARIO ELIMINADO"
+  )
+}
 
     
     // =========================
