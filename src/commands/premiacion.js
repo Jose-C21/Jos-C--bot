@@ -1,5 +1,8 @@
 import { buildRanking } from "./totalmensajes.js"
 
+const TROFEO_ORO =
+"https://i.postimg.cc/rwdkL3BP/E653D192-4815-4E38-B194-E470BC76C8AA.png"
+
 const delay = (ms) =>
   new Promise(resolve => setTimeout(resolve, ms))
 
@@ -38,6 +41,30 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
   })
 
   await delay(3000)
+
+  await sock.sendMessage(
+    chatId,
+    {
+      image: {
+        url: TROFEO_ORO
+      },
+      caption:
+`🌸 Hola, soy Siri
+
+@${primero.num}
+
+🔊 ${subject} 🔊
+
+🥇 PRIMER LUGAR 🥇
+
+👑 CAMPEÓN DEL CONTEO DE MENSAJES 👑
+
+🏆 Felicidades por liderar el ranking de actividad.
+
+🔥 Total de mensajes: ${primero.total}`,
+      mentions: [primero.jid]
+    }
+  )
 
   console.log("TOP 1:", primero)
   console.log("TOP 2:", segundo)
