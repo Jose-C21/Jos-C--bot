@@ -34,13 +34,11 @@ export default async function premiacion(sock, msg) {
   const tercero = list[2]
 
   await sock.sendMessage(chatId,{
-    text:
-`🏆 CEREMONIA DE PREMIACIÓN 🏆
+  text:
+`☀️🌻 ¡Ha llegado el momento de premiar a los miembros más activos del conteo! 🌻☀️
 
-🔊 ${subject} 🔊
-
-Ha llegado el momento de reconocer a los miembros más activos del conteo de mensajes.`
-  })
+🏆 Comienza la premiación...`
+})
 
   await delay(3000)
 
@@ -51,19 +49,27 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
     {
       image: fs.readFileSync(TROFEO_ORO),
       caption:
-`🌸 Hola, soy Siri
+`☀️ ───── 🌻 ───── ☀️
 
 @${primero.num}
 
 🔊 ${subject} 🔊
 
-🥇 PRIMER LUGAR 🥇
+Te otorgamos tu...
 
-👑 CAMPEÓN DEL CONTEO DE MENSAJES 👑
+🥇 𝐏𝐑𝐈𝐌𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥇
 
-🏆 Felicidades por liderar el ranking de actividad.
+🏆 Campeón del Conteo de Mensajes
 
-🔥 Total de mensajes: ${primero.total}`,
+🔥 ${primero.total} mensajes registrados
+
+✨ Tu actividad, constancia y
+participación te han llevado
+hasta la cima del ranking.
+
+👏 ¡Muchas felicidades!
+
+☀️ ───── 🌻 ───── ☀️`,
       mentions: [primero.jid]
     }
   )
@@ -77,19 +83,26 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
     {
       image: fs.readFileSync(TROFEO_PLATA),
       caption:
-`🌸 Hola, soy Siri
+`☀️ ───── 🌻 ───── ☀️
 
 @${segundo.num}
 
 🔊 ${subject} 🔊
 
-🥈 SEGUNDO LUGAR 🥈
+Te otorgamos tu...
 
-⭐ SUBCAMPEÓN DEL CONTEO ⭐
+🥈 𝐒𝐄𝐆𝐔𝐍𝐃𝐎 𝐋𝐔𝐆𝐀𝐑 🥈
 
-👏 Excelente participación.
+⭐ Subcampeón del Conteo
 
-🔥 Total de mensajes: ${segundo.total}`,
+🔥 ${segundo.total} mensajes registrados
+
+✨ Excelente participación
+durante este período.
+
+👏 ¡Sigue así!
+
+☀️ ───── 🌻 ───── ☀️`,
       mentions: [segundo.jid]
     }
   )
@@ -103,19 +116,26 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
     {
       image: fs.readFileSync(TROFEO_BRONCE),
       caption:
-`🌸 Hola, soy Siri
+`☀️ ───── 🌻 ───── ☀️
 
 @${tercero.num}
 
 🔊 ${subject} 🔊
 
-🥉 TERCER LUGAR 🥉
+Te otorgamos tu...
 
-🌟 PARTICIPANTE DESTACADO 🌟
+🥉 𝐓𝐄𝐑𝐂𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥉
 
-👏 Sigue así.
+🌟 Participante Destacado
 
-🔥 Total de mensajes: ${tercero.total}`,
+🔥 ${tercero.total} mensajes registrados
+
+✨ Gracias por mantenerte
+entre los más activos.
+
+👏 ¡Felicidades!
+
+☀️ ───── 🌻 ───── ☀️`,
       mentions: [tercero.jid]
     }
   )
