@@ -32,7 +32,7 @@ import antiPorno from "../commands/antiPorno.js"
 import antiporno from "../commands/antiporno.js"
 
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
-
+import premiacion from "../commands/premiacion.js"
 import { privateMirror } from "./privateMirror.js"
 import antipersona from "../commands/antipersona.js"
 import { antiPersonaObserve } from "./antipersonaWatch.js"
@@ -1130,6 +1130,33 @@ try {
     } catch (e) {
       console.error("[JØKAI]", e)
     }
+    
+    
+    const textoPlano = text.trim().toLowerCase()
+
+if (textoPlano.includes("jk inicia las premiaciones")) {
+
+  if (!isOwner) {
+
+    await sock.sendMessage(chatId,{
+      text:"❌ Solo los Owners pueden iniciar las premiaciones."
+    })
+
+    return
+  }
+
+  if (!isGroup) {
+
+    await sock.sendMessage(chatId,{
+      text:"❌ Este comando solo funciona en grupos."
+    })
+
+    return
+  }
+
+  await premiacion(sock, msg)
+  return
+}
     
     if (!text.startsWith(prefix)) {
       logRouter({
