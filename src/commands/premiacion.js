@@ -57,7 +57,7 @@ export default async function premiacion(sock, msg) {
 
 Te otorgamos tu...
 
-🥇 𝐏𝐑𝐈𝐌𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥇
+> 🥇 𝐏𝐑𝐈𝐌𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥇
 
 🏆 Campeón del Conteo de Mensajes
 
@@ -91,7 +91,7 @@ hasta la cima del ranking.
 
 Te otorgamos tu...
 
-🥈 𝐒𝐄𝐆𝐔𝐍𝐃𝐎 𝐋𝐔𝐆𝐀𝐑 🥈
+> 🥈 𝐒𝐄𝐆𝐔𝐍𝐃𝐎 𝐋𝐔𝐆𝐀𝐑 🥈
 
 ⭐ Subcampeón del Conteo
 
@@ -124,7 +124,7 @@ durante este período.
 
 Te otorgamos tu...
 
-🥉 𝐓𝐄𝐑𝐂𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥉
+> 🥉 𝐓𝐄𝐑𝐂𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥉
 
 🌟 Participante Destacado
 
@@ -144,7 +144,7 @@ entre los más activos.
 
   await sock.sendMessage(chatId,{
     text:
-`🎉 PREMIACIÓN FINALIZADA 🎉
+`> 🎉 PREMIACIÓN FINALIZADA 🎉
 
 Gracias a todos por participar.
 
