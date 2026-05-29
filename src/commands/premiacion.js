@@ -148,7 +148,7 @@ entre los más activos.
 
 Gracias a todos por participar.
 
-🏆 El conteo continúa activo.`
+🏆 El conteo se reiniciara en unos minutos...`
   })
 
   console.log("TOP 1:", primero)
