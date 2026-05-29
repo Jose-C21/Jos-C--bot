@@ -1,13 +1,9 @@
+import fs from "fs"
 import { buildRanking } from "./totalmensajes.js"
 
-const TROFEO_ORO =
-"https://i.postimg.cc/rwdkL3BP/E653D192-4815-4E38-B194-E470BC76C8AA.png"
-
-const TROFEO_PLATA =
-"https://i.postimg.cc/rwdkL3BP/E653D192-4815-4E38-B194-E470BC76C8AA.png"
-
-const TROFEO_BRONCE =
-"https://i.postimg.cc/rwdkL3BP/E653D192-4815-4E38-B194-E470BC76C8AA.png"
+const TROFEO_ORO = "./assets/premios/trofeo.png"
+const TROFEO_PLATA = "./assets/premios/trofeo.png"
+const TROFEO_BRONCE = "./assets/premios/trofeo.png"
 
 const delay = (ms) =>
   new Promise(resolve => setTimeout(resolve, ms))
@@ -48,13 +44,12 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
 
   await delay(3000)
 
-  // 🥇 PRIMER LUGAR
+  console.log("ENVIANDO ORO")
+
   await sock.sendMessage(
     chatId,
     {
-      image: {
-        url: TROFEO_ORO
-      },
+      image: fs.readFileSync(TROFEO_ORO),
       caption:
 `🌸 Hola, soy Siri
 
@@ -75,13 +70,12 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
 
   await delay(5000)
 
-  // 🥈 SEGUNDO LUGAR
+  console.log("ENVIANDO PLATA")
+
   await sock.sendMessage(
     chatId,
     {
-      image: {
-        url: TROFEO_PLATA
-      },
+      image: fs.readFileSync(TROFEO_PLATA),
       caption:
 `🌸 Hola, soy Siri
 
@@ -102,13 +96,12 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
 
   await delay(5000)
 
-  // 🥉 TERCER LUGAR
+  console.log("ENVIANDO BRONCE")
+
   await sock.sendMessage(
     chatId,
     {
-      image: {
-        url: TROFEO_BRONCE
-      },
+      image: fs.readFileSync(TROFEO_BRONCE),
       caption:
 `🌸 Hola, soy Siri
 
@@ -135,7 +128,7 @@ Ha llegado el momento de reconocer a los miembros más activos del conteo de men
 
 Gracias a todos por participar.
 
-🏆 El conteo se reiniciara en unos minutos.`
+🏆 El conteo continúa activo.`
   })
 
   console.log("TOP 1:", primero)
