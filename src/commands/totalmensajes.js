@@ -61,7 +61,7 @@ const toBoldDigits = (x) => {
   return String(x ?? "").replace(/[0-9]/g, (d) => map[d] || d)
 }
 
-async function buildRanking(sock, chatId) {
+export async function buildRanking(sock, chatId) {
   const conteo = readJsonSafe(CONTEO_PATH, {})
   const groupData = conteo[chatId]
   if (!groupData) return { list: [], subject: "" }
