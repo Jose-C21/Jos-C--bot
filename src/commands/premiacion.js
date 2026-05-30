@@ -60,7 +60,7 @@ export default async function premiacion(sock, msg) {
 Te otorgamos tu...
 
 (\__/)
- (•ω•)
+(•ω•)
 / づ𝐏𝐑𝐈𝐌𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥇
 
 > 🏆 Campeón del Conteo de Mensajes
@@ -95,7 +95,10 @@ Te otorgamos tu...
 
 Te otorgamos tu...
 
-> 🥈 𝐒𝐄𝐆𝐔𝐍𝐃𝐎 𝐋𝐔𝐆𝐀𝐑 🥈
+✧･ﾟ✧
+(｡>ω<｡)
+( つ🌟つ
+ /　 /𝐒𝐄𝐆𝐔𝐍𝐃𝐎 𝐋𝐔𝐆𝐀𝐑 🥈
 
 ⭐ Subcampeón del Conteo
 
@@ -128,7 +131,10 @@ Te otorgamos tu...
 
 Te otorgamos tu...
 
-> 🥉 𝐓𝐄𝐑𝐂𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥉
+╔══╗
+╚╗╔╝
+╔╝(¯v´¯)
+╚══.¸.𝐓𝐄𝐑𝐂𝐄𝐑  𝐋𝐔𝐆𝐀𝐑 🥉
 
 🌟 Participante Destacado
 
