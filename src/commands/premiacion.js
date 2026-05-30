@@ -63,7 +63,7 @@ Te otorgamos tu...
 (•ω•)
 / づ𝐏𝐑𝐈𝐌𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥇
 
-> 🏆 Campeón del Conteo de Mensajes
+> 🏆 Líder del Conteo de Mensajes
 
 🔥 ${primero.total} mensajes registrados
 
