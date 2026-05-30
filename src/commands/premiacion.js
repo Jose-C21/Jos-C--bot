@@ -59,11 +59,11 @@ export default async function premiacion(sock, msg) {
 
 Te otorgamos tu...
 
->  (\__/)
->   (•ω•)
->   / づ𝐏𝐑𝐈𝐌𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥇
+(\__/)
+ (•ω•)
+/ づ𝐏𝐑𝐈𝐌𝐄𝐑 𝐋𝐔𝐆𝐀𝐑 🥇
 
-🏆 Campeón del Conteo de Mensajes
+> 🏆 Campeón del Conteo de Mensajes
 
 🔥 ${primero.total} mensajes registrados
 
