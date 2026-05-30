@@ -95,12 +95,12 @@ Te otorgamos tu...
 
 Te otorgamos tu...
 
-✧･ﾟ✧
+ ✧･ﾟ✧
 (｡>ω<｡)
 ( つ🌟つ
  /　 /𝐒𝐄𝐆𝐔𝐍𝐃𝐎 𝐋𝐔𝐆𝐀𝐑 🥈
 
-⭐ Subcampeón del Conteo
+> ⭐ Subcampeón del Conteo
 
 🔥 ${segundo.total} mensajes registrados
 
@@ -136,7 +136,7 @@ Te otorgamos tu...
 ╔╝(¯v´¯)
 ╚══.¸.𝐓𝐄𝐑𝐂𝐄𝐑  𝐋𝐔𝐆𝐀𝐑 🥉
 
-🌟 Participante Destacado
+> 🌟 Participante Destacado
 
 🔥 ${tercero.total} mensajes registrados
 
