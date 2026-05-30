@@ -35,9 +35,11 @@ export default async function premiacion(sock, msg) {
 
   await sock.sendMessage(chatId,{
   text:
-`☀️🌻 ¡Ha llegado el momento de premiar a los miembros más activos del conteo! 🌻☀️
+`╭─❖─🏆─❖─╮
+✨ 𝗣𝗥𝗘𝗠𝗜𝗔𝗖𝗜𝗢́𝗡 ✨
+╰─❖─🔥─❖─╯
 
-🏆 Comienza la premiación...`
+☀️🌻 Ha llegado el momento de reconocer a los miembros más activos del conteo de mensajes. 🌻☀️`
 })
 
   await delay(3000)
