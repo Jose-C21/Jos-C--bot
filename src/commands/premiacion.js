@@ -142,7 +142,7 @@ Te otorgamos tu...
     }
   )
 
-  await delay(3000)
+  await delay(4000)
 
   await sock.sendMessage(chatId,{
     text:
