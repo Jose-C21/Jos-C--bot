@@ -42,7 +42,7 @@ export default async function premiacion(sock, msg) {
 > ☀️🌻 𝑯𝒂 𝒍𝒍𝒆𝒈𝒂𝒅𝒐 𝒆𝒍 𝒎𝒐𝒎𝒆𝒏𝒕𝒐 𝒅𝒆 𝒓𝒆𝒄𝒐𝒏𝒐𝒄𝒆𝒓 𝒂 𝒍𝒐𝒔 𝒎𝒊𝒆𝒎𝒃𝒓𝒐𝒔 𝒎𝒂́𝒔 𝒂𝒄𝒕𝒊𝒗𝒐𝒔 𝒅𝒆𝒍 𝒄𝒐𝒏𝒕𝒆𝒐 𝒅𝒆 𝒎𝒆𝒏𝒔𝒂𝒋𝒆𝒔. `
 })
 
-  await delay(3000)
+  await delay(4000)
 
   console.log("ENVIANDO ORO")
 
