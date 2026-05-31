@@ -197,7 +197,7 @@ Tu cargo de administrador fue retirado en:
 👤 Administrador que realizó la acción:
 ${actorTag}`
 })
-            })
+            
           } catch (e) {
             console.log(
               "[groupWelcome] Error privado demote:",
