@@ -137,7 +137,7 @@ export async function onGroupParticipantsUpdate(sock, update) {
         if (action === "promote") {
           await sock.sendMessage(groupId, {
             text:
-`╭━━━ 👑 ADMINISTRADOR ━━━╮
+`╭━━ 👑 ADMINISTRADOR ━━╮
 
 • 👤 Usuario:
 ${targetTag}
@@ -150,7 +150,7 @@ ${groupName}
 
 ✅ Permisos de administración otorgados.
 
-╰━━━━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━━━╯`,
             mentions: [targetJid, actor].filter(Boolean),
           })
 
@@ -170,7 +170,7 @@ ${actorTag}
 
 ✅ Ya cuentas con permisos de administración.
 
-╰━━━━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━━━╯`,
   mentions: [actor]
 })
           } catch (e) {
@@ -189,7 +189,7 @@ ${actorTag}
         if (action === "demote") {
           await sock.sendMessage(groupId, {
             text:
-`╭━━━ ⚠️ ADMINISTRACIÓN ━━━╮
+`╭━━ ⚠️ ADMINISTRACIÓN ━━╮
 
 • 👤 Usuario:
 ${targetTag}
@@ -202,14 +202,14 @@ ${groupName}
 
 ℹ️ El cargo de administrador ha sido retirado.
 
-╰━━━━━━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━━━━━╯`,
             mentions: [targetJid, actor].filter(Boolean),
           })
 
           try {
             await sock.sendMessage(targetJid, {
   text:
-`╭━━━ ⚠️ ACTUALIZACIÓN ━━━╮
+`╭━━ ⚠️ ACTUALIZACIÓN ━━╮
 
 ℹ️ Tu cargo de administrador
 ha sido retirado en:
@@ -219,7 +219,7 @@ ha sido retirado en:
 🛡️ Acción realizada por:
 ${actorTag}
 
-╰━━━━━━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━━━━━╯`,
   mentions: [actor]
 })
             
