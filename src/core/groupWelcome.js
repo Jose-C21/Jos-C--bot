@@ -148,15 +148,18 @@ ${actorTag}`,
 
           try {
             await sock.sendMessage(targetJid, {
-              text:
+  text:
 `🎉 ¡Felicidades!
 
 Has sido nombrado administrador en:
 
 🏠 ${groupName}
 
+👤 Administrador que realizó la acción:
+${actorTag}
+
 Ahora cuentas con permisos de administración.`
-            })
+})
           } catch (e) {
             console.log(
               "[groupWelcome] Error privado promote:",
@@ -184,12 +187,16 @@ ${actorTag}`,
 
           try {
             await sock.sendMessage(targetJid, {
-              text:
+  text:
 `ℹ️ Aviso
 
 Tu cargo de administrador fue retirado en:
 
-🏠 ${groupName}`
+🏠 ${groupName}
+
+👤 Administrador que realizó la acción:
+${actorTag}`
+})
             })
           } catch (e) {
             console.log(
