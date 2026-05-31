@@ -158,7 +158,8 @@ Has sido nombrado administrador en:
 👤 Administrador que realizó la acción:
 ${actorTag}
 
-Ahora cuentas con permisos de administración.`
+Ahora cuentas con permisos de administración.`,
+  mentions: [actor]
 })
           } catch (e) {
             console.log(
@@ -195,7 +196,8 @@ Tu cargo de administrador fue retirado en:
 🏠 ${groupName}
 
 👤 Administrador que realizó la acción:
-${actorTag}`
+${actorTag}`,
+  mentions: [actor]
 })
             
           } catch (e) {
