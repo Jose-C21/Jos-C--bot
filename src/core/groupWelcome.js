@@ -202,7 +202,7 @@ ${groupName}
 
 ℹ️ El cargo de administrador ha sido retirado.
 
-╰━━━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━━━╯`,
             mentions: [targetJid, actor].filter(Boolean),
           })
 
@@ -219,7 +219,7 @@ ha sido retirado en:
 🛡️ Acción realizada por:
 ${actorTag}
 
-╰━━━━━━━━━━━━━━━━━╯`,
+╰━━━━━━━━━━━━━━━╯`,
   mentions: [actor]
 })
             
