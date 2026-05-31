@@ -1,9 +1,9 @@
 import fs from "fs"
 import { buildRanking } from "./totalmensajes.js"
 
-const TROFEO_ORO = "./assets/premios/trofeo.png"
-const TROFEO_PLATA = "./assets/premios/trofeo.png"
-const TROFEO_BRONCE = "./assets/premios/trofeo.png"
+const TROFEO_ORO = "./assets/premios/primer_lugar.PNG"
+const TROFEO_PLATA = "./assets/premios/segundo_lugar.PNG"
+const TROFEO_BRONCE = "./assets/premios/tercer_lugar.PNG"
 
 const delay = (ms) =>
   new Promise(resolve => setTimeout(resolve, ms))
