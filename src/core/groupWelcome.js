@@ -137,28 +137,40 @@ export async function onGroupParticipantsUpdate(sock, update) {
         if (action === "promote") {
           await sock.sendMessage(groupId, {
             text:
-`👑 *NUEVO ADMINISTRADOR*
+`╭━━━ 👑 ADMINISTRADOR ━━━╮
 
-${targetTag} ahora es administrador del grupo.
+• 👤 Usuario:
+${targetTag}
 
-🛡️ Ascendido por:
-${actorTag}`,
+• 🛡️ Asignado por:
+${actorTag}
+
+• 🏠 Grupo:
+${groupName}
+
+✅ Permisos de administración otorgados.
+
+╰━━━━━━━━━━━━━━━━━━╯`,
             mentions: [targetJid, actor].filter(Boolean),
           })
 
           try {
             await sock.sendMessage(targetJid, {
   text:
-`🎉 ¡Felicidades!
+`╭━━━ 👑 NUEVO CARGO ━━━╮
+
+🎉 ¡Felicidades!
 
 Has sido nombrado administrador en:
 
 🏠 ${groupName}
 
-👤 Administrador que realizó la acción:
+🛡️ Acción realizada por:
 ${actorTag}
 
-Ahora cuentas con permisos de administración.`,
+✅ Ya cuentas con permisos de administración.
+
+╰━━━━━━━━━━━━━━━━━━╯`,
   mentions: [actor]
 })
           } catch (e) {
@@ -177,26 +189,37 @@ Ahora cuentas con permisos de administración.`,
         if (action === "demote") {
           await sock.sendMessage(groupId, {
             text:
-`⚠️ *CAMBIO DE ADMINISTRACIÓN*
+`╭━━━ ⚠️ ADMINISTRACIÓN ━━━╮
 
-${targetTag} ya no es administrador del grupo.
+• 👤 Usuario:
+${targetTag}
 
-🛡️ Acción realizada por:
-${actorTag}`,
+• 🛡️ Acción realizada por:
+${actorTag}
+
+• 🏠 Grupo:
+${groupName}
+
+ℹ️ El cargo de administrador ha sido retirado.
+
+╰━━━━━━━━━━━━━━━━━━━━╯`,
             mentions: [targetJid, actor].filter(Boolean),
           })
 
           try {
             await sock.sendMessage(targetJid, {
   text:
-`ℹ️ Aviso
+`╭━━━ ⚠️ ACTUALIZACIÓN ━━━╮
 
-Tu cargo de administrador fue retirado en:
+ℹ️ Tu cargo de administrador
+ha sido retirado en:
 
 🏠 ${groupName}
 
-👤 Administrador que realizó la acción:
-${actorTag}`,
+🛡️ Acción realizada por:
+${actorTag}
+
+╰━━━━━━━━━━━━━━━━━━━━╯`,
   mentions: [actor]
 })
             
