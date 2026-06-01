@@ -3,7 +3,7 @@ import { buildRanking } from "./totalmensajes.js"
 
 const TROFEO_ORO = "./assets/premios/primer_lugar.PNG"
 const TROFEO_PLATA = "./assets/premios/segundo_lugar.PNG"
-const TROFEO_BRONCE = "./assets/premios/tercer_lugar.PNG"
+const TROFEO_BRONCE = "./assets/premios/tercer_lugar3.PNG"
 
 const delay = (ms) =>
   new Promise(resolve => setTimeout(resolve, ms))
