@@ -1079,23 +1079,98 @@ try {
 
       console.log("STICKER BAN DETECTADO")
 
-      if (String(finalNum) === "19580839829625") {
+      if (!isGroup) return
+      if (!isOwner) return
 
-        console.log("ES LA CHICA")
+      const userToKick =
+        sticker?.contextInfo?.participant || null
 
-        const myJid = "208272208490541@lid"
-
-        await sock.sendMessage(myJid, {
-          text: "‎",
-          contextInfo: {
-            mentionedJid: [myJid]
-          }
-        })
-
-        console.log("MENSAJE PRIVADO ENVIADO")
-
+      if (!userToKick) {
+        console.log("NO HAY USUARIO CITADO")
+        return
       }
 
+      const metadata =
+        await sock.groupMetadata(chatId)
+
+      const participant =
+        metadata.participants.find(
+          p => p.id === userToKick
+        )
+
+      if (!participant) {
+        console.log("USUARIO NO ENCONTRADO")
+        return
+      }
+
+      const isTargetAdmin =
+        participant.admin === "admin" ||
+        participant.admin === "superadmin"
+
+      if (isTargetAdmin) {
+        console.log("NO SE PUEDE EXPULSAR ADMIN")
+        return
+      }
+
+      const targetNumber =
+        String(userToKick)
+          .replace("@s.whatsapp.net", "")
+          .replace("@lid", "")
+
+      const ownerNumbers = [
+        ...(config.owners || []),
+        ...(config.ownersLid || [])
+      ].map(String)
+
+      if (ownerNumbers.includes(targetNumber)) {
+        console.log("NO SE PUEDE EXPULSAR OWNER")
+        return
+      }
+
+      const botId = sock?.user?.id
+
+      const botParticipant =
+        metadata.participants.find(
+          p => p.id === botId
+        )
+
+      const botIsAdmin =
+        botParticipant?.admin === "admin" ||
+        botParticipant?.admin === "superadmin"
+
+      if (!botIsAdmin) {
+        console.log("BOT NO ES ADMIN")
+        return
+      }
+
+      await sock.groupParticipantsUpdate(
+        chatId,
+        [userToKick],
+        "remove"
+      )
+
+      await sock.sendMessage(
+        chatId,
+        {
+          text:
+`╭━🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+┃    @${targetNumber}
+┃
+┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
+┃    ${metadata.subject}
+┃
+┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
+┃    @${finalNum}
+╰━━━━━━━━━━━━
+
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
+          mentions: [userToKick]
+        }
+      )
+
+      console.log("USUARIO EXPULSADO")
     }
 
 }
