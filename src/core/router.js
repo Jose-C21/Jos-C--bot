@@ -694,108 +694,119 @@ try {
 
       if (hash === data.ban) {
 
-  console.log(
-    "[STICKER BAN] Coincidencia detectada"
-  )
+        console.log(
+          "[STICKER BAN] Coincidencia detectada"
+        )
 
-  if (!isGroup) return
+        if (!isGroup) return
 
-  if (!isOwner) {
+        if (!isOwner) {
 
-    await sock.sendMessage(
-      chatId,
-      {
-        text:
-          "❌ Solo los Owners pueden usar este sticker."
-      }
-    )
+          await sock.sendMessage(
+            chatId,
+            {
+              text:
+                "❌ Solo los Owners pueden usar este sticker."
+            }
+          )
 
-    return
-  }
+          return
+        }
 
-  const userToKick =
-    stickerMsg?.contextInfo?.participant
+        const userToKick =
+          stickerMsg?.contextInfo?.participant || null
 
-  if (!userToKick) {
+        if (!userToKick) {
 
-    await sock.sendMessage(
-      chatId,
-      {
-        text:
-          "❌ Debes responder a un mensaje para expulsar."
-      }
-    )
+          await sock.sendMessage(
+            chatId,
+            {
+              text:
+                "❌ Debes responder a un mensaje para expulsar."
+            }
+          )
 
-    return
-  }
+          return
+        }
 
-  const metadata =
-    await sock.groupMetadata(chatId)
+        const metadata =
+          await sock.groupMetadata(chatId)
 
-  const participant =
-    metadata.participants.find(
-      p => p.id === userToKick
-    )
+        const participant =
+          metadata.participants.find(
+            p => p.id === userToKick
+          )
 
-  if (!participant) return
+        if (!participant) {
 
-  const targetNumber =
-    jidToNumber(userToKick)
+          console.log(
+            "[STICKER BAN] Usuario no encontrado"
+          )
 
-  const ownerNumbers = [
-    ...(config.owners || []),
-    ...(config.ownersLid || [])
-  ].map(String)
+          return
+        }
 
-  if (
-    ownerNumbers.includes(
-      String(targetNumber)
-    )
-  ) {
+        const targetNumber =
+          jidToNumber(userToKick)
 
-    await sock.sendMessage(
-      chatId,
-      {
-        text:
-          "❌ No puedes expulsar un Owner."
-      }
-    )
+        const ownerNumbers = [
+          ...(config.owners || []),
+          ...(config.ownersLid || [])
+        ].map(String)
 
-    return
-  }
+        if (
+          ownerNumbers.includes(
+            String(targetNumber)
+          )
+        ) {
 
-  await sock.groupParticipantsUpdate(
-    chatId,
-    [userToKick],
-    "remove"
-  )
+          await sock.sendMessage(
+            chatId,
+            {
+              text:
+                "❌ No puedes expulsar un Owner."
+            }
+          )
 
-  await sock.sendMessage(
-    chatId,
-    {
-      text:
+          return
+        }
+
+        await sock.groupParticipantsUpdate(
+          chatId,
+          [userToKick],
+          "remove"
+        )
+
+        await sock.sendMessage(
+          chatId,
+          {
+            text:
 `╭━🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
-┃ 👤 Usuario:
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
 ┃    @${targetNumber}
 ┃
-┃ 🏷️ Grupo:
+┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
 ┃    ${metadata.subject}
 ┃
-┃ 👮 Administrador:
+┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
 ┃    @${jidToNumber(decodedJid)}
 ╰━━━━━━━━━━━━
 
 ⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
-      mentions: [
-        userToKick,
-        decodedJid
-      ]
-    }
-  )
+            mentions: [
+              userToKick,
+              decodedJid
+            ]
+          }
+        )
 
-  return
-}
+        console.log(
+          "[STICKER BAN] Usuario expulsado"
+        )
+
+        return
+      }
     }
   }
 
