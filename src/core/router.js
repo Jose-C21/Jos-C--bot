@@ -1132,6 +1132,7 @@ try {
       console.log("USER TO KICK:", userToKick)
 console.log("TARGET NUMBER:", targetNumber)
 console.log("BOT ID:", sock?.user?.id)
+console.log("GRUPO:", metadata.subject)
 
 try {
 
