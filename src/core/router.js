@@ -707,17 +707,8 @@ try {
         if (!isGroup) return
 
         if (!isOwner) {
-
-          await sock.sendMessage(
-            chatId,
-            {
-              text:
-                "❌ Solo los Owners pueden usar este sticker."
-            }
-          )
-
-          return
-        }
+  return
+}
 
         const userToKick =
           stickerMsg?.contextInfo?.participant || null
