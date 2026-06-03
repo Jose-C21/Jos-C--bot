@@ -1,0 +1,1247 @@
+
+import config from "../config.js"
+import { getSenderJid, jidToNumber } from "../utils/jid.js"
+import { isAllowedPrivate } from "./middleware/allowlist.js"
+import { antiLinkGuard } from "./antilinkGuard.js" 
+import chalk from "chalk"
+import fs from "fs"
+import path from "path"
+
+
+import { checkRateLimit, buildUserMentionJid, buildUserMentionTag } from "./ratelimit.js"
+
+import sticker from "../commands/sticker.js"
+import play from "../commands/play.js"
+import resetsession from "../commands/resetsession.js"
+import mute from "../commands/mute.js"
+import unmute from "../commands/unmute.js"
+import img from "../commands/img.js"
+import addlista from "../commands/addlista.js"
+import textsticker from "../commands/textsticker.js"
+import playvideo from "../commands/playvideo.js"
+import golpear from "../commands/golpear.js"
+import kiss from "../commands/kiss.js"
+import setstickeralert from "../commands/setstickeralert.js"
+import testestado from "../commands/testestado.js"
+import antiestado from "../commands/antiestado.js"
+import tourl from "../commands/tourl.js"
+import jokai from "../commands/jokai.js"
+import { jokaiWatcher } from "./jokaiWatcher.js"
+import antiPorno from "../commands/antiPorno.js"
+
+import antiporno from "../commands/antiporno.js"
+
+import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
+import premiacion from "../commands/premiacion.js"
+import { privateMirror } from "./privateMirror.js"
+import antipersona from "../commands/antipersona.js"
+import { antiPersonaObserve } from "./antipersonaWatch.js"
+
+import pausarconteo from "../commands/pausarconteo.js"
+import reanudarconteo from "../commands/reanudarconteo.js"
+import estadoconteo from "../commands/estadoconteo.js"
+import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
+
+import tiktok from "../commands/tiktok.js"
+import decir from "../commands/decir.js"
+import audiodoc from "../commands/audiodoc.js"
+import bienvenida from "../commands/bienvenida.js"
+import antilink from "../commands/antilink.js"
+import antis from "../commands/antis.js"
+import open from "../commands/open.js"
+import close from "../commands/close.js"
+import menu from "../commands/menu.js"
+import ver from "../commands/ver.js"
+import perfil from "../commands/perfil.js"
+import kick from "../commands/kick.js"
+import tag from "../commands/tag.js"
+import detectar from "../commands/detectar.js"
+import spotify from "../commands/spotify.js"
+import antiarabe from "../commands/antiarabe.js"
+import fantasma, { fantasmaPage } from "../commands/fantasma.js"
+import fankick from "../commands/fankick.js"
+import add from "../commands/add.js"
+import warnSystem from "../commands/warn.js"
+import reiniciarConteo from "../commands/reiniciarconteo.js"
+import debugview from "../commands/debugview.js"
+
+import sumar from "../commands/sumar.js"
+import detectarSticker from "../commands/detectarSticker.js"
+
+
+const COMMANDS = {
+  resetsession,
+  s: sticker,
+  play,
+  mute,
+  unmute,
+  img,
+  tourl,
+  debugview,
+  sumar,
+  spotify,
+  addlista,
+  jokai,
+  testestado,
+  pausarconteo,
+reanudarconteo,
+estadoconteo,
+  antiestado,
+  ts: textsticker,
+  playvideo,
+  golpear,
+  antiporno,
+  reiniciarconteo: reiniciarConteo,
+  kiss,
+  dsticker: detectarSticker,
+  setstickeralert,
+  detectar,
+  
+  
+  warn: warnSystem,
+  warns: warnSystem,
+  unwarn: warnSystem,
+
+  
+  resetwarns: warnSystem,
+  resetwarnings: warnSystem, 
+
+  warncfg: warnSystem,
+
+  
+  ytsearch,
+  yts: ytsearch,
+
+  
+  antipersona,
+
+  totalmensajes,
+  totalmensajes2: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 2 }),
+  totalmensajes3: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 3 }),
+  totalmensajes4: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 4 }),
+  totalmensajes5: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 5 }),
+  totalmensajes6: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 6 }),
+  totalmensajes7: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 7 }),
+  totalmensajes8: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 8 }),
+  totalmensajes9: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 9 }),
+  totalmensajes10: (sock, msg, ctx) => totalmensajesPage(sock, msg, { ...ctx, page: 10 }),
+
+  tiktok,
+  decir,
+  audiodoc,
+  bienvenida,
+  antilink,
+  antis,
+  open,
+  close,
+  menu,
+  ver,
+  add,
+  perfil,
+  kick,
+  ban: kick,
+  tag,
+  antiarabe,
+
+  fantasma,
+  fantasmas: fantasma,
+  fankick,
+
+  fantasma2: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 2 }),
+  fantasma3: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 3 }),
+  fantasma4: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 4 }),
+  fantasma5: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 5 }),
+  fantasma6: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 6 }),
+  fantasma7: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 7 }),
+  fantasma8: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 8 }),
+  fantasma9: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 9 }),
+  fantasma10: (sock, msg, ctx) => fantasmaPage(sock, msg, { ...ctx, page: 10 }),
+}
+
+function getText(msg) {
+  const m = msg?.message || {}
+  return (
+    m.conversation ||
+    m.extendedTextMessage?.text ||
+    m.imageMessage?.caption ||
+    m.videoMessage?.caption ||
+    m.documentMessage?.caption ||
+    ""
+  ).trim()
+}
+
+function isTextMessage(msg) {
+  const m = msg?.message || {}
+  return !!(m.conversation || m.extendedTextMessage?.text)
+}
+
+function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
+  const owners = (config.owners || []).map(String)
+  const ownersLid = (config.ownersLid || []).map(String)
+  return (
+    owners.includes(String(senderNum)) ||
+    owners.includes(String(senderNumDecoded)) ||
+    ownersLid.includes(String(senderNum)) ||
+    ownersLid.includes(String(senderNumDecoded))
+  )
+}
+
+
+function isStatusMessage(msg) {
+  const m = msg?.message || {}
+
+  return (
+    m?.groupStatusMentionMessage ||
+    m?.extendedTextMessage?.contextInfo?.quotedMessage?.groupStatusMentionMessage ||
+    m?.ephemeralMessage?.message?.groupStatusMentionMessage ||
+    m?.viewOnceMessageV2?.message?.groupStatusMentionMessage
+  )
+}
+
+
+const DATA_DIR = path.join(process.cwd(), "data")
+
+
+const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
+
+function ensureActivosDB() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+
+  if (!fs.existsSync(ACTIVOS_PATH)) {
+    fs.writeFileSync(
+      ACTIVOS_PATH,
+      JSON.stringify({
+        bienvenida: {},
+        despedidas: {},
+        antilink: {},
+        antis: {},
+        antipersona: {},
+        antiestado: {},
+        conteooff: {},
+        antiporno: {}
+      }, null, 2)
+    )
+    return
+  }
+
+  try {
+    const j = JSON.parse(fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}")
+
+if (!j.bienvenida) j.bienvenida = {}
+if (!j.despedidas) j.despedidas = {}
+if (!j.antilink) j.antilink = {}
+if (!j.antis) j.antis = {}
+if (!j.antipersona) j.antipersona = {}
+if (!j.antiestado) j.antiestado = {}
+if (!j.conteooff) j.conteooff = {}
+if (!j.antiporno) j.antiporno = {}
+
+fs.writeFileSync(
+  ACTIVOS_PATH,
+  JSON.stringify(j, null, 2)
+)
+
+  } catch {
+
+    fs.writeFileSync(
+      ACTIVOS_PATH,
+      JSON.stringify({
+        bienvenida: {},
+        despedidas: {},
+        antilink: {},
+        antis: {},
+        antipersona: {},
+        antiestado: {},
+        conteooff: {},
+        antiporno: {}
+      }, null, 2)
+    )
+
+  }
+}
+
+function readActivosSafe() {
+  try {
+
+    ensureActivosDB()
+
+const j = JSON.parse(
+  fs.readFileSync(ACTIVOS_PATH, "utf8") || "{}"
+)
+
+if (!j.bienvenida) j.bienvenida = {}
+if (!j.despedidas) j.despedidas = {}
+if (!j.antilink) j.antilink = {}
+if (!j.antis) j.antis = {}
+if (!j.antipersona) j.antipersona = {}
+if (!j.antiestado) j.antiestado = {}
+if (!j.conteooff) j.conteooff = {}
+if (!j.antiporno) j.antiporno = {}
+
+return j
+
+  } catch {
+
+    return {
+      bienvenida: {},
+      despedidas: {},
+      antilink: {},
+      antis: {},
+      antipersona: {},
+      antiestado: {},
+      conteooff: {},
+      antiporno: {}
+    }
+
+  }
+}
+
+
+export async function antiEstadoHandler(sock, msg, chatId, isGroup, fromMe) {
+  try {
+    const activos = readActivosSafe()
+    const antiestadoOn = !!activos?.antiestado?.[chatId]
+
+    if (isGroup && antiestadoOn && !fromMe && isStatusMessage(msg)) {
+      const user = msg.key.participant || msg.key.remoteJid
+      const tag = `@${user.split("@")[0]}`
+
+      await sock.sendMessage(chatId, {
+        delete: {
+          remoteJid: chatId,
+          fromMe: false,
+          id: msg.key.id,
+          participant: user
+        }
+      }).catch(() => {})
+
+      await sock.sendMessage(chatId, {
+        text: `> ╰❒ ${tag}, ɴᴏ ꜱᴇ ᴘᴇʀᴍɪᴛᴇɴ ᴍᴇɴᴄɪᴏɴᴇꜱ ᴅᴇ ᴇꜱᴛᴀᴅᴏꜱ ᴇɴ ᴇꜱᴛᴇ ɢʀᴜᴘᴏ.`,
+        mentions: [user]
+      }).catch(() => {})
+
+      return true
+    }
+
+    return false
+  } catch (e) {
+    console.error("[antiestado]", e)
+    return false
+  }
+}
+
+
+const CONTEO_PATH = path.join(DATA_DIR, "conteo.json")
+
+function ensureConteoDB() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+  if (!fs.existsSync(CONTEO_PATH)) fs.writeFileSync(CONTEO_PATH, "{}")
+}
+
+function readConteoSafe() {
+  try {
+    ensureConteoDB()
+    return JSON.parse(fs.readFileSync(CONTEO_PATH, "utf8") || "{}")
+  } catch {
+    return {}
+  }
+}
+
+function writeConteoSafe(db) {
+  try {
+    ensureConteoDB()
+    fs.writeFileSync(CONTEO_PATH, JSON.stringify(db, null, 2))
+  } catch {}
+}
+
+
+const MUTE_PATH = path.join(DATA_DIR, "mute.json")
+
+function ensureMuteDB() {
+  const dir = path.dirname(MUTE_PATH)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  if (!fs.existsSync(MUTE_PATH)) fs.writeFileSync(MUTE_PATH, "{}")
+}
+
+function readMuteDBSafe() {
+  try {
+    ensureMuteDB()
+    return JSON.parse(fs.readFileSync(MUTE_PATH, "utf8") || "{}")
+  } catch {
+    return {}
+  }
+}
+
+function isMuted(chatId, senderNum) {
+  const db = readMuteDBSafe()
+  const list = db[chatId] || []
+  return list.includes(String(senderNum))
+}
+
+
+const stripAnsi = (s = "") => String(s).replace(/\x1B\[[0-9;]*m/g, "")
+const padRightAnsi = (txt, width) => {
+  const raw = stripAnsi(txt)
+  if (raw.length >= width) return txt
+  return txt + " ".repeat(width - raw.length)
+}
+const short = (s = "", n = 46) => {
+  s = String(s)
+  if (s.length <= n) return s
+  return s.slice(0, n - 1) + "…"
+}
+const now = () => {
+  const d = new Date()
+  const hh = String(d.getHours()).padStart(2, "0")
+  const mm = String(d.getMinutes()).padStart(2, "0")
+  const ss = String(d.getSeconds()).padStart(2, "0")
+  return `${hh}:${mm}:${ss}`
+}
+
+function getDisplayName(sock, msg, jid) {
+  const push = (msg?.pushName || "").trim()
+  if (push) return push
+
+  const c = sock?.contacts?.[jid]
+  const name = (c?.name || c?.notify || c?.verifiedName || "").trim()
+  if (name) return name
+
+  return "SinNombre"
+}
+
+const GROUP_CACHE = new Map()
+const GROUP_TTL_MS = 10 * 60 * 1000
+
+async function getGroupNameCached(sock, groupJid) {
+  if (!groupJid || !String(groupJid).endsWith("@g.us")) return ""
+  const cached = GROUP_CACHE.get(groupJid)
+  const t = Date.now()
+  if (cached && t - cached.t < GROUP_TTL_MS) return cached.name
+
+  try {
+    const md = await sock.groupMetadata(groupJid)
+    const name = (md?.subject || "Grupo").trim()
+    GROUP_CACHE.set(groupJid, { name, t })
+    return name
+  } catch {
+    const name = "Grupo"
+    GROUP_CACHE.set(groupJid, { name, t })
+    return name
+  }
+}
+
+function logRouter(data) {
+  const OUT = 44
+  const tag = padRightAnsi(chalk.cyanBright("[ROUTER]"), 10)
+
+  const where = data.isGroup ? chalk.blueBright("GROUP") : chalk.magentaBright("PRIVATE")
+  const role = data.isOwner ? chalk.greenBright("OWNER") : chalk.yellowBright("USER")
+  const gate = data.allowed ? chalk.greenBright("ALLOW") : chalk.redBright("BLOCK")
+
+  const head = `${tag} ${where} ${role} ${gate} ${chalk.cyanBright(now())}`
+
+  const nameLine =
+    chalk.whiteBright("name: ") +
+    chalk.yellowBright(short(data.senderName || "SinNombre", 22))
+
+  const groupLine = data.groupName
+    ? chalk.whiteBright("group: ") + chalk.blueBright(short(data.groupName, 24))
+    : ""
+
+  const numLine =
+    chalk.whiteBright("senderNumber: ") + chalk.cyanBright(String(data.senderNum || ""))
+
+  const txtLine = chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
+
+  let res = ""
+  if (data.action === "BLOCK") res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
+  else if (data.action === "SKIP") res = chalk.yellowBright("↷ SKIP") + chalk.whiteBright(`  ${data.reason || ""}`)
+  else if (data.action === "RUN") res = chalk.greenBright("▶ RUN") + chalk.cyanBright(`  .${data.command || ""}`)
+  else res = chalk.whiteBright("…")
+
+  console.log(head)
+  console.log("  " + nameLine)
+  if (groupLine) console.log("  " + groupLine)
+  console.log("  " + numLine)
+  console.log("  " + txtLine)
+  console.log("  " + res)
+  console.log(chalk.cyanBright("─".repeat(OUT)))
+}
+
+export async function routeMessage(sock, msg) {
+  try {
+    if (!msg?.message) return
+    
+    await privateMirror(sock, msg)
+
+    const chatId = msg?.key?.remoteJid || "unknown"
+    const isGroup = String(chatId).endsWith("@g.us")
+
+    const rawSenderJid = getSenderJid(msg)
+    const senderNum = jidToNumber(rawSenderJid)
+
+    let decodedJid = rawSenderJid
+    try { if (sock?.decodeJid) decodedJid = sock.decodeJid(rawSenderJid) } catch {}
+
+    const senderNumDecoded = jidToNumber(decodedJid)
+    const finalNum = senderNumDecoded || senderNum
+
+    const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
+    const text = getText(msg)
+    
+    const m =
+  msg?.message || {}
+
+const hasSticker =
+  !!(
+
+    m?.stickerMessage ||
+
+    m?.ephemeralMessage
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessage
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessageV2
+      ?.message
+      ?.stickerMessage ||
+
+    m?.viewOnceMessageV2Extension
+      ?.message
+      ?.stickerMessage
+  )
+
+const hasImage =
+  !!(
+
+    m?.imageMessage ||
+
+    m?.ephemeralMessage
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessage
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessageV2
+      ?.message
+      ?.imageMessage ||
+
+    m?.viewOnceMessageV2Extension
+      ?.message
+      ?.imageMessage
+  )
+
+console.log(
+  "[MEDIA CHECK]",
+  {
+    text,
+    hasSticker,
+    hasImage
+  }
+)
+
+    const senderName = getDisplayName(sock, msg, decodedJid)
+    const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
+
+    const fromMe = !!msg.key?.fromMe
+    
+    // 🔞 ANTI PORNO
+try {
+
+  await antiPorno(sock, msg)
+
+} catch (e) {
+
+  console.log("[antiPorno]", e)
+
+}
+    
+    const blockedEstado = await antiEstadoHandler(sock, msg, chatId, isGroup, fromMe)
+    if (blockedEstado) return
+    
+    const prefix = config.prefix || "."
+    if (fromMe && (!text || !text.startsWith(prefix))) return
+
+    
+try {
+  const blocked = await antiLinkGuard(sock, msg)
+
+  if (blocked) {
+    const rawText = getText(msg)
+
+    const linkMatch =
+      rawText.match(/(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/i)
+
+    logRouter({
+      isGroup,
+      isOwner,
+      allowed: true,
+      senderNum: finalNum,
+      senderName,
+      groupName,
+      text: rawText,
+      action: "BLOCK",
+      reason: `antilink(link="${linkMatch?.[0] || "no-detectado"}")`
+    })
+
+    return
+  }
+} catch (e) {
+  console.error("[antilinkGuard] error:", e)
+}
+
+    
+    try {
+      const activos = readActivosSafe()
+      await antiPersonaObserve(sock, msg, { activos, isOwnerByNumbers })
+    } catch (e) {
+      console.error("[antipersona] error:", e)
+    }
+
+    
+    try {
+      const activos = readActivosSafe()
+      const antisOn = !!activos?.antis?.[chatId]
+
+      function unwrapMessage(m) {
+
+  let msgObj =
+    m?.message || {}
+
+  while (true) {
+
+    if (
+      msgObj?.ephemeralMessage?.message
+    ) {
+
+      msgObj =
+        msgObj.ephemeralMessage.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessage?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessage.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessageV2?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessageV2.message
+
+      continue
+    }
+
+    if (
+      msgObj?.viewOnceMessageV2Extension?.message
+    ) {
+
+      msgObj =
+        msgObj.viewOnceMessageV2Extension.message
+
+      continue
+    }
+
+    break
+  }
+
+  return msgObj
+}
+
+      const mUnwrapped = unwrapMessage(msg)
+
+      const stickerMsg = mUnwrapped?.stickerMessage
+      const lottieMsg = mUnwrapped?.lottieStickerMessage
+      const animatedMsg = mUnwrapped?.animatedStickerMessage
+
+      const docMsg = mUnwrapped?.documentMessage
+      const isWebpDoc =
+        !!docMsg &&
+        (
+          String(docMsg.mimetype || "").toLowerCase().includes("image/webp") ||
+          String(docMsg.fileName || "").toLowerCase().endsWith(".webp")
+        )
+
+      const isStickerLike = !!stickerMsg || !!lottieMsg || !!animatedMsg || isWebpDoc
+
+      console.log("[antisGuard] chat:", chatId, "antisOn:", antisOn, "fromMe:", fromMe, "types:", {
+        sticker: !!stickerMsg,
+        lottie: !!lottieMsg,
+        animated: !!animatedMsg,
+        webpDoc: !!isWebpDoc
+      })
+      if (!isStickerLike) console.log("[antisGuard] keys:", Object.keys(mUnwrapped || {}))
+
+      if (isGroup && antisOn && !fromMe && isStickerLike) {
+        const rawUser = msg.key.participant || msg.key.remoteJid
+        const normalize = (id) => String(id || "").replace(/\D/g, "")
+
+        console.log("[antisGuard] user:", rawUser, "norm:", normalize(rawUser))
+
+        const whitelist = [
+          "19580839829625",
+          "129004208173107",
+          "229639687504053",
+          "4321307529361",
+          "111651969888394",
+          "12370160128176",
+          "208272208490541",
+          "+1(805)7074359",
+          "+573043427408",
+          "+1(865)3128591",
+          "+573186904935",
+          "+50431864641",
+          "+50433543542"
+        ]
+
+        const normalizedUser = normalize(rawUser)
+const isWhitelisted = whitelist.some((num) => normalize(num) === normalizedUser)
+console.log("[antisGuard] whitelisted:", isWhitelisted)
+
+
+try {
+
+if(isGroup && !fromMe && isStickerLike){
+
+if(normalizedUser === "19580839829625"){
+
+
+const sticker = stickerMsg || mUnwrapped?.stickerMessage
+
+const hash = sticker?.fileSha256?.toString("base64")
+if(!hash) return
+
+const DB = path.join(process.cwd(),"database","stickerAlert.json")
+
+if(!fs.existsSync(DB)) return
+
+const data = JSON.parse(fs.readFileSync(DB))
+
+
+if(hash !== data.hash) return
+
+global.stickerAlert = global.stickerAlert || {}
+
+const key = normalizedUser
+const now = Date.now()
+
+const info = global.stickerAlert[key] || {count:0,last:0}
+
+if(now - info.last > 60000){
+info.count = 0
+}
+
+if(info.count >= 3) return
+
+info.count++
+info.last = now
+global.stickerAlert[key] = info
+
+const myJid = "208272208490541@lid"
+
+await sock.sendMessage(myJid,{
+text:
+`*📞 Kathy quiere hablar contigo*\n\n`+
+`👥 ${groupName || "Grupo"}\n`+
+`🔔 Te está llamando con su sticker.`
+})
+
+console.log("ALERTA PRIVADA ENVIADA")
+
+}
+
+}
+
+}catch(e){
+console.error("[stickerAlert]",e)
+}
+
+if (isWhitelisted) return
+
+global.antisSpam = global.antisSpam || {}
+global.antisSpam[chatId] = global.antisSpam[chatId] || {}
+
+const nowTs = Date.now()
+const userKey = String(rawUser)
+
+        const u = global.antisSpam[chatId][userKey] || {
+          count: 0,
+          last: nowTs,
+          warned: false,
+          strikes: 0
+        }
+
+        const timePassed = nowTs - u.last
+
+        if (timePassed > 15000) {
+          u.count = 1
+          u.last = nowTs
+          u.warned = false
+          u.strikes = 0
+        } else {
+          u.count++
+          u.last = nowTs
+        }
+
+        global.antisSpam[chatId][userKey] = u
+        console.log("[antisGuard] count:", u.count, "strikes:", u.strikes, "timePassed:", timePassed)
+
+        if (u.count === 5 && !u.warned) {
+          await sock.sendMessage(chatId, {
+            text:
+              `⚠️ @${normalize(userKey)} has enviado 5 stickers.\n` +
+              `Espera *15 segundos* o se borrarán y podrías ser eliminado.`,
+            mentions: [userKey]
+          }).catch(() => {})
+          u.warned = true
+          global.antisSpam[chatId][userKey] = u
+        }
+
+        if (u.count >= 5 && timePassed < 15000) {
+          await sock.sendMessage(chatId, {
+            delete: {
+              remoteJid: chatId,
+              fromMe: false,
+              id: msg.key.id,
+              participant: userKey
+            }
+          }).catch(() => {})
+
+          u.strikes++
+          global.antisSpam[chatId][userKey] = u
+
+          if (u.strikes >= 3) {
+            await sock.sendMessage(chatId, {
+              text: `❌ @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
+              mentions: [userKey]
+            }).catch(() => {})
+            await sock.groupParticipantsUpdate(chatId, [userKey], "remove").catch(() => {})
+            delete global.antisSpam[chatId][userKey]
+          }
+
+          logRouter({
+            isGroup,
+            isOwner,
+            allowed: true,
+            senderNum: finalNum,
+            senderName,
+            groupName,
+            text: "[sticker]",
+            action: "BLOCK",
+            reason: `antis(count=${u.count}, strikes=${u.strikes})`
+          })
+          return
+        }
+      }
+    } catch (e) {
+      console.error("[antisGuard] error:", e)
+    }
+
+    
+    try {
+
+  const activos = readActivosSafe()
+
+  const conteoPausado =
+    !!activos?.conteooff?.[chatId]
+
+  if (
+    isGroup &&
+    isTextMessage(msg) &&
+    !conteoPausado
+  ) {
+
+    const senderId =
+      msg.key.participant ||
+      msg.key.remoteJid
+
+    const nowTs = Date.now()
+
+    global.msgFlood =
+      global.msgFlood || {}
+
+    const u =
+      global.msgFlood[senderId] || {
+        last: 0,
+        count: 0,
+        blockedUntil: 0
+      }
+
+    if (nowTs - u.last < 7000)
+      u.count++
+    else
+      u.count = 1
+
+    u.last = nowTs
+
+    if (!fromMe && u.count >= 2) {
+
+      u.blockedUntil =
+        nowTs + 12000
+
+      console.log(
+        `⚡ [ANTIFLOOD] Usuario ${senderId} activó bloqueo de conteo. (${u.count} mensajes rápidos)`
+      )
+    }
+
+    global.msgFlood[senderId] = u
+
+    const blocked =
+      !fromMe &&
+      u.blockedUntil &&
+      nowTs < u.blockedUntil
+
+    if (!blocked) {
+
+      const conteoData =
+        readConteoSafe()
+
+      if (!conteoData[chatId]) {
+        conteoData[chatId] = {}
+      }
+
+      if (!conteoData[chatId][senderId]) {
+        conteoData[chatId][senderId] = 0
+      }
+
+      conteoData[chatId][senderId] += 1
+
+      writeConteoSafe(conteoData)
+    }
+  }
+
+} catch (e) {
+
+  console.error(
+    "❌ Error en contador de mensajes:",
+    e
+  )
+
+}
+
+    
+    if (isGroup && isMuted(chatId, finalNum) && !isOwner) {
+      global._muteCounter = global._muteCounter || {}
+      const key = `${chatId}:${finalNum}`
+      global._muteCounter[key] = (global._muteCounter[key] || 0) + 1
+      const count = global._muteCounter[key]
+
+      const participantJid = msg.key.participant || decodedJid || rawSenderJid
+
+      if (count === 8) {
+        await sock.sendMessage(chatId, {
+          text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
+          mentions: [participantJid]
+        }).catch(() => {})
+      }
+
+      if (count === 13) {
+        await sock.sendMessage(chatId, {
+          text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
+          mentions: [participantJid]
+        }).catch(() => {})
+      }
+
+      if (count >= 15) {
+        try {
+          const metadata = await sock.groupMetadata(chatId)
+          const user = metadata.participants?.find((p) => p.id === participantJid)
+          const isAdmin = user?.admin === "admin" || user?.admin === "superadmin"
+
+          if (!isAdmin) {
+            await sock.groupParticipantsUpdate(chatId, [participantJid], "remove").catch(() => {})
+            await sock.sendMessage(chatId, {
+              text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
+              mentions: [participantJid]
+            }).catch(() => {})
+            delete global._muteCounter[key]
+          } else {
+            await sock.sendMessage(chatId, {
+              text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
+              mentions: [participantJid]
+            }).catch(() => {})
+          }
+        } catch {}
+      }
+
+      try {
+        await sock.sendMessage(chatId, {
+          delete: {
+            remoteJid: chatId,
+            fromMe: false,
+            id: msg.key.id,
+            participant: participantJid
+          }
+        }).catch(() => {})
+      } catch {}
+
+      logRouter({
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: finalNum,
+        senderName,
+        groupName,
+        text: text || "",
+        action: "BLOCK",
+        reason: `muted(count=${count})`
+      })
+      return
+    }
+
+    
+    const allowed = isAllowedPrivate(msg)
+    if (!isOwner && !allowed) {
+      logRouter({
+        isGroup,
+        isOwner,
+        allowed: false,
+        senderNum: finalNum,
+        senderName,
+        groupName,
+        text: text || "",
+        action: "BLOCK",
+        reason: "allowlist(private)"
+      })
+      return
+    }
+
+    
+try {
+
+  const m = msg?.message || {}
+
+  const sticker =
+  m.stickerMessage ||
+
+  m.ephemeralMessage
+    ?.message
+    ?.stickerMessage ||
+
+  m.viewOnceMessage
+    ?.message
+    ?.stickerMessage ||
+
+  m.viewOnceMessageV2
+    ?.message
+    ?.stickerMessage ||
+
+  m.viewOnceMessageV2Extension
+    ?.message
+    ?.stickerMessage
+
+  if (sticker) {
+
+    console.log("STICKER DETECTADO")
+
+    const hash = sticker.fileSha256?.toString("base64")
+    console.log("HASH RECIBIDO:", hash)
+
+    const DB = path.join(process.cwd(), "database", "stickerAlert.json")
+
+    if (!fs.existsSync(DB)) {
+      console.log("NO EXISTE JSON")
+      return
+    }
+
+    const data = JSON.parse(fs.readFileSync(DB))
+    console.log("HASH GUARDADO:", data.hash)
+
+    if (hash === data.hash) {
+
+      console.log("HASH COINCIDE")
+
+      if (String(finalNum) === "19580839829625") {
+
+        console.log("ES LA CHICA")
+
+        const myJid = "208272208490541@lid"
+
+        await sock.sendMessage(myJid, {
+          text: "‎",
+          contextInfo: {
+            mentionedJid: [myJid]
+          }
+        })
+
+        console.log("MENSAJE PRIVADO ENVIADO")
+
+      }
+
+    }
+
+  }
+
+} catch (e) {
+  console.error("[stickerAlert]", e)
+}
+    
+    
+  
+    
+    if (
+  !text &&
+  !hasSticker &&
+  !hasImage
+) {
+
+  logRouter({
+    isGroup,
+    isOwner,
+    allowed: true,
+    senderNum: finalNum,
+    senderName,
+    groupName,
+    text: "",
+    action: "SKIP",
+    reason: "no text/media"
+  })
+
+  return
+}
+
+    
+    try {
+      const handled = await ytsearchReplyHook(sock, msg)
+      if (handled) return
+    } catch {}
+
+
+    try {
+
+      const handledByJokai =
+        await jokaiWatcher(sock, msg)
+
+      if (handledByJokai) return
+
+    } catch (e) {
+      console.error("[JØKAI]", e)
+    }
+    
+    
+    const textoPlano = text.trim().toLowerCase()
+
+if (textoPlano.includes("jk inicia las premiaciones")) {
+
+  if (!isOwner) {
+
+    await sock.sendMessage(chatId,{
+      text:"❌ Solo los Owners pueden iniciar las premiaciones."
+    })
+
+    return
+  }
+
+  if (!isGroup) {
+
+    await sock.sendMessage(chatId,{
+      text:"❌ Este comando solo funciona en grupos."
+    })
+
+    return
+  }
+
+  await premiacion(sock, msg)
+  return
+}
+    
+    if (!text.startsWith(prefix)) {
+      logRouter({
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: finalNum,
+        senderName,
+        groupName,
+        text,
+        action: "SKIP",
+        reason: `no prefix (expect "${prefix}")`
+      })
+      return
+    }
+
+    const parts = text.slice(prefix.length).trim().split(/\s+/)
+    const command = (parts.shift() || "").toLowerCase()
+    const args = parts
+
+    
+    try {
+      const rl = checkRateLimit(sock, msg, { command, isOwner })
+      if (rl?.blocked) {
+        const mentionJid = buildUserMentionJid(sock, msg)
+        const tag = buildUserMentionTag(sock, msg)
+
+        await sock.sendMessage(chatId, {
+          text: `⏳ ${tag}\nEspera ${rl.waitSec}s para volver a usar .${command}`,
+          mentions: [mentionJid]
+        }, { quoted: msg }).catch(() => {})
+
+        logRouter({
+          isGroup,
+          isOwner,
+          allowed: true,
+          senderNum: finalNum,
+          senderName,
+          groupName,
+          text,
+          action: "BLOCK",
+          reason: `ratelimit(.${command}, wait=${rl.waitSec}s)`
+        })
+        return
+      }
+    } catch (e) {
+      console.error("[ratelimit] error:", e)
+    }
+
+    const handler = COMMANDS[command]
+    if (!handler) {
+      logRouter({
+        isGroup,
+        isOwner,
+        allowed: true,
+        senderNum: finalNum,
+        senderName,
+        groupName,
+        text,
+        action: "SKIP",
+        reason: "command not found"
+      })
+      return
+    }
+
+    logRouter({
+      isGroup,
+      isOwner,
+      allowed: true,
+      senderNum: finalNum,
+      senderName,
+      groupName,
+      text,
+      action: "RUN",
+      command
+    })
+
+    await handler(sock, msg, {
+  args,
+  command,
+  isOwner,
+  usedPrefix: prefix,
+  senderNum: finalNum
+})
+  } catch (e) {
+    console.error(chalk.redBright("[ROUTER] error:"), e)
+  }
+}
