@@ -41,7 +41,7 @@ import pausarconteo from "../commands/pausarconteo.js"
 import reanudarconteo from "../commands/reanudarconteo.js"
 import estadoconteo from "../commands/estadoconteo.js"
 import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
-
+import setsticker from "../commands/setsticker.js"
 import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
@@ -79,6 +79,7 @@ const COMMANDS = {
   tourl,
   debugview,
   sumar,
+  setsticker,
   spotify,
   addlista,
   jokai,
