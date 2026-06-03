@@ -1025,26 +1025,51 @@ const userKey = String(rawUser)
     
 try {
 
-  const m = msg?.message || {}
+  function unwrapMessage(m) {
+
+    let msgObj = m?.message || {}
+
+    while (true) {
+
+      if (msgObj?.ephemeralMessage?.message) {
+        msgObj = msgObj.ephemeralMessage.message
+        continue
+      }
+
+      if (msgObj?.viewOnceMessage?.message) {
+        msgObj = msgObj.viewOnceMessage.message
+        continue
+      }
+
+      if (msgObj?.viewOnceMessageV2?.message) {
+        msgObj = msgObj.viewOnceMessageV2.message
+        continue
+      }
+
+      if (msgObj?.viewOnceMessageV2Extension?.message) {
+        msgObj = msgObj.viewOnceMessageV2Extension.message
+        continue
+      }
+
+      break
+    }
+
+    return msgObj
+  }
+
+  const mUnwrapped = unwrapMessage(msg)
 
   const sticker =
-  m.stickerMessage ||
+    mUnwrapped?.stickerMessage
 
-  m.ephemeralMessage
-    ?.message
-    ?.stickerMessage ||
+  console.log("[BAN STICKER]", {
+    detected: !!sticker
+  })
 
-  m.viewOnceMessage
-    ?.message
-    ?.stickerMessage ||
-
-  m.viewOnceMessageV2
-    ?.message
-    ?.stickerMessage ||
-
-  m.viewOnceMessageV2Extension
-    ?.message
-    ?.stickerMessage
+  console.log(
+    "[BAN KEYS]",
+    Object.keys(mUnwrapped || {})
+  )
 
   if (sticker) {
 
