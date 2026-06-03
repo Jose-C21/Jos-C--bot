@@ -41,7 +41,7 @@ import pausarconteo from "../commands/pausarconteo.js"
 import reanudarconteo from "../commands/reanudarconteo.js"
 import estadoconteo from "../commands/estadoconteo.js"
 import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
-
+import stickertovideo from "../commands/stickertovideo.js"
 import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
@@ -82,6 +82,8 @@ const COMMANDS = {
   spotify,
   addlista,
   jokai,
+  mp4: stickertovideo,
+togif: stickertovideo,
   testestado,
   pausarconteo,
 reanudarconteo,
