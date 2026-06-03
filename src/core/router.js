@@ -64,7 +64,7 @@ import add from "../commands/add.js"
 import warnSystem from "../commands/warn.js"
 import reiniciarConteo from "../commands/reiniciarconteo.js"
 import debugview from "../commands/debugview.js"
-
+import setsticker from "../commands/setsticker.js"
 import sumar from "../commands/sumar.js"
 import detectarSticker from "../commands/detectarSticker.js"
 
@@ -74,6 +74,7 @@ const COMMANDS = {
   s: sticker,
   play,
   mute,
+  setsticker,
   unmute,
   img,
   tourl,
