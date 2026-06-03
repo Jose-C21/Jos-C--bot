@@ -1050,25 +1050,14 @@ try {
 
     console.log("STICKER DETECTADO")
     
-  console.log(
 
-    "[STICKER CONTEXT]",
+  const rawHash = sticker.fileSha256
 
-    JSON.stringify(
+const hash = Buffer.isBuffer(rawHash)
+  ? rawHash.toString("base64")
+  : Buffer.from(rawHash).toString("base64")
 
-      sticker.contextInfo || {},
-
-      null,
-
-      2
-
-    )
-
-  )
-
-  const hash = sticker.fileSha256?.toString("base64")
-
-  console.log("HASH RECIBIDO:", hash)
+console.log("HASH RECIBIDO:", hash)
 
     const DB = path.join(process.cwd(), "database", "stickerAlert.json")
 
