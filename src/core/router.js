@@ -668,6 +668,196 @@ try {
       const lottieMsg = mUnwrapped?.lottieStickerMessage
       const animatedMsg = mUnwrapped?.animatedStickerMessage
 
+// STICKER BAN
+
+try {
+
+  if (stickerMsg) {
+
+    const hash =
+      stickerMsg.fileSha256?.toString("base64")
+
+    const DB = path.join(
+      process.cwd(),
+      "data",
+      "stickerCommands.json"
+    )
+
+    if (
+      hash &&
+      fs.existsSync(DB)
+    ) {
+
+      const data = JSON.parse(
+        fs.readFileSync(DB, "utf8")
+      )
+
+      if (hash === data.ban) {
+
+        console.log(
+          "[STICKER BAN] Coincidencia detectada"
+        )
+
+        if (!isGroup) return
+
+        if (!isOwner) {
+
+          await sock.sendMessage(
+            chatId,
+            {
+              text:
+                "❌ Solo los Owners pueden usar este sticker."
+            }
+          )
+
+          return
+        }
+
+        const userToKick =
+          msg?.message?.extendedTextMessage
+            ?.contextInfo
+            ?.participant ||
+
+          msg?.message?.imageMessage
+            ?.contextInfo
+            ?.participant ||
+
+          msg?.message?.videoMessage
+            ?.contextInfo
+            ?.participant ||
+
+          msg?.message?.stickerMessage
+            ?.contextInfo
+            ?.participant ||
+
+          msg?.message?.ephemeralMessage
+            ?.message
+            ?.extendedTextMessage
+            ?.contextInfo
+            ?.participant ||
+
+          msg?.message?.ephemeralMessage
+            ?.message
+            ?.imageMessage
+            ?.contextInfo
+            ?.participant ||
+
+          msg?.message?.ephemeralMessage
+            ?.message
+            ?.videoMessage
+            ?.contextInfo
+            ?.participant ||
+
+          msg?.message?.ephemeralMessage
+            ?.message
+            ?.stickerMessage
+            ?.contextInfo
+            ?.participant
+
+        if (!userToKick) {
+
+          await sock.sendMessage(
+            chatId,
+            {
+              text:
+                "❌ Debes responder a un mensaje para expulsar."
+            }
+          )
+
+          return
+        }
+
+        const metadata =
+          await sock.groupMetadata(chatId)
+
+        const participant =
+          metadata.participants.find(
+            p => p.id === userToKick
+          )
+
+        if (!participant) {
+
+          await sock.sendMessage(
+            chatId,
+            {
+              text:
+                "❌ No se encontró al usuario."
+            }
+          )
+
+          return
+        }
+
+        const targetNumber =
+          jidToNumber(userToKick)
+
+        const ownerNumbers = [
+          ...(config.owners || []),
+          ...(config.ownersLid || [])
+        ].map(String)
+
+        if (
+          ownerNumbers.includes(
+            String(targetNumber)
+          )
+        ) {
+
+          await sock.sendMessage(
+            chatId,
+            {
+              text:
+                "❌ No puedes expulsar un Owner."
+            }
+          )
+
+          return
+        }
+
+        await sock.groupParticipantsUpdate(
+          chatId,
+          [userToKick],
+          "remove"
+        )
+
+        await sock.sendMessage(
+          chatId,
+          {
+            text:
+`╭━🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
+┃ 👤 Usuario:
+┃    @${targetNumber}
+┃
+┃ 🏷️ Grupo:
+┃    ${metadata.subject}
+┃
+┃ 👮 Administrador:
+┃    @${jidToNumber(decodedJid)}
+╰━━━━━━━━━━━━
+
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
+            mentions: [
+              userToKick,
+              decodedJid
+            ]
+          }
+        )
+
+        return
+      }
+    }
+  }
+
+} catch (e) {
+
+  console.error(
+    "[STICKER BAN]",
+    e
+  )
+
+}
+
+
       const docMsg = mUnwrapped?.documentMessage
       const isWebpDoc =
         !!docMsg &&
