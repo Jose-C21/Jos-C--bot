@@ -1143,11 +1143,27 @@ try {
         return
       }
 
-      await sock.groupParticipantsUpdate(
-        chatId,
-        [userToKick],
-        "remove"
-      )
+      console.log("USER TO KICK:", userToKick)
+console.log("TARGET NUMBER:", targetNumber)
+console.log("BOT ID:", sock?.user?.id)
+
+try {
+
+  console.log("INTENTANDO EXPULSAR:", userToKick)
+
+  const res = await sock.groupParticipantsUpdate(
+    chatId,
+    [userToKick],
+    "remove"
+  )
+
+  console.log("RESULTADO REMOVE:", JSON.stringify(res, null, 2))
+
+} catch (err) {
+
+  console.log("ERROR REMOVE:", err)
+
+}
 
       await sock.sendMessage(
         chatId,
