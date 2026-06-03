@@ -564,6 +564,11 @@ try {
 
 }
     
+    console.log(
+  "[TIPO MENSAJE]",
+  Object.keys(msg.message || {})
+)
+    
     const blockedEstado = await antiEstadoHandler(sock, msg, chatId, isGroup, fromMe)
     if (blockedEstado) return
     
