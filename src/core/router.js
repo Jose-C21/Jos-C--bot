@@ -1127,21 +1127,7 @@ try {
         return
       }
 
-      const botId = sock?.user?.id
-
-      const botParticipant =
-        metadata.participants.find(
-          p => p.id === botId
-        )
-
-      const botIsAdmin =
-        botParticipant?.admin === "admin" ||
-        botParticipant?.admin === "superadmin"
-
-      if (!botIsAdmin) {
-        console.log("BOT NO ES ADMIN")
-        return
-      }
+      
 
       console.log("USER TO KICK:", userToKick)
 console.log("TARGET NUMBER:", targetNumber)
