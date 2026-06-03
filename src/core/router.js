@@ -756,13 +756,12 @@ await sock.sendMessage(chatId, {
           )
         ) {
 
-          await sock.sendMessage(
-            chatId,
-            {
-              text:
-                "❌ No puedes expulsar un Owner."
-            }
-          )
+          const tag = `@${jidToNumber(decodedJid)}`
+
+await sock.sendMessage(chatId, {
+  text: `> ╰❒ ${tag}, 𝗹𝗼𝘀 𝗢𝘄𝗻𝗲𝗿𝘀 𝗲𝘀𝘁𝗮́𝗻 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼𝘀 𝗰𝗼𝗻𝘁𝗿𝗮 𝗲𝘅𝗽𝘂𝗹𝘀𝗶𝗼𝗻𝗲𝘀.`,
+  mentions: [decodedJid]
+})
 
           return
         }
