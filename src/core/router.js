@@ -715,13 +715,12 @@ try {
 
         if (!userToKick) {
 
-          await sock.sendMessage(
-            chatId,
-            {
-              text:
-                "❌ Debes responder a un mensaje para expulsar."
-            }
-          )
+        const tag = `@${jidToNumber(decodedJid)}`
+
+await sock.sendMessage(chatId, {
+  text: `> ╰❒ ${tag}, responde al mensaje de la persona que deseas expulsar.`,
+  mentions: [decodedJid]
+})
 
           return
         }
