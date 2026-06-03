@@ -694,135 +694,86 @@ try {
 
       if (hash === data.ban) {
 
-        console.log(
-          "[STICKER BAN] Coincidencia detectada"
-        )
+  console.log(
+    "[STICKER BAN] Coincidencia detectada"
+  )
 
-        if (!isGroup) return
+  if (!isGroup) return
 
-        if (!isOwner) {
+  if (!isOwner) {
 
-          await sock.sendMessage(
-            chatId,
-            {
-              text:
-                "❌ Solo los Owners pueden usar este sticker."
-            }
-          )
+    await sock.sendMessage(
+      chatId,
+      {
+        text:
+          "❌ Solo los Owners pueden usar este sticker."
+      }
+    )
 
-          return
-        }
+    return
+  }
 
-        const userToKick =
-          msg?.message?.extendedTextMessage
-            ?.contextInfo
-            ?.participant ||
+  const userToKick =
+    stickerMsg?.contextInfo?.participant
 
-          msg?.message?.imageMessage
-            ?.contextInfo
-            ?.participant ||
+  if (!userToKick) {
 
-          msg?.message?.videoMessage
-            ?.contextInfo
-            ?.participant ||
+    await sock.sendMessage(
+      chatId,
+      {
+        text:
+          "❌ Debes responder a un mensaje para expulsar."
+      }
+    )
 
-          msg?.message?.stickerMessage
-            ?.contextInfo
-            ?.participant ||
+    return
+  }
 
-          msg?.message?.ephemeralMessage
-            ?.message
-            ?.extendedTextMessage
-            ?.contextInfo
-            ?.participant ||
+  const metadata =
+    await sock.groupMetadata(chatId)
 
-          msg?.message?.ephemeralMessage
-            ?.message
-            ?.imageMessage
-            ?.contextInfo
-            ?.participant ||
+  const participant =
+    metadata.participants.find(
+      p => p.id === userToKick
+    )
 
-          msg?.message?.ephemeralMessage
-            ?.message
-            ?.videoMessage
-            ?.contextInfo
-            ?.participant ||
+  if (!participant) return
 
-          msg?.message?.ephemeralMessage
-            ?.message
-            ?.stickerMessage
-            ?.contextInfo
-            ?.participant
+  const targetNumber =
+    jidToNumber(userToKick)
 
-        if (!userToKick) {
+  const ownerNumbers = [
+    ...(config.owners || []),
+    ...(config.ownersLid || [])
+  ].map(String)
 
-          await sock.sendMessage(
-            chatId,
-            {
-              text:
-                "❌ Debes responder a un mensaje para expulsar."
-            }
-          )
+  if (
+    ownerNumbers.includes(
+      String(targetNumber)
+    )
+  ) {
 
-          return
-        }
+    await sock.sendMessage(
+      chatId,
+      {
+        text:
+          "❌ No puedes expulsar un Owner."
+      }
+    )
 
-        const metadata =
-          await sock.groupMetadata(chatId)
+    return
+  }
 
-        const participant =
-          metadata.participants.find(
-            p => p.id === userToKick
-          )
+  await sock.groupParticipantsUpdate(
+    chatId,
+    [userToKick],
+    "remove"
+  )
 
-        if (!participant) {
-
-          await sock.sendMessage(
-            chatId,
-            {
-              text:
-                "❌ No se encontró al usuario."
-            }
-          )
-
-          return
-        }
-
-        const targetNumber =
-          jidToNumber(userToKick)
-
-        const ownerNumbers = [
-          ...(config.owners || []),
-          ...(config.ownersLid || [])
-        ].map(String)
-
-        if (
-          ownerNumbers.includes(
-            String(targetNumber)
-          )
-        ) {
-
-          await sock.sendMessage(
-            chatId,
-            {
-              text:
-                "❌ No puedes expulsar un Owner."
-            }
-          )
-
-          return
-        }
-
-        await sock.groupParticipantsUpdate(
-          chatId,
-          [userToKick],
-          "remove"
-        )
-
-        await sock.sendMessage(
-          chatId,
-          {
-            text:
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
 `╭━🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
 ┃ 👤 Usuario:
 ┃    @${targetNumber}
@@ -836,15 +787,15 @@ try {
 
 ⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
-            mentions: [
-              userToKick,
-              decodedJid
-            ]
-          }
-        )
+      mentions: [
+        userToKick,
+        decodedJid
+      ]
+    }
+  )
 
-        return
-      }
+  return
+}
     }
   }
 
