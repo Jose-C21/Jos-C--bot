@@ -1,4 +1,3 @@
-
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
@@ -41,7 +40,7 @@ import pausarconteo from "../commands/pausarconteo.js"
 import reanudarconteo from "../commands/reanudarconteo.js"
 import estadoconteo from "../commands/estadoconteo.js"
 import totalmensajes, { totalmensajesPage } from "../commands/totalmensajes.js"
-import stickertovideo from "../commands/stickertovideo.js"
+
 import tiktok from "../commands/tiktok.js"
 import decir from "../commands/decir.js"
 import audiodoc from "../commands/audiodoc.js"
@@ -64,7 +63,7 @@ import add from "../commands/add.js"
 import warnSystem from "../commands/warn.js"
 import reiniciarConteo from "../commands/reiniciarconteo.js"
 import debugview from "../commands/debugview.js"
-import setsticker from "../commands/setsticker.js"
+
 import sumar from "../commands/sumar.js"
 import detectarSticker from "../commands/detectarSticker.js"
 
@@ -74,7 +73,6 @@ const COMMANDS = {
   s: sticker,
   play,
   mute,
-  setsticker,
   unmute,
   img,
   tourl,
@@ -83,8 +81,6 @@ const COMMANDS = {
   spotify,
   addlista,
   jokai,
-  mp4: stickertovideo,
-togif: stickertovideo,
   testestado,
   pausarconteo,
 reanudarconteo,
@@ -319,7 +315,7 @@ export async function antiEstadoHandler(sock, msg, chatId, isGroup, fromMe) {
       }).catch(() => {})
 
       await sock.sendMessage(chatId, {
-        text: `> ╰❒ ${tag}, ɴᴏ ꜱᴇ ᴘᴇʀᴍɪᴛᴇɴ ᴍᴇɴᴄɪᴏɴᴇꜱ ᴅᴇ ᴇꜱᴛᴀᴅᴏꜱ ᴇɴ ᴇꜱᴛᴇ ɢʀᴜᴘᴏ.`,
+        text: `> â°â ${tag}, É´á´ ê±á´ á´á´Êá´Éªá´á´É´ á´á´É´á´Éªá´É´á´ê± á´á´ á´ê±á´á´á´á´ê± á´É´ á´ê±á´á´ É¢Êá´á´á´.`,
         mentions: [user]
       }).catch(() => {})
 
@@ -391,7 +387,7 @@ const padRightAnsi = (txt, width) => {
 const short = (s = "", n = 46) => {
   s = String(s)
   if (s.length <= n) return s
-  return s.slice(0, n - 1) + "…"
+  return s.slice(0, n - 1) + "â¦"
 }
 const now = () => {
   const d = new Date()
@@ -457,10 +453,10 @@ function logRouter(data) {
   const txtLine = chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
 
   let res = ""
-  if (data.action === "BLOCK") res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
-  else if (data.action === "SKIP") res = chalk.yellowBright("↷ SKIP") + chalk.whiteBright(`  ${data.reason || ""}`)
-  else if (data.action === "RUN") res = chalk.greenBright("▶ RUN") + chalk.cyanBright(`  .${data.command || ""}`)
-  else res = chalk.whiteBright("…")
+  if (data.action === "BLOCK") res = chalk.redBright("Ã BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
+  else if (data.action === "SKIP") res = chalk.yellowBright("â· SKIP") + chalk.whiteBright(`  ${data.reason || ""}`)
+  else if (data.action === "RUN") res = chalk.greenBright("â¶ RUN") + chalk.cyanBright(`  .${data.command || ""}`)
+  else res = chalk.whiteBright("â¦")
 
   console.log(head)
   console.log("  " + nameLine)
@@ -468,7 +464,7 @@ function logRouter(data) {
   console.log("  " + numLine)
   console.log("  " + txtLine)
   console.log("  " + res)
-  console.log(chalk.cyanBright("─".repeat(OUT)))
+  console.log(chalk.cyanBright("â".repeat(OUT)))
 }
 
 export async function routeMessage(sock, msg) {
@@ -553,7 +549,7 @@ console.log(
 
     const fromMe = !!msg.key?.fromMe
     
-    // 🔞 ANTI PORNO
+    // ð ANTI PORNO
 try {
 
   await antiPorno(sock, msg)
@@ -563,11 +559,6 @@ try {
   console.log("[antiPorno]", e)
 
 }
-    
-    console.log(
-  "[TIPO MENSAJE]",
-  Object.keys(msg.message || {})
-)
     
     const blockedEstado = await antiEstadoHandler(sock, msg, chatId, isGroup, fromMe)
     if (blockedEstado) return
@@ -762,9 +753,9 @@ const myJid = "208272208490541@lid"
 
 await sock.sendMessage(myJid,{
 text:
-`*📞 Kathy quiere hablar contigo*\n\n`+
-`👥 ${groupName || "Grupo"}\n`+
-`🔔 Te está llamando con su sticker.`
+`*ð Kathy quiere hablar contigo*\n\n`+
+`ð¥ ${groupName || "Grupo"}\n`+
+`ð Te estÃ¡ llamando con su sticker.`
 })
 
 console.log("ALERTA PRIVADA ENVIADA")
@@ -777,7 +768,7 @@ console.log("ALERTA PRIVADA ENVIADA")
 console.error("[stickerAlert]",e)
 }
 
-// if (isWhitelisted) return
+if (isWhitelisted) return
 
 global.antisSpam = global.antisSpam || {}
 global.antisSpam[chatId] = global.antisSpam[chatId] || {}
@@ -810,8 +801,8 @@ const userKey = String(rawUser)
         if (u.count === 5 && !u.warned) {
           await sock.sendMessage(chatId, {
             text:
-              `⚠️ @${normalize(userKey)} has enviado 5 stickers.\n` +
-              `Espera *15 segundos* o se borrarán y podrías ser eliminado.`,
+              `â ï¸ @${normalize(userKey)} has enviado 5 stickers.\n` +
+              `Espera *15 segundos* o se borrarÃ¡n y podrÃ­as ser eliminado.`,
             mentions: [userKey]
           }).catch(() => {})
           u.warned = true
@@ -833,7 +824,7 @@ const userKey = String(rawUser)
 
           if (u.strikes >= 3) {
             await sock.sendMessage(chatId, {
-              text: `❌ @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
+              text: `â @${normalize(userKey)} fue eliminado por abusar de los stickers.`,
               mentions: [userKey]
             }).catch(() => {})
             await sock.groupParticipantsUpdate(chatId, [userKey], "remove").catch(() => {})
@@ -901,7 +892,7 @@ const userKey = String(rawUser)
         nowTs + 12000
 
       console.log(
-        `⚡ [ANTIFLOOD] Usuario ${senderId} activó bloqueo de conteo. (${u.count} mensajes rápidos)`
+        `â¡ [ANTIFLOOD] Usuario ${senderId} activÃ³ bloqueo de conteo. (${u.count} mensajes rÃ¡pidos)`
       )
     }
 
@@ -934,7 +925,7 @@ const userKey = String(rawUser)
 } catch (e) {
 
   console.error(
-    "❌ Error en contador de mensajes:",
+    "â Error en contador de mensajes:",
     e
   )
 
@@ -951,14 +942,14 @@ const userKey = String(rawUser)
 
       if (count === 8) {
         await sock.sendMessage(chatId, {
-          text: `⚠️ @${String(finalNum)} estás muteado.\nSigue enviando mensajes y podrías ser eliminado.`,
+          text: `â ï¸ @${String(finalNum)} estÃ¡s muteado.\nSigue enviando mensajes y podrÃ­as ser eliminado.`,
           mentions: [participantJid]
         }).catch(() => {})
       }
 
       if (count === 13) {
         await sock.sendMessage(chatId, {
-          text: `⛔ @${String(finalNum)} estás al límite.\nSi envías *otro mensaje*, serás eliminado del grupo.`,
+          text: `â @${String(finalNum)} estÃ¡s al lÃ­mite.\nSi envÃ­as *otro mensaje*, serÃ¡s eliminado del grupo.`,
           mentions: [participantJid]
         }).catch(() => {})
       }
@@ -972,13 +963,13 @@ const userKey = String(rawUser)
           if (!isAdmin) {
             await sock.groupParticipantsUpdate(chatId, [participantJid], "remove").catch(() => {})
             await sock.sendMessage(chatId, {
-              text: `❌ @${String(finalNum)} fue eliminado por ignorar el mute.`,
+              text: `â @${String(finalNum)} fue eliminado por ignorar el mute.`,
               mentions: [participantJid]
             }).catch(() => {})
             delete global._muteCounter[key]
           } else {
             await sock.sendMessage(chatId, {
-              text: `🔇 @${String(finalNum)} es administrador y no se puede eliminar.`,
+              text: `ð @${String(finalNum)} es administrador y no se puede eliminar.`,
               mentions: [participantJid]
             }).catch(() => {})
           }
@@ -1030,188 +1021,68 @@ const userKey = String(rawUser)
     
 try {
 
-  function unwrapMessage(m) {
-
-    let msgObj = m?.message || {}
-
-    while (true) {
-
-      if (msgObj?.ephemeralMessage?.message) {
-        msgObj = msgObj.ephemeralMessage.message
-        continue
-      }
-
-      if (msgObj?.viewOnceMessage?.message) {
-        msgObj = msgObj.viewOnceMessage.message
-        continue
-      }
-
-      if (msgObj?.viewOnceMessageV2?.message) {
-        msgObj = msgObj.viewOnceMessageV2.message
-        continue
-      }
-
-      if (msgObj?.viewOnceMessageV2Extension?.message) {
-        msgObj = msgObj.viewOnceMessageV2Extension.message
-        continue
-      }
-
-      break
-    }
-
-    return msgObj
-  }
-
-  const mUnwrapped = unwrapMessage(msg)
+  const m = msg?.message || {}
 
   const sticker =
-    mUnwrapped?.stickerMessage
+  m.stickerMessage ||
 
-  console.log("[BAN STICKER]", {
-    detected: !!sticker
-  })
+  m.ephemeralMessage
+    ?.message
+    ?.stickerMessage ||
 
-console.log(
-  "[BAN HASH]",
-  sticker?.fileSha256?.toString("base64")
-)
+  m.viewOnceMessage
+    ?.message
+    ?.stickerMessage ||
 
-  console.log(
-    "[BAN KEYS]",
-    Object.keys(mUnwrapped || {})
-  )
+  m.viewOnceMessageV2
+    ?.message
+    ?.stickerMessage ||
+
+  m.viewOnceMessageV2Extension
+    ?.message
+    ?.stickerMessage
 
   if (sticker) {
 
     console.log("STICKER DETECTADO")
 
-    const rawHash = sticker.fileSha256
-
-    const hash = Buffer.isBuffer(rawHash)
-      ? rawHash.toString("base64")
-      : Buffer.from(rawHash).toString("base64")
-
+    const hash = sticker.fileSha256?.toString("base64")
     console.log("HASH RECIBIDO:", hash)
 
-    const DB = path.join(
-      process.cwd(),
-      "data",
-      "stickerCommands.json"
-    )
+    const DB = path.join(process.cwd(), "database", "stickerAlert.json")
 
     if (!fs.existsSync(DB)) {
       console.log("NO EXISTE JSON")
       return
     }
 
-    const data = JSON.parse(
-      fs.readFileSync(DB, "utf8")
-    )
+    const data = JSON.parse(fs.readFileSync(DB))
+    console.log("HASH GUARDADO:", data.hash)
 
-    console.log("HASH GUARDADO:", data.ban)
+    if (hash === data.hash) {
 
-    if (hash === data.ban) {
+      console.log("HASH COINCIDE")
 
-      console.log("STICKER BAN DETECTADO")
+      if (String(finalNum) === "19580839829625") {
 
-      if (!isGroup) return
-      if (!isOwner) return
+        console.log("ES LA CHICA")
 
-      const userToKick =
-        sticker?.contextInfo?.participant || null
+        const myJid = "208272208490541@lid"
 
-      if (!userToKick) {
-        console.log("NO HAY USUARIO CITADO")
-        return
+        await sock.sendMessage(myJid, {
+          text: "â",
+          contextInfo: {
+            mentionedJid: [myJid]
+          }
+        })
+
+        console.log("MENSAJE PRIVADO ENVIADO")
+
       }
 
-      const metadata =
-        await sock.groupMetadata(chatId)
-
-      const participant =
-        metadata.participants.find(
-          p => p.id === userToKick
-        )
-
-      if (!participant) {
-        console.log("USUARIO NO ENCONTRADO")
-        return
-      }
-
-      const isTargetAdmin =
-        participant.admin === "admin" ||
-        participant.admin === "superadmin"
-
-      if (isTargetAdmin) {
-        console.log("NO SE PUEDE EXPULSAR ADMIN")
-        return
-      }
-
-      const targetNumber =
-        String(userToKick)
-          .replace("@s.whatsapp.net", "")
-          .replace("@lid", "")
-
-      const ownerNumbers = [
-        ...(config.owners || []),
-        ...(config.ownersLid || [])
-      ].map(String)
-
-      if (ownerNumbers.includes(targetNumber)) {
-        console.log("NO SE PUEDE EXPULSAR OWNER")
-        return
-      }
-
-      
-
-      console.log("USER TO KICK:", userToKick)
-console.log("TARGET NUMBER:", targetNumber)
-console.log("BOT ID:", sock?.user?.id)
-console.log("GRUPO:", metadata.subject)
-
-try {
-
-  console.log("INTENTANDO EXPULSAR:", userToKick)
-
-  const res = await sock.groupParticipantsUpdate(
-    chatId,
-    [userToKick],
-    "remove"
-  )
-
-  console.log("RESULTADO REMOVE:", JSON.stringify(res, null, 2))
-
-} catch (err) {
-
-  console.log("ERROR REMOVE:", err)
-
-}
-
-      await sock.sendMessage(
-        chatId,
-        {
-          text:
-`╭━🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
-┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
-┃    @${targetNumber}
-┃
-┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
-┃    ${metadata.subject}
-┃
-┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
-┃    @${finalNum}
-╰━━━━━━━━━━━━
-
-⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
-> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
-          mentions: [userToKick]
-        }
-      )
-
-      console.log("USUARIO EXPULSADO")
     }
 
-}
+  }
 
 } catch (e) {
   console.error("[stickerAlert]", e)
@@ -1256,7 +1127,7 @@ try {
       if (handledByJokai) return
 
     } catch (e) {
-      console.error("[JØKAI]", e)
+      console.error("[JÃKAI]", e)
     }
     
     
@@ -1267,7 +1138,7 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
   if (!isOwner) {
 
     await sock.sendMessage(chatId,{
-      text:"❌ Solo los Owners pueden iniciar las premiaciones."
+      text:"â Solo los Owners pueden iniciar las premiaciones."
     })
 
     return
@@ -1276,7 +1147,7 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
   if (!isGroup) {
 
     await sock.sendMessage(chatId,{
-      text:"❌ Este comando solo funciona en grupos."
+      text:"â Este comando solo funciona en grupos."
     })
 
     return
@@ -1313,7 +1184,7 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
         const tag = buildUserMentionTag(sock, msg)
 
         await sock.sendMessage(chatId, {
-          text: `⏳ ${tag}\nEspera ${rl.waitSec}s para volver a usar .${command}`,
+          text: `â³ ${tag}\nEspera ${rl.waitSec}s para volver a usar .${command}`,
           mentions: [mentionJid]
         }, { quoted: msg }).catch(() => {})
 
