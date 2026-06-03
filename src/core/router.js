@@ -674,8 +674,11 @@ try {
 
   if (stickerMsg) {
 
-    const hash =
-      stickerMsg.fileSha256?.toString("base64")
+    const rawHash = stickerMsg.fileSha256
+
+    const hash = Buffer.isBuffer(rawHash)
+      ? rawHash.toString("base64")
+      : Buffer.from(rawHash).toString("base64")
 
     const DB = path.join(
       process.cwd(),
@@ -691,6 +694,9 @@ try {
       const data = JSON.parse(
         fs.readFileSync(DB, "utf8")
       )
+
+      console.log("[STICKER BAN] HASH:", hash)
+      console.log("[STICKER BAN] DB:", data.ban)
 
       if (hash === data.ban) {
 
