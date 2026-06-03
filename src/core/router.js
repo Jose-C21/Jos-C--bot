@@ -718,7 +718,7 @@ try {
         const tag = `@${jidToNumber(decodedJid)}`
 
 await sock.sendMessage(chatId, {
-  text: `> ╰❒ ${tag}, responde al mensaje de la persona que deseas expulsar.`,
+  text: `> ╰❒ ${tag}, 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲 𝗮𝗹 𝗺𝗲𝗻𝘀𝗮𝗷𝗲 𝗱𝗲 𝗹𝗮 𝗽𝗲𝗿𝘀𝗼𝗻𝗮 𝗾𝘂𝗲 𝗱𝗲𝘀𝗲𝗮𝘀 𝗲𝘅𝗽𝘂𝗹𝘀𝗮𝗿.`,
   mentions: [decodedJid]
 })
 
