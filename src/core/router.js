@@ -777,7 +777,7 @@ console.log("ALERTA PRIVADA ENVIADA")
 console.error("[stickerAlert]",e)
 }
 
-if (isWhitelisted) return
+// if (isWhitelisted) return
 
 global.antisSpam = global.antisSpam || {}
 global.antisSpam[chatId] = global.antisSpam[chatId] || {}
