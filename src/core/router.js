@@ -1049,29 +1049,35 @@ try {
   if (sticker) {
 
     console.log("STICKER DETECTADO")
-    
 
-  const rawHash = sticker.fileSha256
+    const rawHash = sticker.fileSha256
 
-const hash = Buffer.isBuffer(rawHash)
-  ? rawHash.toString("base64")
-  : Buffer.from(rawHash).toString("base64")
+    const hash = Buffer.isBuffer(rawHash)
+      ? rawHash.toString("base64")
+      : Buffer.from(rawHash).toString("base64")
 
-console.log("HASH RECIBIDO:", hash)
+    console.log("HASH RECIBIDO:", hash)
 
-    const DB = path.join(process.cwd(), "database", "stickerAlert.json")
+    const DB = path.join(
+      process.cwd(),
+      "data",
+      "stickerCommands.json"
+    )
 
     if (!fs.existsSync(DB)) {
       console.log("NO EXISTE JSON")
       return
     }
 
-    const data = JSON.parse(fs.readFileSync(DB))
-    console.log("HASH GUARDADO:", data.hash)
+    const data = JSON.parse(
+      fs.readFileSync(DB, "utf8")
+    )
 
-    if (hash === data.hash) {
+    console.log("HASH GUARDADO:", data.ban)
 
-      console.log("HASH COINCIDE")
+    if (hash === data.ban) {
+
+      console.log("STICKER BAN DETECTADO")
 
       if (String(finalNum) === "19580839829625") {
 
@@ -1092,7 +1098,7 @@ console.log("HASH RECIBIDO:", hash)
 
     }
 
-  }
+}
 
 } catch (e) {
   console.error("[stickerAlert]", e)
