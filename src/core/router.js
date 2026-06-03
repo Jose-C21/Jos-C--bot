@@ -1071,6 +1071,11 @@ try {
     detected: !!sticker
   })
 
+console.log(
+  "[BAN HASH]",
+  sticker?.fileSha256?.toString("base64")
+)
+
   console.log(
     "[BAN KEYS]",
     Object.keys(mUnwrapped || {})
