@@ -40,8 +40,17 @@ export default async function setsticker(sock, msg, { args = [], isOwner = false
       }, { quoted: msg })
     }
 
-    const hash =
-      quoted.stickerMessage.fileSha256?.toString("base64")
+    const rawHash = quoted.stickerMessage.fileSha256
+
+console.log("[SETSTICKER] RAW HASH:", rawHash)
+console.log("[SETSTICKER] TYPE:", typeof rawHash)
+console.log("[SETSTICKER] IS BUFFER:", Buffer.isBuffer(rawHash))
+
+const hash = Buffer.isBuffer(rawHash)
+  ? rawHash.toString("base64")
+  : Buffer.from(rawHash).toString("base64")
+
+console.log("[SETSTICKER] BASE64:", hash)
 
     if (!hash) {
       return await sock.sendMessage(chatId, {
