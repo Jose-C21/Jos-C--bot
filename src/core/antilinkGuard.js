@@ -3,7 +3,11 @@ import fs from "fs"
 import path from "path"
 import axios from "axios"
 import config from "../config.js"
-import { getSenderJid, jidToNumber } from "../utils/jid.js"
+import {
+  getSenderJid,
+  jidToNumber,
+  isProtectedJid
+} from "../utils/jid.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
@@ -245,7 +249,27 @@ export async function antiLinkGuard(sock, msg) {
   const idUsuario = autorAnalizado
 
   
-  await sock.groupParticipantsUpdate(chatId, [idUsuario], "remove").catch(() => {})
+  if (
+  isProtectedJid(
+    sock,
+    idUsuario,
+    config
+  )
+) {
+
+  console.log(
+    "[ANTILINK BLOCKED - PROTECTED]",
+    idUsuario
+  )
+
+  return false
+}
+
+await sock.groupParticipantsUpdate(
+  chatId,
+  [idUsuario],
+  "remove"
+).catch(() => {})
 
   
   await sock.sendMessage(chatId, { delete: msg.key }).catch(() => {})
