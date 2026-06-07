@@ -1,6 +1,10 @@
 // src/commands/kick.js
 import config from "../config.js"
-import { getSenderJid, jidToNumber } from "../utils/jid.js"
+import {
+  getSenderJid,
+  jidToNumber,
+  isProtectedJid
+} from "../utils/jid.js"
 
 const SIGNATURE =
   "\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦"
@@ -104,7 +108,46 @@ export default async function kick(sock, msg, { args = [] } = {}) {
       )
     }
 
-    await sock.groupParticipantsUpdate(chatId, [userToKick], "remove").catch(() => {})
+    if (
+  isProtectedJid(
+    sock,
+    userToKick,
+    config
+  )
+) {
+
+  console.log(
+    "[KICK BLOCKED - PROTECTED]",
+    userToKick
+  )
+
+  const tag = `@${jidToNumber(decodedJid)}`
+
+  await sock.sendMessage(chatId, {
+    text: `> ╰❒ ${tag}, 𝗲𝘀𝘁𝗲 𝘂𝘀𝘂𝗮𝗿𝗶𝗼 𝗲𝘀𝘁𝗮́ 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼.`,
+    mentions: [decodedJid]
+  })
+
+  return
+}
+
+try {
+
+  await sock.groupParticipantsUpdate(
+    chatId,
+    [userToKick],
+    "remove"
+  )
+
+} catch (err) {
+
+  console.error(
+    "[KICK REMOVE ERROR]",
+    err
+  )
+
+  return
+}
 
     await sock.sendMessage(
   chatId,
