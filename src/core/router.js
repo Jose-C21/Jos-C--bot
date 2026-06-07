@@ -1,6 +1,7 @@
 
 import config from "../config.js"
 import {
+  getSenderJid,
   jidToNumber,
   isProtectedJid
 } from "../utils/jid.js"
