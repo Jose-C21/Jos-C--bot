@@ -1,6 +1,10 @@
 // src/commands/fankick.js
 import config from "../config.js"
-import { getSenderJid, jidToNumber } from "../utils/jid.js"
+import {
+  getSenderJid,
+  jidToNumber,
+  isProtectedJid
+} from "../utils/jid.js"
 
 const CACHE_TTL_MS = 10 * 60 * 1000 // debe coincidir con fantasma.js
 
@@ -116,15 +120,40 @@ export default async function fankick(sock, msg) {
   let failed = 0
 
   for (const jid of targets) {
-    try {
-      await sock.groupParticipantsUpdate(chatId, [jid], "remove")
-      removed++
-      await sleep(1200)
-    } catch {
-      failed++
-      await sleep(800)
-    }
+
+  if (
+    isProtectedJid(
+      sock,
+      jid,
+      config
+    )
+  ) {
+
+    console.log(
+      "[FANKICK BLOCKED - PROTECTED]",
+      jid
+    )
+
+    continue
   }
+
+  try {
+
+    await sock.groupParticipantsUpdate(
+      chatId,
+      [jid],
+      "remove"
+    )
+
+    removed++
+    await sleep(1200)
+
+  } catch {
+
+    failed++
+    await sleep(800)
+  }
+}
 
   await sock.sendMessage(chatId, {
     text:
