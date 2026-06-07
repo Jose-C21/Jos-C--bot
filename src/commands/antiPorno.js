@@ -10,7 +10,7 @@ import {
 } from "baileys"
 
 import config from "../config.js"
-import { jidToNumber } from "../utils/jid.js"
+import { jidToNumber, isProtectedJid } from "../utils/jid.js"
 
 // =========================
 // ACTIVOS
@@ -1277,20 +1277,45 @@ if (
 
 } else {
 
-  await sock.groupParticipantsUpdate(
+  if (
+    isProtectedJid(
+      sock,
+      participant,
+      config
+    )
+  ) {
 
-    chatId,
-    [participant],
-    "remove"
+    console.log(
+      "[ANTIPORNO BLOCKED - PROTECTED]",
+      participant
+    )
 
-  ).catch(() => {})
+    return false
+  }
 
-  console.log(
-    "USUARIO ELIMINADO"
-  )
-}
+  try {
 
-}
+    await sock.groupParticipantsUpdate(
+      chatId,
+      [participant],
+      "remove"
+    )
+
+    console.log(
+      "USUARIO ELIMINADO"
+    )
+
+  } catch (err) {
+
+    console.error(
+      "[ANTIPORNO REMOVE ERROR]",
+      err
+    )
+  }
+
+} // <- cierre del else
+
+} // <- cierre del if (participant)
     
     // =========================
 // MENTION REAL
