@@ -2,7 +2,11 @@
 import fs from "fs"
 import path from "path"
 import config from "../config.js"
-import { getSenderJid, jidToNumber } from "../utils/jid.js"
+import {
+  getSenderJid,
+  jidToNumber,
+  isProtectedJid
+} from "../utils/jid.js"
 
 const SIGNATURE =
   "\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦"
@@ -383,39 +387,90 @@ export default async function warnSystem(sock, msg, { args = [], command = "warn
       ).catch(() => {})
 
       // kick automático al llegar a 3
-      if (row.count >= LIMIT) {
-        let md
-        try { md = await sock.groupMetadata(chatId) } catch {}
-        const stillIn = (md?.participants || []).some((p) => p.id === targetJid)
-        if (stillIn) {
-          const admins = (md?.participants || []).filter((p) => p.admin).map((p) => p.id)
-          const isTargetAdmin = admins.includes(targetJid)
+if (row.count >= LIMIT) {
 
-          if (!isTargetAdmin) {
-            await sock.groupParticipantsUpdate(chatId, [targetJid], "remove").catch(() => {})
-            await sock.sendMessage(
-              chatId,
-              {
-                text:
-                  `🚫 ${getMentionTagFromJid(targetJid)} fue expulsado por llegar a *${LIMIT}/${LIMIT} warns*.` +
-                  SIGNATURE,
-                mentions: [targetJid]
-              },
-              { quoted: msg }
-            ).catch(() => {})
-          } else {
-            await sock.sendMessage(
-              chatId,
-              { text: `⚠️ No puedo expulsar a un administrador.` + SIGNATURE },
-              { quoted: msg }
-            ).catch(() => {})
-          }
+  let md
+  try {
+    md = await sock.groupMetadata(chatId)
+  } catch {}
+
+  const stillIn =
+    (md?.participants || []).some(
+      p => p.id === targetJid
+    )
+
+  if (stillIn) {
+
+    const admins =
+      (md?.participants || [])
+        .filter(p => p.admin)
+        .map(p => p.id)
+
+    const isTargetAdmin =
+      admins.includes(targetJid)
+
+    if (!isTargetAdmin) {
+
+      if (
+        isProtectedJid(
+          sock,
+          targetJid,
+          config
+        )
+      ) {
+
+        console.log(
+          "[WARN KICK BLOCKED - PROTECTED]",
+          targetJid
+        )
+
+      } else {
+
+        try {
+
+          await sock.groupParticipantsUpdate(
+            chatId,
+            [targetJid],
+            "remove"
+          )
+
+        } catch (err) {
+
+          console.error(
+            "[WARN REMOVE ERROR]",
+            err
+          )
         }
 
-        // ✅ borrar warns automáticamente si se expulsó / o llegó al límite
-        delete db[chatId][key]
-        writeDB(db)
+        await sock.sendMessage(
+          chatId,
+          {
+            text:
+              `🚫 ${getMentionTagFromJid(targetJid)} fue expulsado por llegar a *${LIMIT}/${LIMIT} warns*.` +
+              SIGNATURE,
+            mentions: [targetJid]
+          },
+          { quoted: msg }
+        ).catch(() => {})
       }
+
+    } else {
+
+      await sock.sendMessage(
+        chatId,
+        {
+          text:
+            `⚠️ No puedo expulsar a un administrador.` +
+            SIGNATURE
+        },
+        { quoted: msg }
+      ).catch(() => {})
+    }
+  }
+
+  delete db[chatId][key]
+  writeDB(db)
+}
 
       await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } }).catch(() => {})
       return
