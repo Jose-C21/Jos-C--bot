@@ -707,23 +707,40 @@ try {
         if (!isGroup) return
 
         if (!isOwner) {
-  return
-}
+          return
+        }
 
         const userToKick =
           stickerMsg?.contextInfo?.participant || null
 
+        console.log(
+          "[STICKER BAN DEBUG]",
+          {
+            sender: decodedJid,
+            target: userToKick,
+            targetNumber: userToKick
+              ? jidToNumber(userToKick)
+              : null,
+            bot: sock.user?.id,
+            botNumber: jidToNumber(sock.user?.id)
+          }
+        )
+
         if (!userToKick) {
 
-        const tag = `@${jidToNumber(decodedJid)}`
+          const tag = `@${jidToNumber(decodedJid)}`
 
-await sock.sendMessage(chatId, {
-  text: `> ╰❒ ${tag}, 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲 𝗮𝗹 𝗺𝗲𝗻𝘀𝗮𝗷𝗲 𝗱𝗲 𝗹𝗮 𝗽𝗲𝗿𝘀𝗼𝗻𝗮 𝗾𝘂𝗲 𝗱𝗲𝘀𝗲𝗮𝘀 𝗲𝘅𝗽𝘂𝗹𝘀𝗮𝗿.`,
-  mentions: [decodedJid]
-})
+          await sock.sendMessage(chatId, {
+            text: `> ╰❒ ${tag}, 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲 𝗮𝗹 𝗺𝗲𝗻𝘀𝗮𝗷𝗲 𝗱𝗲 𝗹𝗮 𝗽𝗲𝗿𝘀𝗼𝗻𝗮 𝗾𝘂𝗲 𝗱𝗲𝘀𝗲𝗮𝘀 𝗲𝘅𝗽𝘂𝗹𝘀𝗮𝗿.`,
+            mentions: [decodedJid]
+          })
 
           return
         }
+
+        console.log(
+          "[STICKER BAN] Solicitando metadata..."
+        )
 
         const metadata =
           await sock.groupMetadata(chatId)
@@ -739,6 +756,13 @@ await sock.sendMessage(chatId, {
             "[STICKER BAN] Usuario no encontrado"
           )
 
+          console.log(
+            "[STICKER BAN] PARTICIPANTS SAMPLE:",
+            metadata.participants
+              .slice(0, 5)
+              .map(p => p.id)
+          )
+
           return
         }
 
@@ -750,21 +774,46 @@ await sock.sendMessage(chatId, {
           ...(config.ownersLid || [])
         ].map(String)
 
+        console.log(
+          "[STICKER BAN OWNER CHECK]",
+          {
+            target: userToKick,
+            targetNumber,
+            ownerNumbers
+          }
+        )
+
         if (
           ownerNumbers.includes(
             String(targetNumber)
           )
         ) {
 
+          console.log(
+            "[STICKER BAN OWNER PROTECTED]",
+            {
+              target: userToKick,
+              targetNumber
+            }
+          )
+
           const tag = `@${jidToNumber(decodedJid)}`
 
-await sock.sendMessage(chatId, {
-  text: `> ╰❒ ${tag}, 𝗹𝗼𝘀 𝗢𝘄𝗻𝗲𝗿𝘀 𝗲𝘀𝘁𝗮́𝗻 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼𝘀 𝗰𝗼𝗻𝘁𝗿𝗮 𝗲𝘅𝗽𝘂𝗹𝘀𝗶𝗼𝗻𝗲𝘀.`,
-  mentions: [decodedJid]
-})
+          await sock.sendMessage(chatId, {
+            text: `> ╰❒ ${tag}, 𝗹𝗼𝘀 𝗢𝘄𝗻𝗲𝗿𝘀 𝗲𝘀𝘁𝗮́𝗻 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼𝘀 𝗰𝗼𝗻𝘁𝗿𝗮 𝗲𝘅𝗽𝘂𝗹𝘀𝗶𝗼𝗻𝗲𝘀.`,
+            mentions: [decodedJid]
+          })
 
           return
         }
+
+        console.log(
+          "[STICKER BAN REMOVE TARGET]",
+          {
+            target: userToKick,
+            targetNumber
+          }
+        )
 
         await sock.groupParticipantsUpdate(
           chatId,
@@ -808,8 +857,13 @@ await sock.sendMessage(chatId, {
 } catch (e) {
 
   console.error(
-    "[STICKER BAN]",
-    e
+    "[STICKER BAN ERROR]",
+    {
+      message: e?.message,
+      data: e?.data,
+      output: e?.output,
+      stack: e?.stack
+    }
   )
 
 }
