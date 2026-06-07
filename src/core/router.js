@@ -1,6 +1,9 @@
 
 import config from "../config.js"
-import { getSenderJid, jidToNumber } from "../utils/jid.js"
+import {
+  jidToNumber,
+  isProtectedJid
+} from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
 import { antiLinkGuard } from "./antilinkGuard.js" 
 import chalk from "chalk"
@@ -767,45 +770,45 @@ try {
         }
 
         const targetNumber =
-          jidToNumber(userToKick)
+  jidToNumber(userToKick)
 
-        const ownerNumbers = [
-          ...(config.owners || []),
-          ...(config.ownersLid || [])
-        ].map(String)
+console.log(
+  "[STICKER BAN PROTECT CHECK]",
+  {
+    target: userToKick,
+    targetNumber
+  }
+)
 
-        console.log(
-          "[STICKER BAN OWNER CHECK]",
-          {
-            target: userToKick,
-            targetNumber,
-            ownerNumbers
-          }
-        )
+if (
+  isProtectedJid(
+    sock,
+    userToKick,
+    config
+  )
+) {
 
-        if (
-          ownerNumbers.includes(
-            String(targetNumber)
-          )
-        ) {
+  console.log(
+    "[STICKER BAN PROTECTED]",
+    {
+      target: userToKick,
+      targetNumber
+    }
+  )
 
-          console.log(
-            "[STICKER BAN OWNER PROTECTED]",
-            {
-              target: userToKick,
-              targetNumber
-            }
-          )
+  const tag = `@${jidToNumber(decodedJid)}`
 
-          const tag = `@${jidToNumber(decodedJid)}`
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+        `> ╰❒ ${tag}, 𝗲𝘀𝘁𝗲 𝘂𝘀𝘂𝗮𝗿𝗶𝗼 𝗲𝘀𝘁𝗮́ 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼 𝗰𝗼𝗻𝘁𝗿𝗮 𝗲𝘅𝗽𝘂𝗹𝘀𝗶𝗼𝗻𝗲𝘀.`,
+      mentions: [decodedJid]
+    }
+  )
 
-          await sock.sendMessage(chatId, {
-            text: `> ╰❒ ${tag}, 𝗹𝗼𝘀 𝗢𝘄𝗻𝗲𝗿𝘀 𝗲𝘀𝘁𝗮́𝗻 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼𝘀 𝗰𝗼𝗻𝘁𝗿𝗮 𝗲𝘅𝗽𝘂𝗹𝘀𝗶𝗼𝗻𝗲𝘀.`,
-            mentions: [decodedJid]
-          })
-
-          return
-        }
+  return
+}
 
         console.log(
           "[STICKER BAN REMOVE TARGET]",
