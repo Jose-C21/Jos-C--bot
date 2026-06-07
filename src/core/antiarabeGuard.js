@@ -1,7 +1,11 @@
 
 import fs from "fs"
 import path from "path"
-import { jidToNumber } from "../utils/jid.js"
+import config from "../config.js"
+import {
+  jidToNumber,
+  isProtectedJid
+} from "../utils/jid.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
@@ -123,6 +127,22 @@ export async function antiarabeGuard(sock, update, { isOwnerByNumbers } = {}) {
         mentions: [kickJid]
       }).catch(() => {})
 
+      
+      if (
+  isProtectedJid(
+    sock,
+    kickJid,
+    config
+  )
+) {
+
+  console.log(
+    "[ANTIARABE BLOCKED - PROTECTED]",
+    kickJid
+  )
+
+  continue
+}
       
       await sock.groupParticipantsUpdate(groupId, [kickJid], "remove").catch(() => {})
 
