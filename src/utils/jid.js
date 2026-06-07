@@ -7,3 +7,17 @@ export function jidToNumber(jid = "") {
   const left = str.split("@")[0]
   return left.replace(/[^0-9]/g, "")
 }
+
+export function isProtectedJid(sock, jid = "", config = {}) {
+  const targetNumber = jidToNumber(jid)
+
+  const protectedNumbers = [
+    ...(config.owners || []),
+    ...(config.ownersLid || []),
+    jidToNumber(sock?.user?.id)
+  ].map(String)
+
+  return protectedNumbers.includes(
+    String(targetNumber)
+  )
+}
