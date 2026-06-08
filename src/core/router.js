@@ -849,13 +849,259 @@ if (
           }
         )
 
-        console.log(
+                console.log(
           "[STICKER BAN] Usuario expulsado"
         )
 
         return
       }
+
+      if (hash === data.mute) {
+
+  if (!isGroup) return
+
+  if (!isOwner) {
+    return
+  }
+
+  const targetJid =
+    stickerMsg?.contextInfo?.participant || null
+
+  if (!targetJid) {
+
+    const tag = `@${jidToNumber(decodedJid)}`
+
+    await sock.sendMessage(chatId, {
+      text:
+        `> ╰❒ ${tag}, 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲 𝗮𝗹 𝗺𝗲𝗻𝘀𝗮𝗷𝗲 𝗱𝗲 𝗹𝗮 𝗽𝗲𝗿𝘀𝗼𝗻𝗮 𝗾𝘂𝗲 𝗱𝗲𝘀𝗲𝗮𝘀 𝗺𝘂𝘁𝗲𝗮𝗿.`,
+      mentions: [decodedJid]
+    })
+
+    return
+  }
+
+  if (
+    isProtectedJid(
+      sock,
+      targetJid,
+      config
+    )
+  ) {
+
+    const tag = `@${jidToNumber(decodedJid)}`
+
+    await sock.sendMessage(chatId, {
+      text:
+        `> ╰❒ ${tag}, 𝗲𝘀𝘁𝗲 𝘂𝘀𝘂𝗮𝗿𝗶𝗼 𝗲𝘀𝘁𝗮́ 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼 𝗰𝗼𝗻𝘁𝗿𝗮 𝗺𝘂𝘁𝗲𝗼𝘀.`,
+      mentions: [decodedJid]
+    })
+
+    return
+  }
+
+  const MUTE_PATH = path.join(
+    process.cwd(),
+    "data",
+    "mute.json"
+  )
+
+  if (!fs.existsSync(MUTE_PATH)) {
+
+    fs.writeFileSync(
+      MUTE_PATH,
+      "{}"
+    )
+
+  }
+
+  let muteDB = {}
+
+  try {
+
+    muteDB = JSON.parse(
+      fs.readFileSync(
+        MUTE_PATH,
+        "utf8"
+      ) || "{}"
+    )
+
+  } catch {
+
+    muteDB = {}
+
+  }
+
+  if (!muteDB[chatId]) {
+    muteDB[chatId] = []
+  }
+
+  const targetNumber =
+    jidToNumber(targetJid)
+
+  if (
+    !muteDB[chatId].includes(
+      String(targetNumber)
+    )
+  ) {
+
+    muteDB[chatId].push(
+      String(targetNumber)
+    )
+
+    fs.writeFileSync(
+      MUTE_PATH,
+      JSON.stringify(
+        muteDB,
+        null,
+        2
+      )
+    )
+  }
+
+  const metadata =
+    await sock.groupMetadata(chatId)
+
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+`╭━🔇 𝗠𝗨𝗧𝗘 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗢
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+┃    @${targetNumber}
+┃
+┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
+┃    ${metadata.subject}
+┃
+┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
+┃    @${jidToNumber(decodedJid)}
+╰━━━━━━━━━━━━
+
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
+      mentions: [
+        targetJid,
+        decodedJid
+      ]
     }
+  )
+
+  return
+}
+
+if (hash === data.unmute) {
+
+  if (!isGroup) return
+
+  if (!isOwner) {
+    return
+  }
+
+  const targetJid =
+    stickerMsg?.contextInfo?.participant || null
+
+  if (!targetJid) {
+
+    const tag = `@${jidToNumber(decodedJid)}`
+
+    await sock.sendMessage(chatId, {
+      text:
+        `> ╰❒ ${tag}, 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲 𝗮𝗹 𝗺𝗲𝗻𝘀𝗮𝗷𝗲 𝗱𝗲 𝗹𝗮 𝗽𝗲𝗿𝘀𝗼𝗻𝗮 𝗾𝘂𝗲 𝗱𝗲𝘀𝗲𝗮𝘀 𝗱𝗲𝘀𝗺𝘂𝘁𝗲𝗮𝗿.`,
+      mentions: [decodedJid]
+    })
+
+    return
+  }
+
+  const MUTE_PATH = path.join(
+    process.cwd(),
+    "data",
+    "mute.json"
+  )
+
+  if (!fs.existsSync(MUTE_PATH)) {
+
+    fs.writeFileSync(
+      MUTE_PATH,
+      "{}"
+    )
+
+  }
+
+  let muteDB = {}
+
+  try {
+
+    muteDB = JSON.parse(
+      fs.readFileSync(
+        MUTE_PATH,
+        "utf8"
+      ) || "{}"
+    )
+
+  } catch {
+
+    muteDB = {}
+
+  }
+
+  const targetNumber =
+    jidToNumber(targetJid)
+
+  if (muteDB[chatId]) {
+
+    muteDB[chatId] =
+      muteDB[chatId].filter(
+        x => String(x) !== String(targetNumber)
+      )
+
+    if (
+      muteDB[chatId].length === 0
+    ) {
+      delete muteDB[chatId]
+    }
+
+    fs.writeFileSync(
+      MUTE_PATH,
+      JSON.stringify(
+        muteDB,
+        null,
+        2
+      )
+    )
+  }
+
+  const metadata =
+    await sock.groupMetadata(chatId)
+
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+`╭━🔊 𝗨𝗡𝗠𝗨𝗧𝗘 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗢
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+┃    @${targetNumber}
+┃
+┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
+┃    ${metadata.subject}
+┃
+┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
+┃    @${jidToNumber(decodedJid)}
+╰━━━━━━━━━━━━
+
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
+      mentions: [
+        targetJid,
+        decodedJid
+      ]
+    }
+  )
+
+    return
+      }
+
+    }
+
   }
 
 } catch (e) {
