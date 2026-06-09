@@ -1100,6 +1100,141 @@ if (hash === data.unmute) {
     return
       }
 
+    if (hash === data.open) {
+
+  if (!isGroup) return
+
+  if (!isOwner) {
+    return
+  }
+
+  const metadata =
+    await sock.groupMetadata(chatId)
+
+  const botJid =
+    sock.user?.id
+
+  const botParticipant =
+    metadata.participants.find(
+      p =>
+        p.id === botJid ||
+        p.id === decodedJid
+    )
+
+  if (
+    botParticipant &&
+    !botParticipant.admin
+  ) {
+
+    await sock.sendMessage(
+      chatId,
+      {
+        text:
+          "> ╰❒ 𝗘𝗹 𝗯𝗼𝘁 𝗻𝗼 𝘁𝗶𝗲𝗻𝗲 𝗽𝗲𝗿𝗺𝗶𝘀𝗼𝘀 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿."
+      }
+    )
+
+    return
+  }
+
+  await sock.groupSettingUpdate(
+    chatId,
+    "not_announcement"
+  )
+
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+`╭━🔓 𝗚𝗥𝗨𝗣𝗢 𝗔𝗕𝗜𝗘𝗥𝗧𝗢
+┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
+┃    ${metadata.subject}
+┃
+┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
+┃    @${jidToNumber(decodedJid)}
+╰━━━━━━━━━━━━
+
+❑ ᴛᴏᴅᴏꜱ ʟᴏꜱ ᴍɪᴇᴍʙʀᴏꜱ ᴘᴜᴇᴅᴇɴ ᴇɴᴠɪᴀʀ ᴍᴇɴꜱᴀᴊᴇꜱ.
+
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
+      mentions: [
+        decodedJid
+      ]
+    }
+  )
+
+  return
+}
+
+if (hash === data.close) {
+
+  if (!isGroup) return
+
+  if (!isOwner) {
+    return
+  }
+
+  const metadata =
+    await sock.groupMetadata(chatId)
+
+  const botJid =
+    sock.user?.id
+
+  const botParticipant =
+    metadata.participants.find(
+      p =>
+        p.id === botJid ||
+        p.id === decodedJid
+    )
+
+  if (
+    botParticipant &&
+    !botParticipant.admin
+  ) {
+
+    await sock.sendMessage(
+      chatId,
+      {
+        text:
+          "> ╰❒ 𝗘𝗹 𝗯𝗼𝘁 𝗻𝗼 𝘁𝗶𝗲𝗻𝗲 𝗽𝗲𝗿𝗺𝗶𝘀𝗼𝘀 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿."
+      }
+    )
+
+    return
+  }
+
+  await sock.groupSettingUpdate(
+    chatId,
+    "announcement"
+  )
+
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+`╭━🔒 𝗚𝗥𝗨𝗣𝗢 𝗖𝗘𝗥𝗥𝗔𝗗𝗢
+┃ 🏷️ 𝗚𝗿𝘂𝗽𝗼:
+┃    ${metadata.subject}
+┃
+┃ 👮 𝗔𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿(𝗮):
+┃    @${jidToNumber(decodedJid)}
+╰━━━━━━━━━━━━
+
+❑ ꜱᴏʟᴏ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴅᴏʀᴇꜱ ᴘᴜᴇᴅᴇɴ ᴇɴᴠɪᴀʀ ᴍᴇɴꜱᴀᴊᴇꜱ.
+
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`,
+      mentions: [
+        decodedJid
+      ]
+    }
+  )
+
+  return
+}
+    
+    
     }
 
   }
