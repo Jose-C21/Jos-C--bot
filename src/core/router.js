@@ -937,6 +937,39 @@ if (
 
   const targetNumber =
     jidToNumber(targetJid)
+    
+    if (
+  muteDB[chatId]?.includes(
+    String(targetNumber)
+  )
+) {
+
+  const ownerTag =
+    `@${jidToNumber(decodedJid)}`
+
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+`╭━⚠️ 𝗨𝗦𝗨𝗔𝗥𝗜𝗢 𝗬𝗔 𝗠𝗨𝗧𝗘𝗔𝗗𝗢
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+┃    @${targetNumber}
+┃
+┃ 👮 𝗦𝗼𝗹𝗶𝗰𝗶𝘁𝗮𝗱𝗼 𝗽𝗼𝗿:
+┃    ${ownerTag}
+╰━━━━━━━━━━━━
+
+❑ 𝗘𝘀𝘁𝗲 𝘂𝘀𝘂𝗮𝗿𝗶𝗼 𝘆𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗲𝗻 𝗹𝗮 𝗹𝗶𝘀𝘁𝗮 𝗱𝗲 𝗺𝘂𝘁𝗲𝗮𝗱𝗼𝘀.`,
+      mentions: [
+        targetJid,
+        decodedJid
+      ]
+    }
+  )
+
+  return
+}
+    
 
   if (
     !muteDB[chatId].includes(
@@ -1046,6 +1079,40 @@ if (hash === data.unmute) {
 
   const targetNumber =
     jidToNumber(targetJid)
+
+if (
+  !muteDB[chatId] ||
+  !muteDB[chatId].includes(
+    String(targetNumber)
+  )
+) {
+
+  const ownerTag =
+    `@${jidToNumber(decodedJid)}`
+
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+`╭━⚠️ 𝗨𝗦𝗨𝗔𝗥𝗜𝗢 𝗬𝗔 𝗗𝗘𝗦𝗠𝗨𝗧𝗘𝗔𝗗𝗢
+┃ 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+┃    @${targetNumber}
+┃
+┃ 👮 𝗦𝗼𝗹𝗶𝗰𝗶𝘁𝗮𝗱𝗼 𝗽𝗼𝗿:
+┃    ${ownerTag}
+╰━━━━━━━━━━━━
+
+❑ 𝗘𝘀𝘁𝗲 𝘂𝘀𝘂𝗮𝗿𝗶𝗼 𝗻𝗼 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗺𝘂𝘁𝗲𝗮𝗱𝗼.`,
+      mentions: [
+        targetJid,
+        decodedJid
+      ]
+    }
+  )
+
+  return
+}
+
 
   if (muteDB[chatId]) {
 
