@@ -1111,18 +1111,29 @@ if (hash === data.unmute) {
   const metadata =
     await sock.groupMetadata(chatId)
 
+  if (metadata.announce === false) {
+
+    await sock.sendMessage(
+      chatId,
+      {
+        text:
+          "> ╰❒ 𝗘𝗹 𝗴𝗿𝘂𝗽𝗼 𝘆𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗮𝗯𝗶𝗲𝗿𝘁𝗼."
+      }
+    )
+
+    return
+  }
+
   const botJid =
     sock.user?.id
 
   const botParticipant =
     metadata.participants.find(
-      p =>
-        p.id === botJid ||
-        p.id === decodedJid
+      p => p.id === botJid
     )
 
   if (
-    botParticipant &&
+    !botParticipant ||
     !botParticipant.admin
   ) {
 
@@ -1178,18 +1189,29 @@ if (hash === data.close) {
   const metadata =
     await sock.groupMetadata(chatId)
 
+  if (metadata.announce === true) {
+
+    await sock.sendMessage(
+      chatId,
+      {
+        text:
+          "> ╰❒ 𝗘𝗹 𝗴𝗿𝘂𝗽𝗼 𝘆𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗰𝗲𝗿𝗿𝗮𝗱𝗼."
+      }
+    )
+
+    return
+  }
+
   const botJid =
     sock.user?.id
 
   const botParticipant =
     metadata.participants.find(
-      p =>
-        p.id === botJid ||
-        p.id === decodedJid
+      p => p.id === botJid
     )
 
   if (
-    botParticipant &&
+    !botParticipant ||
     !botParticipant.admin
   ) {
 
