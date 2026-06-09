@@ -1113,40 +1113,45 @@ if (hash === data.unmute) {
 
   if (metadata.announce === false) {
 
-    await sock.sendMessage(
-      chatId,
-      {
-        text:
-          "> ╰❒ 𝗘𝗹 𝗴𝗿𝘂𝗽𝗼 𝘆𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗮𝗯𝗶𝗲𝗿𝘁𝗼."
-      }
-    )
+  const tag = `@${jidToNumber(decodedJid)}`
 
-    return
-  }
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+        `> ╰❒ ${tag}, 𝗲𝗹 𝗴𝗿𝘂𝗽𝗼 𝘆𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗮𝗯𝗶𝗲𝗿𝘁𝗼.`,
+      mentions: [decodedJid]
+    }
+  )
+
+  return
+}
 
   const botJid =
-    sock.user?.id
+  sock.user?.id
 
-  const botParticipant =
-    metadata.participants.find(
-      p => p.id === botJid
-    )
+const botParticipant =
+  metadata.participants.find(
+    p =>
+      p.id === botJid ||
+      p.id === decodedJid
+  )
 
-  if (
-    !botParticipant ||
-    !botParticipant.admin
-  ) {
+if (
+  botParticipant &&
+  !botParticipant.admin
+) {
 
-    await sock.sendMessage(
-      chatId,
-      {
-        text:
-          "> ╰❒ 𝗘𝗹 𝗯𝗼𝘁 𝗻𝗼 𝘁𝗶𝗲𝗻𝗲 𝗽𝗲𝗿𝗺𝗶𝘀𝗼𝘀 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿."
-      }
-    )
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+        "> ╰❒ 𝗘𝗹 𝗯𝗼𝘁 𝗻𝗼 𝘁𝗶𝗲𝗻𝗲 𝗽𝗲𝗿𝗺𝗶𝘀𝗼𝘀 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿."
+    }
+  )
 
-    return
-  }
+  return
+}
 
   await sock.groupSettingUpdate(
     chatId,
@@ -1191,40 +1196,45 @@ if (hash === data.close) {
 
   if (metadata.announce === true) {
 
-    await sock.sendMessage(
-      chatId,
-      {
-        text:
-          "> ╰❒ 𝗘𝗹 𝗴𝗿𝘂𝗽𝗼 𝘆𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗰𝗲𝗿𝗿𝗮𝗱𝗼."
-      }
-    )
+  const tag = `@${jidToNumber(decodedJid)}`
 
-    return
-  }
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+        `> ╰❒ ${tag}, 𝗲𝗹 𝗴𝗿𝘂𝗽𝗼 𝘆𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗰𝗲𝗿𝗿𝗮𝗱𝗼.`,
+      mentions: [decodedJid]
+    }
+  )
+
+  return
+}
 
   const botJid =
-    sock.user?.id
+  sock.user?.id
 
-  const botParticipant =
-    metadata.participants.find(
-      p => p.id === botJid
-    )
+const botParticipant =
+  metadata.participants.find(
+    p =>
+      p.id === botJid ||
+      p.id === decodedJid
+  )
 
-  if (
-    !botParticipant ||
-    !botParticipant.admin
-  ) {
+if (
+  botParticipant &&
+  !botParticipant.admin
+) {
 
-    await sock.sendMessage(
-      chatId,
-      {
-        text:
-          "> ╰❒ 𝗘𝗹 𝗯𝗼𝘁 𝗻𝗼 𝘁𝗶𝗲𝗻𝗲 𝗽𝗲𝗿𝗺𝗶𝘀𝗼𝘀 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿."
-      }
-    )
+  await sock.sendMessage(
+    chatId,
+    {
+      text:
+        "> ╰❒ 𝗘𝗹 𝗯𝗼𝘁 𝗻𝗼 𝘁𝗶𝗲𝗻𝗲 𝗽𝗲𝗿𝗺𝗶𝘀𝗼𝘀 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿."
+    }
+  )
 
-    return
-  }
+  return
+}
 
   await sock.groupSettingUpdate(
     chatId,
