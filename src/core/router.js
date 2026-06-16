@@ -34,7 +34,8 @@ import { jokaiWatcher } from "./jokaiWatcher.js"
 import antiPorno from "../commands/antiPorno.js"
 import clima from "../commands/clima.js"
 import antiporno from "../commands/antiporno.js"
-
+import afk from "../commands/afk.js"                              
+import { afkWatcher } from "../core/afkWatcher.js"
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
 import premiacion from "../commands/premiacion.js"
 import { privateMirror } from "./privateMirror.js"
@@ -569,6 +570,9 @@ try {
     
     const blockedEstado = await antiEstadoHandler(sock, msg, chatId, isGroup, fromMe)
     if (blockedEstado) return
+
+    // 🌙 AFK — detecta menciones y vuelta del usuario
+    try { await afkWatcher(sock, msg) } catch (e) { console.error("[afkWatcher]", e) }
     
     const prefix = config.prefix || "."
     if (fromMe && (!text || !text.startsWith(prefix))) return
