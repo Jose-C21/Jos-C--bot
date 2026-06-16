@@ -115,7 +115,7 @@ async function enviarAvisoVuelta(sock, chatId, entry, userJid) {
 
   await sock.sendMessage(chatId, {
     text:
-`╭─〔 🔔 𝗕𝗜𝗘𝗡𝗩𝗘𝗡𝗜𝗗𝗢 𝗗𝗘 𝗩𝗨𝗘𝗟𝗧𝗔 〕─⬣
+`╭─〔 🔔 𝗗𝗘 𝗩𝗨𝗘𝗟𝗧𝗔 𝗘𝗡 𝗟Í𝗡𝗘𝗔 〕─⬣
 
 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
 @${userNum}
