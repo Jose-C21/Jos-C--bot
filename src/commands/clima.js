@@ -247,7 +247,7 @@ export default async function clima(sock, msg, { args = [], usedPrefix = "." }) 
     // ─── Mensaje final ───
     const texto =
 `${eClima} *CLIMA EN ${ubicacion.toUpperCase()}*
-┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 
 ${eTemp} *Temperatura:* ${temp}${simbolo}
 🌡️ *Sensación:* ${sensacion}${simbolo}
