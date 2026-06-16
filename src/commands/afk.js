@@ -49,7 +49,26 @@ export default async function afk(sock, msg, { args = [], usedPrefix = "." }) {
 
     // ── Sin argumentos o .afk on → activar ─────────────────
     if (!subCmd || subCmd === "on") {
-      const razon = args.slice(subCmd === "on" ? 1 : 0).join(" ").trim() || "Sin razón"
+      const razon = args.slice(subCmd === "on" ? 1 : 0).join(" ").trim()
+
+if (!razon) {
+  return await sock.sendMessage(chatId, {
+  text:
+`⚠️ 𝗥𝗮𝘇ó𝗻 𝗿𝗲𝗾𝘂𝗲𝗿𝗶𝗱𝗮
+
+𝗗𝗲𝗯𝗲𝘀 𝗶𝗻𝗱𝗶𝗰𝗮𝗿 𝘂𝗻𝗮 𝗿𝗮𝘇ó𝗻
+𝗽𝗮𝗿𝗮 𝗮𝗰𝘁𝗶𝘃𝗮𝗿 𝗲𝗹 𝗺𝗼𝗱𝗼 𝗔𝗙𝗞.
+
+📌 𝗘𝗷𝗲𝗺𝗽𝗹𝗼𝘀:
+
+• ${usedPrefix}afk estudiando
+• ${usedPrefix}afk trabajando
+• ${usedPrefix}afk durmiendo
+• ${usedPrefix}afk en una reunión
+
+${SIGNATURE}`
+}, { quoted: msg })
+}
 
       db[userKey] = {
         jid:        userKey,
@@ -63,19 +82,19 @@ export default async function afk(sock, msg, { args = [], usedPrefix = "." }) {
 
       return await sock.sendMessage(chatId, {
         text:
-`┌─────────────────────────
-│  🌙  *MODO AFK ACTIVADO*
-├─────────────────────────
-│  👤  *Usuario:*  @${userNum}
-│  📝  *Razón:*    ${razon}
-├─────────────────────────
-│  💡  Si alguien te menciona
-│  en cualquier grupo, el bot
-│  avisará que estás AFK.
-│
-│  ✍️  Al escribir un mensaje
-│  el modo AFK se quita solo.
-└─────────────────────────${SIGNATURE}`,
+`╭─〔 🌙 𝗠𝗢𝗗𝗢 𝗔𝗙𝗞 𝗔𝗖𝗧𝗜𝗩𝗔𝗗𝗢 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${userNum}
+
+📝 𝗥𝗮𝘇ó𝗻:
+${razon}
+
+🔕 𝗟𝗮𝘀 𝗺𝗲𝗻𝗰𝗶𝗼𝗻𝗲𝘀 𝘆 𝗿𝗲𝘀𝗽𝘂𝗲𝘀𝘁𝗮𝘀
+𝗺𝗼𝘀𝘁𝗿𝗮𝗿á𝗻 𝗲𝘀𝘁𝗲 𝗮𝘃𝗶𝘀𝗼
+𝗮𝘂𝘁𝗼𝗺á𝘁𝗶𝗰𝗮𝗺𝗲𝗻𝘁𝗲.
+
+╰────────────────⬣${SIGNATURE}`,
         mentions: [userKey]
       }, { quoted: msg })
     }
