@@ -50,6 +50,25 @@ function normalizeJid(jid = "") {
 
 // Extrae todas las menciones del mensaje (todos los tipos de mensaje)
 function getMenciones(msg) {
+  // Extrae el autor del mensaje citado (reply)
+function getQuotedSender(msg) {
+  const m = msg?.message || {}
+
+  const inner =
+    m?.ephemeralMessage?.message ||
+    m?.viewOnceMessageV2?.message ||
+    m?.viewOnceMessageV2Extension?.message ||
+    m
+
+  const ctx =
+    inner?.extendedTextMessage?.contextInfo ||
+    inner?.imageMessage?.contextInfo ||
+    inner?.videoMessage?.contextInfo ||
+    inner?.documentMessage?.contextInfo
+
+  return ctx?.participant || null
+}
+  
   const m = msg?.message || {}
   const inner =
     m?.ephemeralMessage?.message ||
@@ -181,43 +200,70 @@ export async function afkWatcher(sock, msg) {
     }
 
     // ─────────────────────────────────────────────────────
-    // 2. ¿El mensaje menciona a alguien AFK?
-    // ─────────────────────────────────────────────────────
-    const menciones = getMenciones(msg)
-    if (!menciones.length) return false
+// 2. ¿Mencionó o respondió a alguien AFK?
+// ─────────────────────────────────────────────────────
 
-    // Recargar DB por si cambió en el paso anterior
-    const dbActual = readDB()
-    if (Object.keys(dbActual).length === 0) return false
+const menciones = getMenciones(msg)
+const quotedSender = getQuotedSender(msg)
 
-    // Cooldown: 1 aviso por usuario AFK por grupo cada 60 segundos
-    global._afkCooldown = global._afkCooldown || {}
+// Unificar menciones + respuestas
+const objetivos = [...menciones]
 
-    let handled = false
-    const groupName = await getGroupName(sock, chatId)
+if (quotedSender) {
+  objetivos.push(quotedSender)
+}
 
-    for (const mencionadoJid of menciones) {
-      const normMencionado = normalizeJid(mencionadoJid)
+// Nada que revisar
+if (!objetivos.length) return false
 
-      for (const [key, entry] of Object.entries(dbActual)) {
-        if (normalizeJid(key) !== normMencionado) continue
+// Eliminar duplicados
+const objetivosUnicos = [...new Set(objetivos)]
 
-        // Cooldown por (grupo + usuario AFK)
-        const coolKey  = `${chatId}:${normalizeJid(key)}`
-        const lastSent = global._afkCooldown[coolKey] || 0
-        if (Date.now() - lastSent < 60_000) break
+// Recargar DB por si cambió en el paso anterior
+const dbActual = readDB()
+if (Object.keys(dbActual).length === 0) return false
 
-        global._afkCooldown[coolKey] = Date.now()
+// Cooldown: 1 aviso por usuario AFK por grupo cada 60 segundos
+global._afkCooldown = global._afkCooldown || {}
 
-        await enviarAvisoAFK(sock, chatId, entry, decodedSender, groupName)
-        handled = true
+let handled = false
+const groupName = await getGroupName(sock, chatId)
 
-        console.log(`[afkWatcher] Aviso: ${entry.num} está AFK, mencionado por ${jidToNumber(decodedSender)} en "${groupName}"`)
-        break
-      }
+for (const objetivoJid of objetivosUnicos) {
+  const normObjetivo = normalizeJid(objetivoJid)
+
+  for (const [key, entry] of Object.entries(dbActual)) {
+    if (normalizeJid(key) !== normObjetivo) continue
+
+    // Cooldown por grupo + usuario AFK
+    const coolKey = `${chatId}:${normalizeJid(key)}`
+    const lastSent = global._afkCooldown[coolKey] || 0
+
+    if (Date.now() - lastSent < 60_000) {
+      break
     }
 
-    return handled
+    global._afkCooldown[coolKey] = Date.now()
+
+    await enviarAvisoAFK(
+      sock,
+      chatId,
+      entry,
+      decodedSender,
+      groupName
+    )
+
+    handled = true
+
+    console.log(
+      `[afkWatcher] Aviso AFK → ${entry.num} | por ${jidToNumber(decodedSender)} | grupo "${groupName}"`
+    )
+
+    break
+  }
+}
+
+return handled
 
   } catch (e) {
     console.error("[afkWatcher] ERROR:", e)
