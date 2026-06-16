@@ -104,13 +104,15 @@ ${razon}
       if (!db[userKey]) {
         return await sock.sendMessage(chatId, {
           text:
-`┌─────────────────────────
-│  ℹ️  *SIN AFK ACTIVO*
-├─────────────────────────
-│  👤  @${userNum}
-│  No tienes el modo AFK
-│  activado actualmente.
-└─────────────────────────${SIGNATURE}`,
+`╭─〔 ℹ️ 𝗦𝗜𝗡 𝗔𝗙𝗞 𝗔𝗖𝗧𝗜𝗩𝗢 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${userNum}
+
+❌ 𝗡𝗼 𝘁𝗶𝗲𝗻𝗲𝘀 𝗻𝗶𝗻𝗴ú𝗻
+𝗺𝗼𝗱𝗼 𝗔𝗙𝗞 𝗮𝗰𝘁𝗶𝘃𝗮𝗱𝗼.
+
+╰────────────────⬣${SIGNATURE}`,
           mentions: [userKey]
         }, { quoted: msg })
       }
@@ -124,15 +126,21 @@ ${razon}
 
       return await sock.sendMessage(chatId, {
         text:
-`┌─────────────────────────
-│  ✅  *MODO AFK DESACTIVADO*
-├─────────────────────────
-│  👤  *Usuario:*  @${userNum}
-│  ⏱️  *Duración:* ${tiempo}
-│  📝  *Razón fue:* ${entry.razon}
-├─────────────────────────
-│  🔔  Ya estás disponible.
-└─────────────────────────${SIGNATURE}`,
+`╭─〔 ✅ 𝗔𝗙𝗞 𝗗𝗘𝗦𝗔𝗖𝗧𝗜𝗩𝗔𝗗𝗢 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${userNum}
+
+⏳ 𝗗𝘂𝗿𝗮𝗰𝗶ó𝗻:
+${tiempo}
+
+📝 𝗥𝗮𝘇ó𝗻:
+${entry.razon}
+
+🔔 𝗬𝗮 𝗲𝘀𝘁á𝘀
+𝗱𝗶𝘀𝗽𝗼𝗻𝗶𝗯𝗹𝗲.
+
+╰────────────────⬣${SIGNATURE}`,
         mentions: [userKey]
       }, { quoted: msg })
     }
@@ -143,25 +151,36 @@ ${razon}
       if (!entry) {
         return await sock.sendMessage(chatId, {
           text:
-`┌─────────────────────────
-│  📋  *ESTADO AFK*
-├─────────────────────────
-│  👤  @${userNum}
-│  ❌  Sin modo AFK activo
-└─────────────────────────${SIGNATURE}`,
+`╭─〔 📋 𝗘𝗦𝗧𝗔𝗗𝗢 𝗔𝗙𝗞 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${userNum}
+
+❌ 𝗡𝗼 𝘁𝗶𝗲𝗻𝗲𝘀
+𝗔𝗙𝗞 𝗮𝗰𝘁𝗶𝘃𝗼.
+
+╰────────────────⬣${SIGNATURE}`,
           mentions: [userKey]
         }, { quoted: msg })
       }
 
       return await sock.sendMessage(chatId, {
         text:
-`┌─────────────────────────
-│  🌙  *ESTADO AFK*
-├─────────────────────────
-│  👤  *Usuario:*  @${userNum}
-│  📝  *Razón:*    ${entry.razon}
-│  ⏱️  *Tiempo:*   ${tiempoTranscurrido(entry.activadoEn)}
-└─────────────────────────${SIGNATURE}`,
+`╭─〔 🌙 𝗘𝗦𝗧𝗔𝗗𝗢 𝗔𝗙𝗞 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${userNum}
+
+📝 𝗥𝗮𝘇ó𝗻:
+${entry.razon}
+
+⏳ 𝗧𝗶𝗲𝗺𝗽𝗼 𝘁𝗿𝗮𝗻𝘀𝗰𝘂𝗿𝗿𝗶𝗱𝗼:
+${tiempoTranscurrido(entry.activadoEn)}
+
+🔕 𝗘𝗹 𝗺𝗼𝗱𝗼 𝗔𝗙𝗞
+𝘀𝗶𝗴𝘂𝗲 𝗮𝗰𝘁𝗶𝘃𝗼.
+
+╰────────────────⬣${SIGNATURE}`,
         mentions: [userKey]
       }, { quoted: msg })
     }
@@ -182,29 +201,40 @@ ${razon}
 
       return await sock.sendMessage(chatId, {
         text:
-`┌─────────────────────────
-│  🌙  *MODO AFK ACTIVADO*
-├─────────────────────────
-│  👤  *Usuario:*  @${userNum}
-│  📝  *Razón:*    ${razonDirecta}
-├─────────────────────────
-│  💡  Si alguien te menciona
-│  en cualquier grupo, el bot
-│  avisará que estás AFK.
-│
-│  ✍️  Al escribir un mensaje
-│  el modo AFK se quita solo.
-└─────────────────────────${SIGNATURE}`,
+`╭─〔 🌙 𝗠𝗢𝗗𝗢 𝗔𝗙𝗞 𝗔𝗖𝗧𝗜𝗩𝗔𝗗𝗢 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${userNum}
+
+📝 𝗥𝗮𝘇ó𝗻:
+${razon}
+
+🔕 𝗟𝗮𝘀 𝗺𝗲𝗻𝗰𝗶𝗼𝗻𝗲𝘀 𝘆 𝗿𝗲𝘀𝗽𝘂𝗲𝘀𝘁𝗮𝘀
+𝗺𝗼𝘀𝘁𝗿𝗮𝗿á𝗻 𝗲𝘀𝘁𝗲 𝗮𝘃𝗶𝘀𝗼
+𝗮𝘂𝘁𝗼𝗺á𝘁𝗶𝗰𝗮𝗺𝗲𝗻𝘁𝗲.
+
+╰────────────────⬣${SIGNATURE}`,
         mentions: [userKey]
       }, { quoted: msg })
     }
 
   } catch (e) {
-    console.error("[afk cmd] ERROR:", e)
-    try {
-      await sock.sendMessage(msg?.key?.remoteJid, {
-        text: `❌ Error en el comando AFK.${SIGNATURE}`
-      }, { quoted: msg })
-    } catch {}
-  }
+  console.error("[afk cmd] ERROR:", e)
+
+  try {
+    await sock.sendMessage(msg?.key?.remoteJid, {
+      text:
+`╭─〔 ❌ 𝗘𝗥𝗥𝗢𝗥 𝗔𝗙𝗞 〕─⬣
+
+⚠️ 𝗢𝗰𝘂𝗿𝗿𝗶ó 𝘂𝗻 𝗲𝗿𝗿𝗼𝗿
+𝗮𝗹 𝗽𝗿𝗼𝗰𝗲𝘀𝗮𝗿 𝗲𝗹
+𝗰𝗼𝗺𝗮𝗻𝗱𝗼 𝗔𝗙𝗞.
+
+🔄 𝗜𝗻𝘁é𝗻𝘁𝗮𝗹𝗼
+𝗻𝘂𝗲𝘃𝗮𝗺𝗲𝗻𝘁𝗲.
+
+╰────────────────⬣${SIGNATURE}`
+    }, { quoted: msg })
+  } catch {}
+}
 }
