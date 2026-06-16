@@ -32,7 +32,7 @@ import tourl from "../commands/tourl.js"
 import jokai from "../commands/jokai.js"
 import { jokaiWatcher } from "./jokaiWatcher.js"
 import antiPorno from "../commands/antiPorno.js"
-
+import clima from "../commands/clima.js"
 import antiporno from "../commands/antiporno.js"
 
 import ytsearch, { ytsearchReplyHook } from "../commands/ytsearch.js"
@@ -88,6 +88,7 @@ const COMMANDS = {
   addlista,
   jokai,
   testestado,
+  clima,
   pausarconteo,
 reanudarconteo,
 estadoconteo,
