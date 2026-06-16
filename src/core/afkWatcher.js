@@ -81,25 +81,29 @@ async function getGroupName(sock, chatId) {
 // ── Mensaje: alguien mencionó a un usuario AFK ───────────
 
 async function enviarAvisoAFK(sock, chatId, entry, quienMencionoJid, groupName) {
-  const afkNum  = entry.num
-  const afkJid  = entry.jid
-  const porNum  = jidToNumber(quienMencionoJid)
+  const afkNum = entry.num
+  const afkJid = entry.jid
 
   await sock.sendMessage(chatId, {
     text:
-`┌──────────────
-│  🌙  *USUARIO AFK*
-├───────────────
-│  👤  *Usuario:*  @${afkNum}
-│  📝  *Razón:*    ${entry.razon}
-│  ⏱️  *Ausente:*  ${tiempoTranscurrido(entry.activadoEn)}
-├───────────────
-│  📢  @${porNum} lo mencionó
-│  en *${groupName}*
-│
-│  💬  Te responderá cuando
-│  esté disponible.
-└───────────────${SIGNATURE}`,
+`╭─〔 🌙 𝗨𝗦𝗨𝗔𝗥𝗜𝗢 𝗔𝗨𝗦𝗘𝗡𝗧𝗘 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${afkNum}
+
+📝 𝗥𝗮𝘇ó𝗻:
+${entry.razon}
+
+⏳ 𝗔𝘂𝘀𝗲𝗻𝘁𝗲 𝗱𝗲𝘀𝗱𝗲:
+${tiempoTranscurrido(entry.activadoEn)}
+
+🏷️ 𝗚𝗿𝘂𝗽𝗼:
+${groupName}
+
+💬 𝗘𝘀𝘁𝗲 𝘂𝘀𝘂𝗮𝗿𝗶𝗼 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗔𝗙𝗞.
+✨ 𝗧𝗲 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲𝗿á 𝗰𝘂𝗮𝗻𝗱𝗼 𝗿𝗲𝗴𝗿𝗲𝘀𝗲.
+
+╰────────────────⬣${SIGNATURE}`,
     mentions: [afkJid, quienMencionoJid]
   }).catch(() => {})
 }
@@ -111,14 +115,20 @@ async function enviarAvisoVuelta(sock, chatId, entry, userJid) {
 
   await sock.sendMessage(chatId, {
     text:
-`┌─────────────
-│  🔔  *HA VUELTO*
-├──────────────
-│  👤  *Usuario:*  @${userNum}
-│  ✅  Ya está disponible
-│  ⏱️  *Estuvo AFK:*  ${tiempoTranscurrido(entry.activadoEn)}
-│  📝  *Razón fue:* ${entry.razon}
-└──────────────${SIGNATURE}`,
+`╭─〔 🔔 𝗕𝗜𝗘𝗡𝗩𝗘𝗡𝗜𝗗𝗢 𝗗𝗘 𝗩𝗨𝗘𝗟𝗧𝗔 〕─⬣
+
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
+@${userNum}
+
+⏳ 𝗧𝗶𝗲𝗺𝗽𝗼 𝗔𝗙𝗞:
+${tiempoTranscurrido(entry.activadoEn)}
+
+📝 𝗠𝗼𝘁𝗶𝘃𝗼:
+${entry.razon}
+
+✅ 𝗬𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗱𝗶𝘀𝗽𝗼𝗻𝗶𝗯𝗹𝗲.
+
+╰────────────────⬣${SIGNATURE}`,
     mentions: [userJid]
   }).catch(() => {})
 }
