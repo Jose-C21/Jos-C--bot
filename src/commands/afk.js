@@ -158,7 +158,7 @@ ${SIGNATURE}`
 
     return await sock.sendMessage(chatId, {
       text:
-`╭─〔 🌙 𝗠𝗢𝗗𝗢 𝗔𝗙𝗞 𝗔𝗖𝗧𝗜𝗩𝗔𝗗𝗢 〕─⬣
+`╭─〔 🌙 𝗔𝗙𝗞 𝗔𝗖𝗧𝗜𝗩𝗔𝗗𝗢 〕─⬣
 
 👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
 @${userNum}
