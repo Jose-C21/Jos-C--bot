@@ -1,19 +1,3 @@
-// src/core/adminGuard.js
-//
-// Seguridad de administración:
-// Solo los OWNERS configurados (config.owners / config.ownersLid) pueden
-// dar o quitar el cargo de administrador dentro del grupo.
-//
-// - Si un admin (que no es owner) le quita el admin a otro admin:
-//     -> se le retira el admin al que lo quitó (castigo)
-//     -> se le devuelve el admin al que se lo quitaron (restauración)
-//
-// - Si un admin (que no es owner) le da el admin a un miembro:
-//     -> se le retira el admin al que lo otorgó (castigo)
-//     -> se le retira el admin al que lo recibió (castigo)
-//
-// En ambos casos se envía un único aviso bonito mencionando a ambas partes.
-
 import config from "../config.js"
 import { jidToNumber, isProtectedJid } from "../utils/jid.js"
 
@@ -149,20 +133,20 @@ export async function adminSecurityGuard(sock, update) {
       }
 
       const lines = [
-        "🚨 *ALERTA DE SEGURIDAD* 🚨",
+        "🚨 𝗔𝗟𝗘𝗥𝗧𝗔 𝗗𝗘 𝗦𝗘𝗚𝗨𝗥𝗜𝗗𝗔𝗗 🚨",
         "",
-        "❌ Acción de administración no autorizada",
+        "❌ 𝗔𝗰𝗰𝗶𝗼́𝗻 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗻𝗼 𝗮𝘂𝘁𝗼𝗿𝗶𝘇𝗮𝗱𝗮",
         "",
-        `👤 Lo hizo: ${authorTag}`,
-        `🎯 Le quitó el admin a: ${targetTags}`,
+        `👤 𝗟𝗼 𝗵𝗶𝘇𝗼: ${authorTag}`,
+        `🎯 𝗟𝗲 𝗾𝘂𝗶𝘁𝗼́ 𝗲𝗹 𝗮𝗱𝗺𝗶𝗻 𝗮: ${targetTags}`,
         "",
-        "📌 Solo los *owners* del grupo pueden quitar administración.",
+        "📌 𝗦𝗼𝗹𝗼 𝗹𝗼𝘀 𝗼𝘄𝗻𝗲𝗿𝘀 𝗱𝗲𝗹 𝗴𝗿𝘂𝗽𝗼 𝗽𝘂𝗲𝗱𝗲𝗻 𝗾𝘂𝗶𝘁𝗮𝗿 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻.",
         "",
-        "🔧 Corrección automática aplicada:",
-        `• Se retiró el admin a ${authorTag}`,
-        `• Se devolvió el admin a ${targetTags}`,
+        "🔧 𝗖𝗼𝗿𝗿𝗲𝗰𝗰𝗶𝗼́𝗻 𝗮𝘂𝘁𝗼𝗺𝗮́𝘁𝗶𝗰𝗮 𝗮𝗽𝗹𝗶𝗰𝗮𝗱𝗮:",
+        `🔻 𝗦𝗲 𝗿𝗲𝘁𝗶𝗿𝗼́ 𝗲𝗹 𝗮𝗱𝗺𝗶𝗻 𝗮 ${authorTag}`,
+        `🔁 𝗦𝗲 𝗱𝗲𝘃𝗼𝗹𝘃𝗶𝗼́ 𝗲𝗹 𝗮𝗱𝗺𝗶𝗻 𝗮 ${targetTags}`,
         "",
-        `🛡️ ${groupName} está protegido.`
+        `🛡️ ${groupName} 𝗲𝘀𝘁𝗮́ 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼.`
       ]
 
       await sock.sendMessage(groupId, {
@@ -206,21 +190,21 @@ export async function adminSecurityGuard(sock, update) {
       }
 
       const lines = [
-        "🚨 *ALERTA DE SEGURIDAD* 🚨",
+        "🚨 𝗔𝗟𝗘𝗥𝗧𝗔 𝗗𝗘 𝗦𝗘𝗚𝗨𝗥𝗜𝗗𝗔𝗗 🚨",
         "",
-        "❌ Acción de administración no autorizada",
+        "❌ 𝗔𝗰𝗰𝗶𝗼́𝗻 𝗱𝗲 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗻𝗼 𝗮𝘂𝘁𝗼𝗿𝗶𝘇𝗮𝗱𝗮",
         "",
-        `👤 Lo hizo: ${authorTag}`,
-        `🎯 Le dio admin a: ${targetTags}`,
+        `👤 𝗟𝗼 𝗵𝗶𝘇𝗼: ${authorTag}`,
+        `🎯 𝗟𝗲 𝗱𝗶𝗼 𝗮𝗱𝗺𝗶𝗻 𝗮: ${targetTags}`,
         "",
-        "📌 Solo los *owners* del grupo pueden otorgar administración.",
+        "📌 𝗦𝗼𝗹𝗼 𝗹𝗼𝘀 𝗼𝘄𝗻𝗲𝗿𝘀 𝗱𝗲𝗹 𝗴𝗿𝘂𝗽𝗼 𝗽𝘂𝗲𝗱𝗲𝗻 𝗼𝘁𝗼𝗿𝗴𝗮𝗿 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻.",
         "",
-        "🔧 Corrección automática aplicada:",
-        `• Se retiró el admin a ${authorTag}`
+        "🔧 𝗖𝗼𝗿𝗿𝗲𝗰𝗰𝗶𝗼́𝗻 𝗮𝘂𝘁𝗼𝗺𝗮́𝘁𝗶𝗰𝗮 𝗮𝗽𝗹𝗶𝗰𝗮𝗱𝗮:",
+        `🔻 𝗦𝗲 𝗿𝗲𝘁𝗶𝗿𝗼́ 𝗲𝗹 𝗮𝗱𝗺𝗶𝗻 𝗮 ${authorTag}`
       ]
 
       if (punishableTargets.length) {
-        lines.push(`• Se retiró el admin a ${targetTags}`)
+        lines.push(`🔻 𝗦𝗲 𝗿𝗲𝘁𝗶𝗿𝗼́ 𝗲𝗹 𝗮𝗱𝗺𝗶𝗻 𝗮 ${targetTags}`)
       }
 
       lines.push("", `🛡️ ${groupName} está protegido.`)
