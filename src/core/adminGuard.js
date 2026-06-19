@@ -38,13 +38,53 @@ function getBotNumberSet(sock) {
   return set
 }
 
-function isBotAdminFromMd(md, botNumbers) {
+function isBotAdminFromMd(md, sock) {
   const parts = md?.participants || []
+
+  const botIds = new Set()
+
+  const add = (jid) => {
+    if (!jid) return
+
+    botIds.add(String(jid))
+    botIds.add(jidToNumber(jid))
+
+    try {
+      if (sock?.decodeJid) {
+        const decoded = sock.decodeJid(jid)
+        botIds.add(String(decoded))
+        botIds.add(jidToNumber(decoded))
+      }
+    } catch {}
+  }
+
+  add(sock?.user?.id)
+  add(sock?.user?.lid)
+
   for (const p of parts) {
-    if (botNumbers.has(jidToNumber(p?.id))) {
-      return p?.admin === "admin" || p?.admin === "superadmin"
+    const pid = String(p?.id || "")
+
+    let decodedPid = pid
+    try {
+      if (sock?.decodeJid) {
+        decodedPid = sock.decodeJid(pid)
+      }
+    } catch {}
+
+    const matches =
+      botIds.has(pid) ||
+      botIds.has(decodedPid) ||
+      botIds.has(jidToNumber(pid)) ||
+      botIds.has(jidToNumber(decodedPid))
+
+    if (matches) {
+      return (
+        p?.admin === "admin" ||
+        p?.admin === "superadmin"
+      )
     }
   }
+
   return false
 }
 
@@ -104,7 +144,7 @@ export async function adminSecurityGuard(sock, update) {
       groupName = (md?.subject || "este grupo").trim()
     } catch {}
 
-    const botIsAdmin = isBotAdminFromMd(md, botNumbers)
+    const botIsAdmin = isBotAdminFromMd(md, sock)
     const authorTag = mentionTag(decodedAuthor || author)
 
     if (action === "demote") {
