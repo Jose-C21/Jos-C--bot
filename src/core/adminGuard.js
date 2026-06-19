@@ -38,22 +38,42 @@ function getBotNumberSet(sock) {
   return set
 }
 
-function isBotAdminFromMd(sock, md, botNumbers) {
+function findBotParticipant(sock, md, botNumbers) {
   const parts = md?.participants || []
 
   const botJid = sock?.user?.id
   let decodedBotJid = botJid
   try { if (sock?.decodeJid) decodedBotJid = sock.decodeJid(botJid) } catch {}
 
-  const botParticipant = parts.find(p => {
+  return parts.find(p => {
     if (!p?.id) return false
     if (p.id === botJid || p.id === decodedBotJid) return true
     const n = jidToNumber(p.id)
     return n && botNumbers.has(n)
-  })
-
-  return botParticipant?.admin === "admin" || botParticipant?.admin === "superadmin"
+  }) || null
 }
+
+async function getBotAdminStatus(sock, groupId, botNumbers, retries = 2, delayMs = 600) {
+  let lastMd = null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let md = null
+    try { md = await sock.groupMetadata(groupId) } catch {}
+    lastMd = md || lastMd
+
+    const botP = findBotParticipant(sock, md, botNumbers)
+
+    if (botP && (botP.admin === "admin" || botP.admin === "superadmin")) {
+      return { isAdmin: true, md }
+    }
+    if (botP && botP.admin === null && attempt < retries) {
+      await new Promise(r => setTimeout(r, delayMs))
+      continue
+    }
+    return { isAdmin: false, md }
+  }
+  return { isAdmin: false, md: lastMd }
+}
+
 
 
 /**
@@ -105,20 +125,17 @@ export async function adminSecurityGuard(sock, update) {
     }
     if (!rawTargets.length) return false
 
-    let md = null
-    let groupName = "este grupo"
-    try {
-      md = await sock.groupMetadata(groupId)
-      groupName = (md?.subject || "este grupo").trim()
-    } catch {}
+    const { isAdmin: botIsAdmin, md } = await getBotAdminStatus(sock, groupId, botNumbers)
+const groupName = (md?.subject || "este grupo").trim()
 
-    console.log("[DEBUG botIsAdmin]", JSON.stringify({
+console.log("[DEBUG botIsAdmin]", JSON.stringify({
   sockUserId: sock?.user?.id,
   sockUserLid: sock?.user?.lid,
   botNumbers: Array.from(botNumbers),
+  botIsAdmin,
   participantsRaw: (md?.participants || []).map(p => ({ id: p?.id, admin: p?.admin }))
 }))
-  const botIsAdmin = isBotAdminFromMd(sock, md, botNumbers)
+
 
     const authorTag = mentionTag(decodedAuthor || author)
 
