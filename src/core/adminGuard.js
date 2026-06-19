@@ -1,6 +1,10 @@
 import config from "../config.js"
 import { jidToNumber, isProtectedJid } from "../utils/jid.js"
 
+function isValidJid(jid = "") {
+  return typeof jid === "string" && jid.includes("@s.whatsapp.net")
+}
+
 const SIGNATURE =
   "\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦"
 
@@ -16,9 +20,14 @@ function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
 }
 
 function normalizeParticipant(p) {
-  if (!p) return { jid: "", phoneJid: "" }
-  if (typeof p === "string") return { jid: p, phoneJid: "" }
-  return { jid: String(p.id || ""), phoneJid: String(p.phoneNumber || "") }
+  if (!p) return null
+
+  const jid = typeof p === "string" ? p : p.id
+
+  if (!jid || typeof jid !== "string") return null
+  if (!jid.includes("@")) return null
+
+  return jid
 }
 
 function mentionTag(jid = "") {
@@ -64,6 +73,14 @@ export async function adminSecurityGuard(sock, update) {
     if (action !== "promote" && action !== "demote") return false
     if (!participants.length || !author) return false
 
+if (!isValidJid(author)) {
+
+  console.log("[ADMIN GUARD] author inválido:", author)
+
+  return false
+
+}
+
     const botNumbers = getBotNumberSet(sock)
     const authorNum = jidToNumber(author)
 
@@ -82,11 +99,11 @@ export async function adminSecurityGuard(sock, update) {
     }
 
     const rawTargets = []
-    for (const p of participants) {
-      const { jid: pJid, phoneJid } = normalizeParticipant(p)
-      const targetJid = phoneJid || pJid
-      if (targetJid) rawTargets.push(targetJid)
-    }
+
+for (const p of participants) {
+  const jid = normalizeParticipant(p)
+  if (isValidJid(jid)) rawTargets.push(jid)
+}
     if (!rawTargets.length) return false
 
     let groupName = "este grupo"
@@ -109,11 +126,9 @@ try {
 
 try {
 
-  await sock.groupParticipantsUpdate(
-    groupId,
-    [author],
-    "demote"
-  )
+  if (isValidJid(author)) {
+  await sock.groupParticipantsUpdate(groupId, [author], "demote")
+}
 
   for (const t of rawTargets) {
     await sock.groupParticipantsUpdate(
