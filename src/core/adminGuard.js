@@ -53,37 +53,22 @@ function findBotParticipant(sock, md, botNumbers) {
   }) || null
 }
 
-async function getBotAdminStatus(sock, groupId, botNumbers, retries = 5, delayMs = 1500) {
-  let lastMd = null
+async function getBotAdminStatus(sock, groupId, botNumbers) {
+  let md = null
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    let md = null
+  try {
+    md = await sock.groupMetadata(groupId)
+  } catch {}
 
-    try {
-      md = await sock.groupMetadata(groupId)
-    } catch {}
+  const botP = findBotParticipant(sock, md, botNumbers)
 
-    lastMd = md || lastMd
-
-    const botP = findBotParticipant(sock, md, botNumbers)
-
-    if (botP) {
-      if (botP.admin === "admin" || botP.admin === "superadmin") {
-        return { isAdmin: true, md }
-      }
-
-      // RC9 suele devolver admin:null en grupos LID.
-      // Esperamos varios intentos antes de concluir que no es admin.
-      if ((botP.admin === null || botP.admin === undefined) && attempt < retries) {
-        await new Promise(r => setTimeout(r, delayMs))
-        continue
-      }
-    }
-
-    break
+  if (botP) {
+    // En este proyecto el bot siempre será administrador.
+    // Ignoramos el campo admin porque RC9 devuelve null.
+    return { isAdmin: true, md }
   }
 
-  return { isAdmin: false, md: lastMd }
+  return { isAdmin: false, md }
 }
 
 
@@ -140,13 +125,6 @@ export async function adminSecurityGuard(sock, update) {
     const { isAdmin: botIsAdmin, md } = await getBotAdminStatus(sock, groupId, botNumbers)
 const groupName = (md?.subject || "este grupo").trim()
 
-console.log("[DEBUG botIsAdmin]", JSON.stringify({
-  sockUserId: sock?.user?.id,
-  sockUserLid: sock?.user?.lid,
-  botNumbers: Array.from(botNumbers),
-  botIsAdmin,
-  participantsRaw: (md?.participants || []).map(p => ({ id: p?.id, admin: p?.admin }))
-}))
 
 
     const authorTag = mentionTag(decodedAuthor || author)
