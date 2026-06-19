@@ -229,17 +229,9 @@ export async function startSock(onMessage) {
         return
       }
 
-      await sleep(5000)
       
-      const md = await sock.groupMetadata(update.id)
-
-console.log(
-    "[AFTER SLEEP]",
-    md.participants.map(p => ({
-        id: p.id,
-        admin: p.admin
-    }))
-)
+      
+      
       
       const adminViolation = await adminSecurityGuard(sock, update)
       if (adminViolation) {
