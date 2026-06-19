@@ -112,7 +112,13 @@ export async function adminSecurityGuard(sock, update) {
       groupName = (md?.subject || "este grupo").trim()
     } catch {}
 
-    const botIsAdmin = isBotAdminFromMd(sock, md, botNumbers)
+    console.log("[DEBUG botIsAdmin]", JSON.stringify({
+  sockUserId: sock?.user?.id,
+  sockUserLid: sock?.user?.lid,
+  botNumbers: Array.from(botNumbers),
+  participantsRaw: (md?.participants || []).map(p => ({ id: p?.id, admin: p?.admin }))
+}))
+  const botIsAdmin = isBotAdminFromMd(sock, md, botNumbers)
 
     const authorTag = mentionTag(decodedAuthor || author)
 
