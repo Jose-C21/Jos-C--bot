@@ -224,7 +224,7 @@ if (!correctionWorked) {
         lines.push(`🔻 𝗦𝗲 𝗿𝗲𝘁𝗶𝗿𝗼́ 𝗲𝗹 𝗮𝗱𝗺𝗶𝗻 𝗮 ${targetTags}`)
       }
 
-      lines.push("", `🛡️ ${groupName} está protegido.`)
+      lines.push("", `🛡️ ${groupName} 𝗲𝘀𝘁𝗮́ 𝗽𝗿𝗼𝘁𝗲𝗴𝗶𝗱𝗼.`)
 
       await sock.sendMessage(groupId, {
         text: lines.join("\n") + SIGNATURE,
