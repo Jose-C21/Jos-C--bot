@@ -38,15 +38,23 @@ function getBotNumberSet(sock) {
   return set
 }
 
-function isBotAdminFromMd(md, botNumbers) {
+function isBotAdminFromMd(sock, md, botNumbers) {
   const parts = md?.participants || []
-  for (const p of parts) {
-    if (botNumbers.has(jidToNumber(p?.id))) {
-      return p?.admin === "admin" || p?.admin === "superadmin"
-    }
-  }
-  return false
+
+  const botJid = sock?.user?.id
+  let decodedBotJid = botJid
+  try { if (sock?.decodeJid) decodedBotJid = sock.decodeJid(botJid) } catch {}
+
+  const botParticipant = parts.find(p => {
+    if (!p?.id) return false
+    if (p.id === botJid || p.id === decodedBotJid) return true
+    const n = jidToNumber(p.id)
+    return n && botNumbers.has(n)
+  })
+
+  return botParticipant?.admin === "admin" || botParticipant?.admin === "superadmin"
 }
+
 
 /**
  * Detecta si un autor de un evento group-participants.update es el propio bot.
@@ -104,7 +112,8 @@ export async function adminSecurityGuard(sock, update) {
       groupName = (md?.subject || "este grupo").trim()
     } catch {}
 
-    const botIsAdmin = isBotAdminFromMd(md, botNumbers)
+    const botIsAdmin = isBotAdminFromMd(sock, md, botNumbers)
+
     const authorTag = mentionTag(decodedAuthor || author)
 
     if (action === "demote") {
