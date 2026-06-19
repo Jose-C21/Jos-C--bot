@@ -38,55 +38,7 @@ function getBotNumberSet(sock) {
   return set
 }
 
-function isBotAdminFromMd(md, sock) {
-  const parts = md?.participants || []
 
-  const botIds = new Set()
-
-  const add = (jid) => {
-    if (!jid) return
-
-    botIds.add(String(jid))
-    botIds.add(jidToNumber(jid))
-
-    try {
-      if (sock?.decodeJid) {
-        const decoded = sock.decodeJid(jid)
-        botIds.add(String(decoded))
-        botIds.add(jidToNumber(decoded))
-      }
-    } catch {}
-  }
-
-  add(sock?.user?.id)
-  add(sock?.user?.lid)
-
-  for (const p of parts) {
-    const pid = String(p?.id || "")
-
-    let decodedPid = pid
-    try {
-      if (sock?.decodeJid) {
-        decodedPid = sock.decodeJid(pid)
-      }
-    } catch {}
-
-    const matches =
-      botIds.has(pid) ||
-      botIds.has(decodedPid) ||
-      botIds.has(jidToNumber(pid)) ||
-      botIds.has(jidToNumber(decodedPid))
-
-    if (matches) {
-      return (
-        p?.admin === "admin" ||
-        p?.admin === "superadmin"
-      )
-    }
-  }
-
-  return false
-}
 
 /**
  * Detecta si un autor de un evento group-participants.update es el propio bot.
@@ -137,40 +89,53 @@ export async function adminSecurityGuard(sock, update) {
     }
     if (!rawTargets.length) return false
 
-    let md = null
     let groupName = "este grupo"
-    try {
-      md = await sock.groupMetadata(groupId)
-      groupName = (md?.subject || "este grupo").trim()
-    } catch {}
 
-    const botIsAdmin = isBotAdminFromMd(md, sock)
+try {
+  const md = await sock.groupMetadata(groupId)
+  groupName = (md?.subject || "este grupo").trim()
+} catch {}
+
+    
     const authorTag = mentionTag(decodedAuthor || author)
 
     if (action === "demote") {
       const targetTags = rawTargets.map(mentionTag).join(", ")
       const mentions = Array.from(new Set([author, decodedAuthor, ...rawTargets].filter(Boolean)))
 
-      if (!botIsAdmin) {
-        await sock.sendMessage(groupId, {
-          text:
-`🚨 *ALERTA DE SEGURIDAD* 🚨
+      
 
-❌ ${authorTag} le quitó el admin a ${targetTags} sin ser owner.
+      let correctionWorked = true
 
-📌 Solo los *owners* del grupo pueden quitar administración.
+try {
 
-⚠️ No pude corregirlo automáticamente porque no soy administrador del grupo.
-🔧 Hazme administrador para activar esta protección.` + SIGNATURE,
-          mentions
-        }).catch(() => {})
-        return true
-      }
+  await sock.groupParticipantsUpdate(
+    groupId,
+    [author],
+    "demote"
+  )
 
-      await sock.groupParticipantsUpdate(groupId, [author], "demote").catch(() => {})
-      for (const t of rawTargets) {
-        await sock.groupParticipantsUpdate(groupId, [t], "promote").catch(() => {})
-      }
+  for (const t of rawTargets) {
+    await sock.groupParticipantsUpdate(
+      groupId,
+      [t],
+      "promote"
+    )
+  }
+
+} catch (err) {
+
+  correctionWorked = false
+
+  console.error(
+    "[ADMIN GUARD DEMOTE ERROR]",
+    err
+  )
+}
+
+if (!correctionWorked) {
+  return true
+}
 
       const lines = [
         "🚨 𝗔𝗟𝗘𝗥𝗧𝗔 𝗗𝗘 𝗦𝗘𝗚𝗨𝗥𝗜𝗗𝗔𝗗 🚨",
@@ -208,26 +173,38 @@ export async function adminSecurityGuard(sock, update) {
       const targetTags = realTargets.map(mentionTag).join(", ")
       const mentions = Array.from(new Set([author, decodedAuthor, ...realTargets].filter(Boolean)))
 
-      if (!botIsAdmin) {
-        await sock.sendMessage(groupId, {
-          text:
-`🚨 *ALERTA DE SEGURIDAD* 🚨
+      
+      let correctionWorked = true
 
-❌ ${authorTag} le dio el admin a ${targetTags} sin ser owner.
+try {
 
-📌 Solo los *owners* del grupo pueden otorgar administración.
+  await sock.groupParticipantsUpdate(
+    groupId,
+    [author],
+    "demote"
+  )
 
-⚠️ No pude corregirlo automáticamente porque no soy administrador del grupo.
-🔧 Hazme administrador para activar esta protección.` + SIGNATURE,
-          mentions
-        }).catch(() => {})
-        return true
-      }
+  for (const t of punishableTargets) {
+    await sock.groupParticipantsUpdate(
+      groupId,
+      [t],
+      "demote"
+    )
+  }
 
-      await sock.groupParticipantsUpdate(groupId, [author], "demote").catch(() => {})
-      for (const t of punishableTargets) {
-        await sock.groupParticipantsUpdate(groupId, [t], "demote").catch(() => {})
-      }
+} catch (err) {
+
+  correctionWorked = false
+
+  console.error(
+    "[ADMIN GUARD PROMOTE ERROR]",
+    err
+  )
+}
+
+if (!correctionWorked) {
+  return true
+}
 
       const lines = [
         "🚨 𝗔𝗟𝗘𝗥𝗧𝗔 𝗗𝗘 𝗦𝗘𝗚𝗨𝗥𝗜𝗗𝗔𝗗 🚨",
