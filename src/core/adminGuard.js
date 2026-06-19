@@ -53,24 +53,36 @@ function findBotParticipant(sock, md, botNumbers) {
   }) || null
 }
 
-async function getBotAdminStatus(sock, groupId, botNumbers, retries = 2, delayMs = 600) {
+async function getBotAdminStatus(sock, groupId, botNumbers, retries = 5, delayMs = 1500) {
   let lastMd = null
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     let md = null
-    try { md = await sock.groupMetadata(groupId) } catch {}
+
+    try {
+      md = await sock.groupMetadata(groupId)
+    } catch {}
+
     lastMd = md || lastMd
 
     const botP = findBotParticipant(sock, md, botNumbers)
 
-    if (botP && (botP.admin === "admin" || botP.admin === "superadmin")) {
-      return { isAdmin: true, md }
+    if (botP) {
+      if (botP.admin === "admin" || botP.admin === "superadmin") {
+        return { isAdmin: true, md }
+      }
+
+      // RC9 suele devolver admin:null en grupos LID.
+      // Esperamos varios intentos antes de concluir que no es admin.
+      if ((botP.admin === null || botP.admin === undefined) && attempt < retries) {
+        await new Promise(r => setTimeout(r, delayMs))
+        continue
+      }
     }
-    if (botP && botP.admin === null && attempt < retries) {
-      await new Promise(r => setTimeout(r, delayMs))
-      continue
-    }
-    return { isAdmin: false, md }
+
+    break
   }
+
   return { isAdmin: false, md: lastMd }
 }
 
