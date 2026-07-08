@@ -153,16 +153,17 @@ try {
   chatId,
   {
     text: 
-`🚫 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔
-━━━━━━━━━━━━━━━━━━━
-
+`> ⛔ 𝗘𝗫𝗣𝗨𝗟𝗦𝗜𝗢́𝗡 𝗘𝗝𝗘𝗖𝗨𝗧𝗔𝗗𝗔 ⛔
+━━━━━━━━━━━━━━━━
+👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼 ⇾ @${jidToNumber(userToKick)}
 🏷️ 𝗚𝗿𝘂𝗽𝗼 ⇾ ${metadata.subject}
-👮 𝗔𝗱𝗺𝗶𝗻 ⇾ @${jidToNumber(decodedJid)}
-👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼 ⇾ @${jidToNumber(userToKick)}` + SIGNATURE,
+━━━━━━━━━━━━━━━━
+👮 𝗔𝗱𝗺𝗶𝗻 ⇾ @${jidToNumber(decodedJid)}` + SIGNATURE,
     mentions: [userToKick, decodedJid]
   },
   { quoted: msg }
 )
+
 
 
 
