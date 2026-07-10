@@ -80,7 +80,7 @@ export default async function menu(sock, msg) {
       dispositivo = "Desconocido"
     }
 
-    const versionBot = "4.2.0"
+    const versionBot = "5.0.0"
 
     const captionText =
 `「 ❑ 𝗦𝗜𝗦𝗧𝗘𝗠𝗔 𝗗𝗘 𝗕𝗢𝗧 · 𝗣𝗥𝗜𝗩𝗔𝗗𝗢 ❑ 」
