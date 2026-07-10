@@ -88,13 +88,13 @@ export default async function menu(sock, msg) {
 ⊱┊${saludo}, ${user} ✨
 ⊱┊${msgDia}
 
-❑ 𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝘂𝘀𝘂𝗮𝗿𝗶𝗼
+❑ ┊𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝘂𝘀𝘂𝗮𝗿𝗶𝗼
 > ➤ 𝗨𝘀𝘂𝗮𝗿𝗶𝗼 ⇾ ${user}
 > ➤ 𝗧𝗶𝗽𝗼 𝗱𝗲 𝗰𝗵𝗮𝘁 ⇾ ${tipoChat}
 > ➤ 𝗗𝗶𝘀𝗽𝗼𝘀𝗶𝘁𝗶𝘃𝗼 ⇾ ${dispositivo}
 > ➤ 𝗥𝗼𝗹 ⇾ ${rol}
 
-❑ 𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝗯𝗼𝘁
+❑ ┊𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝗯𝗼𝘁
 > ➤ 𝗙𝗲𝗰𝗵𝗮 ⇾ ${diaSemana}, ${fecha}
 > ➤ 𝗛𝗼𝗿𝗮 ⇾ ${hora}
 > ➤ 𝗩𝗲𝗿𝘀𝗶𝗼́𝗻 ⇾ ${versionBot}
