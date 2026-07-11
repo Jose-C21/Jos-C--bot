@@ -1,9 +1,90 @@
 import fs from "fs"
 import path from "path"
+import { createCanvas, loadImage } from "canvas"
 import { isBotAuthor } from "./adminGuard.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
+
+// ==============================
+// PLANTILLA DE BIENVENIDA (canvas)
+// ==============================
+const TEMPLATE_PATH = path.join(
+  process.cwd(),
+  "assets",
+  "bienvenida_template.PNG"
+)
+
+// Coordenadas exactas de la plantilla (bienvenida_template.png, 1200x627)
+const AVATAR_CX = 255
+const AVATAR_CY = 309
+const AVATAR_RAD = 116
+
+const NAME_X = 431
+const NAME_Y = 303 + 26 // +26 porque fillText usa la línea base, no la esquina superior
+const NAME_MAX_WIDTH = 620 // ancho disponible antes de chocar con el borde de la tarjeta
+
+async function generarImagenBienvenida(nombreUsuario, profilePicUrl) {
+  const W = 1200
+  const H = 627
+
+  const canvas = createCanvas(W, H)
+  const ctx = canvas.getContext("2d")
+
+  // 1. Fondo (plantilla ya diseñada: girasoles, tarjeta, logo, textos fijos)
+  const fondo = await loadImage(TEMPLATE_PATH)
+  ctx.drawImage(fondo, 0, 0, W, H)
+
+  // 2. Foto de perfil real, recortada en círculo exacto
+  let avatarImg
+  try {
+    avatarImg = await loadImage(profilePicUrl)
+  } catch {
+    avatarImg = await loadImage(FALLBACK_AVATAR)
+  }
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(AVATAR_CX, AVATAR_CY, AVATAR_RAD, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.clip()
+  ctx.drawImage(
+    avatarImg,
+    AVATAR_CX - AVATAR_RAD,
+    AVATAR_CY - AVATAR_RAD,
+    AVATAR_RAD * 2,
+    AVATAR_RAD * 2
+  )
+  ctx.restore()
+
+  // 3. Nombre de usuario (con autoajuste de tamaño si es muy largo)
+  let fontSize = 32
+  ctx.textBaseline = "alphabetic"
+  ctx.fillStyle = "#fff2d7"
+
+  let displayName = `@${nombreUsuario}`
+
+  ctx.font = `bold ${fontSize}px Sans`
+  while (ctx.measureText(displayName).width > NAME_MAX_WIDTH && fontSize > 18) {
+    fontSize -= 2
+    ctx.font = `bold ${fontSize}px Sans`
+  }
+
+  // si sigue sin caber, se recorta con "..."
+  if (ctx.measureText(displayName).width > NAME_MAX_WIDTH) {
+    while (
+      ctx.measureText(displayName + "…").width > NAME_MAX_WIDTH &&
+      displayName.length > 4
+    ) {
+      displayName = displayName.slice(0, -1)
+    }
+    displayName += "…"
+  }
+
+  ctx.fillText(displayName, NAME_X, NAME_Y)
+
+  return canvas.toBuffer("image/png")
+}
 
 function ensureActivos() {
   const dir = path.dirname(ACTIVOS_PATH)
@@ -306,15 +387,27 @@ ${actorTag}
       }
 
       if (action === "add" && welcomeOn) {
+        // nombre a mostrar en la imagen: el número/tag, sin el "@"
+        const nombreParaImagen = mentionTag.replace(/^@/, "")
+
+        let imagenBuffer = null
+        try {
+          imagenBuffer = await generarImagenBienvenida(
+            nombreParaImagen,
+            profilePicUrl
+          )
+        } catch (e) {
+          console.error("[groupWelcome] Error generando imagen de bienvenida:", e)
+        }
+
         const caption =
-          `╭─༻❀\n` +
-          `➣ *¡Bienvenido/a ${mentionTag} !* ✨\n` +
-          `╰─༻❀\n\n` +
-          `⟢ 🏠 *${groupName}*${desc}\n\n` +
-          `🌼 Esperamos que disfrutes y compartas buena vibra 🌼`
+          `🏠 *${groupName}*${desc}\n\n` +
+          `${mentionTag}`
 
         await sock.sendMessage(groupId, {
-          image: { url: profilePicUrl },
+          image: imagenBuffer
+            ? imagenBuffer
+            : { url: profilePicUrl },
           caption,
           mentions: [mentionJid],
         })
