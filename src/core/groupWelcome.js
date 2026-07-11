@@ -401,8 +401,11 @@ ${actorTag}
         }
 
         const caption =
-          `🏠 *${groupName}*${desc}\n\n` +
-          `${mentionTag}`
+          `╭─༻❀\n` +
+          `➣ *¡Bienvenido/a ${mentionTag} !* ✨\n` +
+          `╰─༻❀\n\n` +
+          `⟢ 🏠 *${groupName}*${desc}\n\n` +
+          `🌼 Esperamos que disfrutes y compartas buena vibra 🌼`
 
         await sock.sendMessage(groupId, {
           image: imagenBuffer
