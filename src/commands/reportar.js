@@ -38,13 +38,31 @@ export default async function reportar(sock, msg, { args = [] } = {}) {
     const ctxInfo = msg.message?.extendedTextMessage?.contextInfo || {}
     const reportedJid = ctxInfo.participant || null
 
-    if (!reportedJid) {
+            if (!reportedJid) {
       return await sock.sendMessage(
         chatId,
-        { text: "📝 *Debes responder al mensaje de la persona que quieres reportar.*" + SIGNATURE },
+        {
+          text:
+`📝 𝗗𝗲𝗯𝗲𝘀 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲𝗿 𝗮𝗹 𝗺𝗲𝗻𝘀𝗮𝗷𝗲 𝗱𝗲 𝗹𝗮 𝗽𝗲𝗿𝘀𝗼𝗻𝗮 𝗾𝘂𝗲 𝗾𝘂𝗶𝗲𝗿𝗲𝘀 𝗿𝗲𝗽𝗼𝗿𝘁𝗮𝗿.
+
+ℹ️ ¿𝗣𝗮𝗿𝗮 𝗾𝘂𝗲́ 𝘀𝗶𝗿𝘃𝗲?
+𝗘𝘀𝘁𝗲 𝗰𝗼𝗺𝗮𝗻𝗱𝗼 𝘁𝗲 𝗽𝗲𝗿𝗺𝗶𝘁𝗲 𝗮𝘃𝗶𝘀𝗮𝗿𝗹𝗲 𝗮 𝗹𝗼𝘀 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗱𝗼𝗿𝗲𝘀 𝗱𝗲𝗹 𝗴𝗿𝘂𝗽𝗼 𝘀𝗼𝗯𝗿𝗲 𝘂𝗻 𝗰𝗼𝗺𝗽𝗼𝗿𝘁𝗮𝗺𝗶𝗲𝗻𝘁𝗼 𝗶𝗻𝗱𝗲𝗯𝗶𝗱𝗼 (𝘀𝗽𝗮𝗺, 𝗮𝗰𝗼𝘀𝗼, 𝗳𝗮𝗹𝘁𝗮𝘀 𝗱𝗲 𝗿𝗲𝘀𝗽𝗲𝘁𝗼, 𝗲𝘁𝗰). 𝗘𝗹 𝗮𝘃𝗶𝘀𝗼 𝗹𝗹𝗲𝗴𝗮 𝗮𝗹 𝗴𝗿𝘂𝗽𝗼 𝘆 𝗱𝗶𝗿𝗲𝗰𝘁𝗼 𝗮𝗹 𝗽𝗿𝗶𝘃𝗮𝗱𝗼 𝗱𝗲 𝗰𝗮𝗱𝗮 𝗮𝗱𝗺𝗶𝗻.
+
+📌 𝗖𝗼́𝗺𝗼 𝘂𝘀𝗮𝗿𝗹𝗼:
+𝗥𝗲𝘀𝗽𝗼𝗻𝗱𝗲 𝗮𝗹 𝗺𝗲𝗻𝘀𝗮𝗷𝗲 𝗱𝗲 𝗲𝘀𝗮 𝗽𝗲𝗿𝘀𝗼𝗻𝗮 𝗰𝗼𝗻:
+.𝗿𝗲𝗽𝗼𝗿𝘁𝗮𝗿 <𝗺𝗼𝘁𝗶𝘃𝗼>
+
+⚡ 𝗨𝘀𝗮𝗿 𝗲𝘀𝘁𝗲 𝗰𝗼𝗺𝗮𝗻𝗱𝗼 𝗲𝘀 𝗺𝗮́𝘀 𝗿𝗮́𝗽𝗶𝗱𝗼 𝘆 𝘀𝗲𝗴𝘂𝗿𝗼 𝗾𝘂𝗲 𝗲𝘀𝗰𝗿𝗶𝗯𝗶𝗿𝗹𝗲 𝗮 𝘂𝗻 𝗮𝗱𝗺𝗶𝗻 𝘂𝗻𝗼 𝗽𝗼𝗿 𝘂𝗻𝗼: 𝘁𝗼𝗱𝗼𝘀 𝘀𝗲 𝗲𝗻𝘁𝗲𝗿𝗮𝗻 𝗮𝗹 𝗶𝗻𝘀𝘁𝗮𝗻𝘁𝗲 𝘆 𝗽𝘂𝗲𝗱𝗲𝗻 𝘀𝗼𝗹𝘂𝗰𝗶𝗼𝗻𝗮𝗿𝗹𝗼 𝗺𝗮́𝘀 𝗿𝗮́𝗽𝗶𝗱𝗼.
+
+✅ 𝗦𝗲́ 𝗰𝗹𝗮𝗿𝗼 𝗰𝗼𝗻 𝗲𝗹 𝗺𝗼𝘁𝗶𝘃𝗼, 𝗲𝗻𝘁𝗿𝗲 𝗺𝗮́𝘀 𝗽𝗿𝗲𝗰𝗶𝘀𝗼 𝗹𝗼 𝗲𝘀𝗰𝗿𝗶𝗯𝗮𝘀, 𝗺𝗮́𝘀 𝗿𝗮́𝗽𝗶𝗱𝗼 𝗲𝗹 𝗮𝗱𝗺𝗶𝗻 𝗲𝗻𝘁𝗶𝗲𝗻𝗱𝗲 𝗾𝘂𝗲́ 𝗽𝗮𝘀𝗼́ 𝘆 𝗽𝘂𝗲𝗱𝗲 𝗮𝗰𝘁𝘂𝗮𝗿.
+
+𝗘𝗷𝗲𝗺𝗽𝗹𝗼: .𝗿𝗲𝗽𝗼𝗿𝘁𝗮𝗿 𝗺𝗲 𝗲𝘀𝘁𝗮́ 𝗶𝗻𝘀𝘂𝗹𝘁𝗮𝗻𝗱𝗼` + SIGNATURE
+        },
         { quoted: msg }
       )
     }
+
+
 
     if (!motivo) {
       return await sock.sendMessage(
@@ -116,7 +134,7 @@ export default async function reportar(sock, msg, { args = [] } = {}) {
 🎯 𝗨𝘀𝘂𝗮𝗿𝗶𝗼 𝗿𝗲𝗽𝗼𝗿𝘁𝗮𝗱𝗼 ⇾ ${reportedTag}
 📄 𝗠𝗼𝘁𝗶𝘃𝗼 ⇾ ${motivo}
 ━━━━━━━━━━━━━━━━
-🔎 𝗥𝗲𝘃𝗶𝘀𝗮𝗹𝗼 𝗰𝘂𝗮𝗻𝗱𝗼 𝗽𝘂𝗲𝗱𝗮𝘀` + SIGNATURE,
+🔎 𝗥𝗲𝘃𝗶𝘀𝗮𝗹𝗼 𝗰𝘂𝗮𝗻𝗱𝗼 𝗽𝘂𝗲𝗱𝗮𝘀.` + SIGNATURE,
           mentions: [senderJid, reportedJid]
         })
       } catch (e) {
