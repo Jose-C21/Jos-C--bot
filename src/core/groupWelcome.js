@@ -1,109 +1,9 @@
 import fs from "fs"
 import path from "path"
-import { createCanvas, loadImage } from "canvas"
 import { isBotAuthor } from "./adminGuard.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
-const NOMBRES_PATH = path.join(DATA_DIR, "nombres.json")
-
-// ==============================
-// CACHÉ DE NOMBRES DE PERFIL (pushName)
-// ==============================
-// Baileys no expone una API para "consultar" el nombre de perfil de un
-// número cualquiera. El único dato confiable es msg.pushName, que solo
-// viaja adjunto a los mensajes que esa persona ya envió. router.js guarda
-// ahí cada pushName que ve pasar; acá solo lo leemos.
-function getNombreCacheado(jid) {
-  if (!jid) return ""
-  try {
-    if (!fs.existsSync(NOMBRES_PATH)) return ""
-    const db = JSON.parse(fs.readFileSync(NOMBRES_PATH, "utf8") || "{}")
-    return db[String(jid)] || ""
-  } catch {
-    return ""
-  }
-}
-
-// ==============================
-// PLANTILLA DE BIENVENIDA (canvas)
-// ==============================
-const TEMPLATE_PATH = path.join(
-  process.cwd(),
-  "assets",
-  "bienvenida_template2.png"
-)
-
-// Coordenadas exactas de la plantilla (bienvenida_template.png, 1200x627)
-const AVATAR_CX = 255
-const AVATAR_CY = 309
-const AVATAR_RAD = 116
-
-const NAME_X = 431
-const NAME_Y = 303 + 26 // +26 porque fillText usa la línea base, no la esquina superior
-const NAME_MAX_WIDTH = 620 // ancho disponible antes de chocar con el borde de la tarjeta
-
-async function generarImagenBienvenida(nombreUsuario, profilePicUrl) {
-  const W = 1200
-  const H = 627
-
-  const canvas = createCanvas(W, H)
-  const ctx = canvas.getContext("2d")
-
-  // 1. Fondo (plantilla ya diseñada: girasoles, tarjeta, logo, textos fijos)
-  const fondo = await loadImage(TEMPLATE_PATH)
-  ctx.drawImage(fondo, 0, 0, W, H)
-
-  // 2. Foto de perfil real, recortada en círculo exacto
-  let avatarImg
-  try {
-    avatarImg = await loadImage(profilePicUrl)
-  } catch {
-    avatarImg = await loadImage(FALLBACK_AVATAR)
-  }
-
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(AVATAR_CX, AVATAR_CY, AVATAR_RAD, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.clip()
-  ctx.drawImage(
-    avatarImg,
-    AVATAR_CX - AVATAR_RAD,
-    AVATAR_CY - AVATAR_RAD,
-    AVATAR_RAD * 2,
-    AVATAR_RAD * 2
-  )
-  ctx.restore()
-
-  // 3. Nombre de usuario (con autoajuste de tamaño si es muy largo)
-  let fontSize = 32
-  ctx.textBaseline = "alphabetic"
-  ctx.fillStyle = "#fff2d7"
-
-  let displayName = nombreUsuario
-
-  ctx.font = `bold ${fontSize}px Sans`
-  while (ctx.measureText(displayName).width > NAME_MAX_WIDTH && fontSize > 18) {
-    fontSize -= 2
-    ctx.font = `bold ${fontSize}px Sans`
-  }
-
-  // si sigue sin caber, se recorta con "..."
-  if (ctx.measureText(displayName).width > NAME_MAX_WIDTH) {
-    while (
-      ctx.measureText(displayName + "…").width > NAME_MAX_WIDTH &&
-      displayName.length > 4
-    ) {
-      displayName = displayName.slice(0, -1)
-    }
-    displayName += "…"
-  }
-
-  ctx.fillText(displayName, NAME_X, NAME_Y)
-
-  return canvas.toBuffer("image/png")
-}
 
 function ensureActivos() {
   const dir = path.dirname(ACTIVOS_PATH)
@@ -143,16 +43,15 @@ const FALLBACK_AVATAR =
   "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
 
 function normalizeParticipant(p) {
-  if (!p) return { jid: "", phoneJid: "", notify: "" }
+  if (!p) return { jid: "", phoneJid: "" }
 
   if (typeof p === "string") {
-    return { jid: p, phoneJid: "", notify: "" }
+    return { jid: p, phoneJid: "" }
   }
 
   return {
     jid: String(p.id || ""),
     phoneJid: String(p.phoneNumber || ""),
-    notify: String(p.notify || p.name || "").trim(),
   }
 }
 
@@ -165,23 +64,9 @@ function makeMentionTag(jid, phoneJid = "") {
   return `@${String(base).split("@")[0]}`
 }
 
-// Mismo mecanismo que usa el bot en router.js (getDisplayName) para resolver
-// el nombre real desde el contacts store de Baileys — sin esto solo tenemos el numero.
-function getRealName(sock, jid) {
-  const c = sock?.contacts?.[jid]
-  const name = (c?.name || c?.notify || c?.verifiedName || "").trim()
-  return name || ""
-}
-
 export async function onGroupParticipantsUpdate(sock, update) {
   try {
     console.log("[groupWelcome] UPDATE RAW:", JSON.stringify(update))
-    console.log(
-      "[groupWelcome] DEBUG contacts keys:",
-      Object.keys(sock?.contacts || {}).length,
-      "primeros:",
-      Object.entries(sock?.contacts || {}).slice(0, 3)
-    )
 
     const { id: groupId, participants = [], action } = update || {}
 
@@ -373,8 +258,7 @@ ${actorTag}
     for (const p of participants) {
       const {
         jid: participantJid,
-        phoneJid,
-        notify: participantNotify
+        phoneJid
       } = normalizeParticipant(p)
 
       if (!participantJid && !phoneJid) continue
@@ -422,28 +306,6 @@ ${actorTag}
       }
 
       if (action === "add" && welcomeOn) {
-        // nombre a mostrar en la imagen, en orden de prioridad:
-        // 1) "notify" que a veces trae el propio evento de baileys
-        // 2) nombre real desde el contacts store (mismo mecanismo de las menciones)
-        // 3) numero de telefono como ultimo recurso
-        const nombreReal =
-          participantNotify ||
-          getRealName(sock, participantJid) ||
-          getRealName(sock, phoneJid) ||
-          getNombreCacheado(participantJid) ||
-          getNombreCacheado(phoneJid)
-        const nombreParaImagen = nombreReal || mentionTag.replace(/^@/, "")
-
-        let imagenBuffer = null
-        try {
-          imagenBuffer = await generarImagenBienvenida(
-            nombreParaImagen,
-            profilePicUrl
-          )
-        } catch (e) {
-          console.error("[groupWelcome] Error generando imagen de bienvenida:", e)
-        }
-
         const caption =
           `╭─༻❀\n` +
           `➣ *¡Bienvenido/a ${mentionTag} !* ✨\n` +
@@ -452,9 +314,7 @@ ${actorTag}
           `🌼 Esperamos que disfrutes y compartas buena vibra 🌼`
 
         await sock.sendMessage(groupId, {
-          image: imagenBuffer
-            ? imagenBuffer
-            : { url: profilePicUrl },
+          image: { url: profilePicUrl },
           caption,
           mentions: [mentionJid],
         })
