@@ -2,6 +2,7 @@ import fs from "fs"
 import path from "path"
 import { createCanvas, loadImage } from "canvas"
 import { isBotAuthor } from "./adminGuard.js"
+import { getName } from "../utils/nameCache.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
@@ -157,6 +158,12 @@ function getRealName(sock, jid) {
 export async function onGroupParticipantsUpdate(sock, update) {
   try {
     console.log("[groupWelcome] UPDATE RAW:", JSON.stringify(update))
+    console.log(
+      "[groupWelcome] DEBUG contacts keys:",
+      Object.keys(sock?.contacts || {}).length,
+      "primeros:",
+      Object.entries(sock?.contacts || {}).slice(0, 3)
+    )
 
     const { id: groupId, participants = [], action } = update || {}
 
@@ -404,7 +411,9 @@ ${actorTag}
         const nombreReal =
           participantNotify ||
           getRealName(sock, participantJid) ||
-          getRealName(sock, phoneJid)
+          getRealName(sock, phoneJid) ||
+          getName(participantJid) ||
+          getName(phoneJid)
         const nombreParaImagen = nombreReal || mentionTag.replace(/^@/, "")
 
         let imagenBuffer = null
