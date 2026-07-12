@@ -12,7 +12,7 @@ const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
 const TEMPLATE_PATH = path.join(
   process.cwd(),
   "assets",
-  "bienvenida_template.PNG"
+  "bienvenida_template2.PNG"
 )
 
 // Coordenadas exactas de la plantilla (bienvenida_template.png, 1200x627)
@@ -62,7 +62,7 @@ async function generarImagenBienvenida(nombreUsuario, profilePicUrl) {
   ctx.textBaseline = "alphabetic"
   ctx.fillStyle = "#fff2d7"
 
-  let displayName = `@${nombreUsuario}`
+  let displayName = nombreUsuario
 
   ctx.font = `bold ${fontSize}px Sans`
   while (ctx.measureText(displayName).width > NAME_MAX_WIDTH && fontSize > 18) {
@@ -124,15 +124,16 @@ const FALLBACK_AVATAR =
   "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
 
 function normalizeParticipant(p) {
-  if (!p) return { jid: "", phoneJid: "" }
+  if (!p) return { jid: "", phoneJid: "", notify: "" }
 
   if (typeof p === "string") {
-    return { jid: p, phoneJid: "" }
+    return { jid: p, phoneJid: "", notify: "" }
   }
 
   return {
     jid: String(p.id || ""),
     phoneJid: String(p.phoneNumber || ""),
+    notify: String(p.notify || p.name || "").trim(),
   }
 }
 
@@ -143,6 +144,14 @@ function makeMentionTag(jid, phoneJid = "") {
       : jid
 
   return `@${String(base).split("@")[0]}`
+}
+
+// Mismo mecanismo que usa el bot en router.js (getDisplayName) para resolver
+// el nombre real desde el contacts store de Baileys — sin esto solo tenemos el numero.
+function getRealName(sock, jid) {
+  const c = sock?.contacts?.[jid]
+  const name = (c?.name || c?.notify || c?.verifiedName || "").trim()
+  return name || ""
 }
 
 export async function onGroupParticipantsUpdate(sock, update) {
@@ -339,7 +348,8 @@ ${actorTag}
     for (const p of participants) {
       const {
         jid: participantJid,
-        phoneJid
+        phoneJid,
+        notify: participantNotify
       } = normalizeParticipant(p)
 
       if (!participantJid && !phoneJid) continue
@@ -387,8 +397,15 @@ ${actorTag}
       }
 
       if (action === "add" && welcomeOn) {
-        // nombre a mostrar en la imagen: el número/tag, sin el "@"
-        const nombreParaImagen = mentionTag.replace(/^@/, "")
+        // nombre a mostrar en la imagen, en orden de prioridad:
+        // 1) "notify" que a veces trae el propio evento de baileys
+        // 2) nombre real desde el contacts store (mismo mecanismo de las menciones)
+        // 3) numero de telefono como ultimo recurso
+        const nombreReal =
+          participantNotify ||
+          getRealName(sock, participantJid) ||
+          getRealName(sock, phoneJid)
+        const nombreParaImagen = nombreReal || mentionTag.replace(/^@/, "")
 
         let imagenBuffer = null
         try {
