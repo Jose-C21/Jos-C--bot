@@ -2,10 +2,28 @@ import fs from "fs"
 import path from "path"
 import { createCanvas, loadImage } from "canvas"
 import { isBotAuthor } from "./adminGuard.js"
-import { getName } from "../utils/nameCache.js"
 
 const DATA_DIR = path.join(process.cwd(), "data")
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
+const NOMBRES_PATH = path.join(DATA_DIR, "nombres.json")
+
+// ==============================
+// CACHÉ DE NOMBRES DE PERFIL (pushName)
+// ==============================
+// Baileys no expone una API para "consultar" el nombre de perfil de un
+// número cualquiera. El único dato confiable es msg.pushName, que solo
+// viaja adjunto a los mensajes que esa persona ya envió. router.js guarda
+// ahí cada pushName que ve pasar; acá solo lo leemos.
+function getNombreCacheado(jid) {
+  if (!jid) return ""
+  try {
+    if (!fs.existsSync(NOMBRES_PATH)) return ""
+    const db = JSON.parse(fs.readFileSync(NOMBRES_PATH, "utf8") || "{}")
+    return db[String(jid)] || ""
+  } catch {
+    return ""
+  }
+}
 
 // ==============================
 // PLANTILLA DE BIENVENIDA (canvas)
@@ -412,8 +430,8 @@ ${actorTag}
           participantNotify ||
           getRealName(sock, participantJid) ||
           getRealName(sock, phoneJid) ||
-          getName(participantJid) ||
-          getName(phoneJid)
+          getNombreCacheado(participantJid) ||
+          getNombreCacheado(phoneJid)
         const nombreParaImagen = nombreReal || mentionTag.replace(/^@/, "")
 
         let imagenBuffer = null
