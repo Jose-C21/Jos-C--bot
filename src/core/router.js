@@ -1,4 +1,3 @@
-
 import config from "../config.js"
 import {
   getSenderJid,
@@ -211,33 +210,6 @@ const DATA_DIR = path.join(process.cwd(), "data")
 
 
 const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
-const NOMBRES_PATH = path.join(DATA_DIR, "nombres.json")
-
-// Caché en disco de pushName por jid. Es la única fuente confiable de
-// nombre de perfil que da Baileys, y solo viaja junto a los mensajes.
-// groupWelcome.js la lee para poder mostrar el nombre real al dar
-// la bienvenida, incluso si esa persona escribió en otro chat.
-function saveNombre(jid, name) {
-  if (!jid || !name) return
-  const clean = String(name).trim()
-  if (!clean) return
-
-  try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-
-    let db = {}
-    if (fs.existsSync(NOMBRES_PATH)) {
-      db = JSON.parse(fs.readFileSync(NOMBRES_PATH, "utf8") || "{}")
-    }
-
-    if (db[String(jid)] === clean) return // sin cambios
-
-    db[String(jid)] = clean
-    fs.writeFileSync(NOMBRES_PATH, JSON.stringify(db, null, 2))
-  } catch (e) {
-    console.error("[router] error guardando nombre:", e?.message)
-  }
-}
 
 function ensureActivosDB() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -581,7 +553,6 @@ console.log(
 )
 
     const senderName = getDisplayName(sock, msg, decodedJid)
-    saveNombre(decodedJid, msg?.pushName)
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
     const fromMe = !!msg.key?.fromMe
