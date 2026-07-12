@@ -12,7 +12,7 @@ const ACTIVOS_PATH = path.join(DATA_DIR, "activos.json")
 const TEMPLATE_PATH = path.join(
   process.cwd(),
   "assets",
-  "bienvenida_template2.PNG"
+  "bienvenida_template2.png"
 )
 
 // Coordenadas exactas de la plantilla (bienvenida_template.png, 1200x627)
