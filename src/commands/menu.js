@@ -8,7 +8,7 @@ import { createCanvas, loadImage, registerFont } from "canvas"
 const FALLBACK_AVATAR =
   "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
 
-const TEMPLATE_PATH = path.join(process.cwd(), "assets", "menu_template.png")
+const TEMPLATE_PATH = path.join(process.cwd(), "assets", "menu_template2.png")
 
 registerFont(path.join(process.cwd(), "assets", "fonts", "BigShoulders-Bold.ttf"), { family: "MenuNombre" })
 registerFont(path.join(process.cwd(), "assets", "fonts", "WorkSans-Bold.ttf"), { family: "MenuTexto" })
