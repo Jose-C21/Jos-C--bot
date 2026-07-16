@@ -1,7 +1,101 @@
 // src/commands/menu.js
 import moment from "moment-timezone"
+import path from "path"
 import { jidToNumber, getSenderJid } from "../utils/jid.js"
 import config from "../config.js"
+import { createCanvas, loadImage } from "canvas"
+
+const FALLBACK_AVATAR =
+  "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
+
+const TEMPLATE_PATH = path.join(process.cwd(), "assets", "menu_template.png")
+
+function limpiarNombreParaImagen(nombre) {
+  if (!nombre) return ""
+  return nombre
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, "")
+    .trim()
+}
+
+async function generarImagenMenu({ nombre, profilePicUrl, rol, tipoChat, fecha, hora }) {
+  const SIZE = 1000
+
+  const canvas = createCanvas(SIZE, SIZE)
+  const ctx = canvas.getContext("2d")
+
+  const fondo = await loadImage(TEMPLATE_PATH)
+  ctx.drawImage(fondo, 0, 0, SIZE, SIZE)
+
+  ctx.textAlign = "center"
+  ctx.textBaseline = "alphabetic"
+
+  const AVATAR_CX = SIZE / 2
+  const AVATAR_CY = 335
+  const AVATAR_RAD = 172
+
+  let avatarImg
+  try {
+    avatarImg = await loadImage(profilePicUrl)
+  } catch {
+    avatarImg = await loadImage(FALLBACK_AVATAR)
+  }
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(AVATAR_CX, AVATAR_CY, AVATAR_RAD, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.clip()
+  ctx.drawImage(
+    avatarImg,
+    AVATAR_CX - AVATAR_RAD,
+    AVATAR_CY - AVATAR_RAD,
+    AVATAR_RAD * 2,
+    AVATAR_RAD * 2
+  )
+  ctx.restore()
+
+  const NAME_MAX_WIDTH = 620
+  let displayName = nombre || "Usuario"
+
+  let fontSize = 52
+  ctx.fillStyle = "#fff2d7"
+  ctx.font = `bold ${fontSize}px Sans`
+
+  while (ctx.measureText(displayName).width > NAME_MAX_WIDTH && fontSize > 28) {
+    fontSize -= 2
+    ctx.font = `bold ${fontSize}px Sans`
+  }
+
+  if (ctx.measureText(displayName).width > NAME_MAX_WIDTH) {
+    while (
+      ctx.measureText(displayName + "…").width > NAME_MAX_WIDTH &&
+      displayName.length > 4
+    ) {
+      displayName = displayName.slice(0, -1)
+    }
+    displayName += "…"
+  }
+
+  ctx.fillText(displayName, SIZE / 2, 600)
+
+  ctx.font = "bold 28px Sans"
+  ctx.fillStyle = "#0d0d0d"
+  ctx.fillText(rol, SIZE / 2, 663)
+
+  const cols = [
+    { value: tipoChat, cx: SIZE / 2 - 300 },
+    { value: fecha, cx: SIZE / 2 },
+    { value: hora, cx: SIZE / 2 + 300 }
+  ]
+
+  for (const col of cols) {
+    ctx.font = "bold 32px Sans"
+    ctx.fillStyle = "#fff2d7"
+    ctx.fillText(col.value, col.cx, 825)
+  }
+
+  return canvas.toBuffer("image/png")
+}
 
 export default async function menu(sock, msg) {
   try {
@@ -11,28 +105,24 @@ export default async function menu(sock, msg) {
     moment.locale("es")
     const timezone = "America/Tegucigalpa"
 
-    // Reacción inicial
     await sock.sendMessage(chatId, { react: { text: "📜", key: msg.key } }).catch(() => {})
 
-    // Usuario
     const senderJid = getSenderJid(msg)
     const num = jidToNumber(senderJid)
     const user = "@" + String(num || senderJid).replace(/\D/g, "")
+    const nombreReal = (msg?.pushName || "").trim()
 
-    // Fecha y hora
     let diaSemana = moment().tz(timezone).format("dddd")
     diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)
     const fecha = moment().tz(timezone).format("DD/MM/YYYY")
     const hora = moment().tz(timezone).format("HH:mm:ss")
     const horaNum = moment().tz(timezone).hour()
 
-    // Saludo
     let saludo
     if (horaNum >= 5 && horaNum < 12) saludo = "🌅 𝗕𝘂𝗲𝗻𝗼𝘀 𝗱𝗶𝗮𝘀"
     else if (horaNum >= 12 && horaNum < 19) saludo = "☀️ 𝗕𝘂𝗲𝗻𝗮𝘀 𝘁𝗮𝗿𝗱𝗲𝘀"
     else saludo = "🌙 𝗕𝘂𝗲𝗻𝗮𝘀 𝗻𝗼𝗰𝗵𝗲𝘀"
 
-    // Mensaje por día
     let msgDia = ""
     switch (diaSemana.toLowerCase()) {
       case "lunes": msgDia = "💪 ¡ᴀ ᴇᴍᴘᴇᴢᴀʀ ʟᴀ ꜱᴇᴍᴀɴᴀ ᴄᴏɴ ᴛᴏᴅᴏ!"; break
@@ -45,10 +135,8 @@ export default async function menu(sock, msg) {
       default: msgDia = ""
     }
 
-    // Rol (Dev/Admin/Usuario)
     let rol = "👤 ᴜꜱᴜᴀʀɪᴏ"
 
-    // Owner por config.owners / ownersLid (tu estructura)
     const isOwner =
       (config.owners || []).map(String).includes(String(num)) ||
       (config.ownersLid || []).map(String).includes(String(num))
@@ -65,10 +153,11 @@ export default async function menu(sock, msg) {
     if (isOwner) rol = "🧩 ᴅᴇᴠᴇʟᴏᴘᴇʀ"
     else if (isAdmin) rol = "👑 ᴀᴅᴍɪɴɪꜱᴛʀᴀᴅᴏʀ"
 
-    // Tipo de chat
-    const tipoChat = String(chatId).endsWith("@g.us") ? "👥 ɢʀᴜᴘᴏ" : "💬 ᴘʀɪᴠᴀᴅᴏ"
+    const rolImagen = isOwner ? "DEVELOPER" : isAdmin ? "ADMINISTRADOR" : "USUARIO"
 
-    // Dispositivo (heurística por id)
+    const tipoChat = String(chatId).endsWith("@g.us") ? "👥 ɢʀᴜᴘᴏ" : "💬 ᴘʀɪᴠᴀᴅᴏ"
+    const tipoChatImagen = String(chatId).endsWith("@g.us") ? "Grupo" : "Privado"
+
     let dispositivo = "Desconocido"
     try {
       const msgId = String(msg.key?.id || "").toLowerCase()
@@ -83,21 +172,8 @@ export default async function menu(sock, msg) {
     const versionBot = "5.0.0"
 
     const captionText =
-`「 ❑ 𝗦𝗜𝗦𝗧𝗘𝗠𝗔 𝗗𝗘 𝗕𝗢𝗧 · 𝗣𝗥𝗜𝗩𝗔𝗗𝗢 ❑ 」
-
-⊱┊${saludo}, ${user} ✨
+`⊱┊${saludo}, ${user} ✨
 ⊱┊${msgDia}
-
-❑ ┊𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝘂𝘀𝘂𝗮𝗿𝗶𝗼
-> ➤ 𝗨𝘀𝘂𝗮𝗿𝗶𝗼 ⇾ ${user}
-> ➤ 𝗧𝗶𝗽𝗼 𝗱𝗲 𝗰𝗵𝗮𝘁 ⇾ ${tipoChat}
-> ➤ 𝗗𝗶𝘀𝗽𝗼𝘀𝗶𝘁𝗶𝘃𝗼 ⇾ ${dispositivo}
-> ➤ 𝗥𝗼𝗹 ⇾ ${rol}
-
-❑ ┊𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝗯𝗼𝘁
-> ➤ 𝗙𝗲𝗰𝗵𝗮 ⇾ ${diaSemana}, ${fecha}
-> ➤ 𝗛𝗼𝗿𝗮 ⇾ ${hora}
-> ➤ 𝗩𝗲𝗿𝘀𝗶𝗼́𝗻 ⇾ ${versionBot}
 
 「 ❑ 𝗠𝗘𝗡𝗨́ 𝗣𝗥𝗜𝗡𝗖𝗜𝗣𝗔𝗟 ❑ 」
 
@@ -163,11 +239,32 @@ export default async function menu(sock, msg) {
 ⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
 
-    // ✅ Enviar imagen con caption y mención
+    let profilePicUrl = FALLBACK_AVATAR
+    try {
+      const pic = await sock.profilePictureUrl(senderJid, "image")
+      if (typeof pic === "string" && pic) profilePicUrl = pic
+    } catch {}
+
+    let imagenBuffer = null
+    try {
+      imagenBuffer = await generarImagenMenu({
+        nombre: limpiarNombreParaImagen(nombreReal) || user,
+        profilePicUrl,
+        rol: rolImagen,
+        tipoChat: tipoChatImagen,
+        fecha,
+        hora
+      })
+    } catch (e) {
+      console.error("[menu] Error generando imagen:", e)
+    }
+
     await sock.sendMessage(
       chatId,
       {
-        image: { url: "https://i.postimg.cc/nVGqZ0Fd/17C6275D-76AF-410C-86D5-0E89A361B252.png" },
+        image: imagenBuffer
+          ? imagenBuffer
+          : { url: FALLBACK_AVATAR },
         caption: captionText,
         mentions: [senderJid]
       },
