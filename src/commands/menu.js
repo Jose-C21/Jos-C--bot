@@ -8,16 +8,50 @@ import { createCanvas, loadImage, registerFont } from "canvas"
 const FALLBACK_AVATAR =
   "https://i.postimg.cc/VLCVJnd5/F6049B9B-B574-486D-94C7-AC17ED4438C2.png"
 
-const TEMPLATE_PATH = path.join(process.cwd(), "assets", "menu_template2.png")
+const TEMPLATE_PATH = path.join(process.cwd(), "assets", "menu_template.png")
 
 registerFont(path.join(process.cwd(), "assets", "fonts", "BigShoulders-Bold.ttf"), { family: "MenuNombre" })
 registerFont(path.join(process.cwd(), "assets", "fonts", "WorkSans-Bold.ttf"), { family: "MenuTexto" })
 
 function limpiarNombreParaImagen(nombre) {
   if (!nombre) return ""
-  return nombre
+
+  const bloquesLetras = [
+    0x1D400, 0x1D434, 0x1D468, 0x1D49C, 0x1D4D0,
+    0x1D504, 0x1D538, 0x1D56C, 0x1D5A0, 0x1D5D4,
+    0x1D608, 0x1D63C, 0x1D670
+  ]
+  const bloquesDigitos = [0x1D7CE, 0x1D7D8, 0x1D7E2, 0x1D7EC, 0x1D7F6]
+
+  let out = ""
+  for (const ch of nombre) {
+    const cp = ch.codePointAt(0)
+    let mapeado = null
+
+    for (const start of bloquesLetras) {
+      if (cp >= start && cp < start + 52) {
+        const off = cp - start
+        mapeado = off < 26
+          ? String.fromCharCode(65 + off)
+          : String.fromCharCode(97 + (off - 26))
+        break
+      }
+    }
+
+    if (mapeado === null) {
+      for (const start of bloquesDigitos) {
+        if (cp >= start && cp < start + 10) {
+          mapeado = String.fromCharCode(48 + (cp - start))
+          break
+        }
+      }
+    }
+
+    out += mapeado !== null ? mapeado : ch
+  }
+
+  return out
     .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, "")
-    .replace(/[\u{1D400}-\u{1D7FF}]/gu, "")
     .replace(/[\u{2460}-\u{24FF}]/gu, "")
     .replace(/[\u{FF00}-\u{FFEF}]/gu, "")
     .trim()
@@ -107,7 +141,7 @@ async function generarImagenMenu({ nombre, profilePicUrl, rol, tipoChat, fecha, 
   for (const col of cols) {
     ctx.font = "bold 26px MenuTexto"
     ctx.fillStyle = "#fff2d7"
-    ctx.fillText(col.value, col.cx, 798)
+    ctx.fillText(col.value, col.cx, 822)
   }
 
   return canvas.toBuffer("image/png")
@@ -126,7 +160,10 @@ export default async function menu(sock, msg) {
     const senderJid = getSenderJid(msg)
     const num = jidToNumber(senderJid)
     const user = "@" + String(num || senderJid).replace(/\D/g, "")
-    const nombreReal = (msg?.pushName || "").trim()
+    const isFromMe = !!msg.key?.fromMe
+    const nombreReal = isFromMe
+      ? (sock.user?.name || sock.user?.verifiedName || "").trim()
+      : (msg?.pushName || "").trim()
 
     let diaSemana = moment().tz(timezone).format("dddd")
     diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)
@@ -142,7 +179,7 @@ export default async function menu(sock, msg) {
     let msgDia = ""
     switch (diaSemana.toLowerCase()) {
       case "lunes": msgDia = "💪 ¡ᴀ ᴇᴍᴘᴇᴢᴀʀ ʟᴀ ꜱᴇᴍᴀɴᴀ ᴄᴏɴ ᴛᴏᴅᴏ!"; break
-      case "martes": msgDia = "🚀 ᴍᴀʀᴛᴇꜱ ᴅᴇ ᴇɴᴇʀɢɪᴀ ᴘᴏꜱɪᴛɪᴠᴀ"; break
+      case "martes": msgDia = "🚀 ᴍᴀʳᴛᴇꜱ ᴅᴇ ᴇɴᴇʳɢɪᴀ ᴘᴏꜱɪᴛɪᴠᴀ"; break
       case "miércoles": msgDia = "🌟 ᴍɪᴛᴀᴅ ᴅᴇ ꜱᴇᴍᴀɴᴀ, ꜱɪɢᴜᴇ ꜰᴜᴇʳᴛᴇ"; break
       case "jueves": msgDia = "🔥 ¡ᴄᴀꜱɪ ᴠɪᴇʳɴᴇꜱ, ɴᴏ ᴛᴇ ʀɪɴᴅᴀꜱ!"; break
       case "viernes": msgDia = "🎉 ᴠɪᴇʳɴᴇꜱ ᴀʟ ꜰɪɴ, ᴅɪꜱꜰʳᴜᴛᴀ ᴛᴜ ᴅɪᴀ"; break
@@ -151,7 +188,7 @@ export default async function menu(sock, msg) {
       default: msgDia = ""
     }
 
-    let rol = "👤 ᴜꜱᴜᴀʳɪᴏ"
+    let rol = "👤 ᴜꜱᴜᴀʀɪᴏ"
 
     const isOwner =
       (config.owners || []).map(String).includes(String(num)) ||
@@ -256,7 +293,7 @@ export default async function menu(sock, msg) {
 > ➤ .𝗿𝗲𝗮𝗻𝘂𝗱𝗮𝗿𝗰𝗼𝗻𝘁𝗲𝗼 ⇾ ʳᴇᴀɴᴜᴅᴀʳ ᴄᴏɴᴛᴇᴏ
 
 ❑ 𝗨𝘁𝗶𝗹𝗶𝗱𝗮𝗱𝗲𝘀 — 𝗣𝘂́𝗯𝗹𝗶𝗰𝗼
-> ➤ .𝗰𝗹𝗶𝗺𝗮 ⇾ ᴄʟɪᴍᴀ ᴅᴇ ᴜɴᴀ ᴄɪᴜᴅᴀᴅ
+> ➤ .𝗰𝗹𝗶𝗺𝗮 ⇾ ᴄʳᴇᴀʳ ᴜɴᴀ ᴄɪᴜᴅᴀᴅ
 > ➤ .𝗮𝗳𝗸 ⇾ ᴍᴏᴅᴏ ᴀᴜꜱᴇɴᴛᴇ
 
 ⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
