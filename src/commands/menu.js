@@ -72,7 +72,7 @@ async function generarImagenMenu({ nombre, profilePicUrl, rol, tipoChat, fecha, 
   ctx.imageSmoothingQuality = "high"
 
   const AVATAR_CX = SIZE / 2
-  const AVATAR_CY = 340
+  const AVATAR_CY = 338
   const AVATAR_RAD = 172
 
   let avatarImg
