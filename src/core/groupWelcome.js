@@ -149,7 +149,8 @@ export async function onGroupParticipantsUpdate(sock, update) {
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 ╭ 🛡️ 𝗔𝗱𝗺𝗶𝗻
 ├ ${actorTag}
-╰▸ 𝗗𝗶𝗼 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗮 ${targetTag}
+╰▸ 𝗗𝗶𝗼 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗮:
+   ${targetTag}
 
 ╭ 🏠 𝗚𝗿𝘂𝗽𝗼
 ╰▸ ${groupName}
@@ -196,7 +197,8 @@ export async function onGroupParticipantsUpdate(sock, update) {
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 ╭ 🛡️ 𝗔𝗱𝗺𝗶𝗻
 ├ ${actorTag}
-╰▸ 𝗤𝘂𝗶𝘁𝗼 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗮 ${targetTag}
+╰▸ 𝗤𝘂𝗶𝘁𝗼 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗮:
+   ${targetTag}
 
 ╭ 🏠 𝗚𝗿𝘂𝗽𝗼
 ╰▸ ${groupName}
