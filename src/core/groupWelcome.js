@@ -149,10 +149,10 @@ export async function onGroupParticipantsUpdate(sock, update) {
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 ╭ 🛡️ 𝗔𝗱𝗺𝗶𝗻
 ├ ${actorTag}
-╰ 𝗗𝗶𝗼 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗮 ${targetTag}
+╰▸ 𝗗𝗶𝗼 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗮 ${targetTag}
 
 ╭ 🏠 𝗚𝗿𝘂𝗽𝗼
-╰ ${groupName}
+╰▸ ${groupName}
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 > ✅ ᴘᴇʀᴍɪꜱᴏꜱ ᴅᴇ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴄɪᴏ́ɴ ᴏᴛᴏʀɢᴀᴅᴏꜱ ᴄᴏʀʀᴇᴄᴛᴀᴍᴇɴᴛᴇ.`
 ,
@@ -162,20 +162,18 @@ export async function onGroupParticipantsUpdate(sock, update) {
           try {
             await sock.sendMessage(targetJid, {
   text:
-`╭━━━ 👑 NUEVO CARGO ━━━╮
+`> ⟢ ɴᴜᴇᴠᴏ ᴄᴀʀɢᴏ ⟣
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+🎉 ¡𝗙𝗲𝗹𝗶𝗰𝗶𝗱𝗮𝗱𝗲𝘀! 𝗔𝗵𝗼𝗿𝗮 𝗲𝗿𝗲𝘀 𝗮𝗱𝗺𝗶𝗻
 
-🎉 ¡Felicidades!
+╭ 🏠 𝗚𝗿𝘂𝗽𝗼
+╰▸ ${groupName}
 
-Has sido nombrado administrador en:
-
-🏠 ${groupName}
-
-🛡️ Acción realizada por:
-${actorTag}
-
-✅ Ya cuentas con permisos de administración.
-
-╰━━━━━━━━━━━━━━━╯`,
+╭ 🛡️ 𝗔𝗱𝗺𝗶𝗻 𝗾𝘂𝗲 𝗹𝗼 𝗿𝗲𝗮𝗹𝗶𝘇𝗼́
+╰▸ ${actorTag}
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+> ✅ ʏᴀ ᴄᴜᴇɴᴛᴀꜱ ᴄᴏɴ ᴘᴇʀᴍɪꜱᴏꜱ ᴅᴇ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴄɪᴏ́ɴ.`
+,
   mentions: [actor]
 })
           } catch (e) {
@@ -194,37 +192,33 @@ ${actorTag}
         if (action === "demote") {
           await sock.sendMessage(groupId, {
             text:
-`╭━━ ⚠️ ADMINISTRACIÓN ━━╮
+`> ⟢ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴄɪᴏ́ɴ ʀᴇᴛɪʀᴀᴅᴀ ⟣
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+╭ 🛡️ 𝗔𝗱𝗺𝗶𝗻
+├ ${actorTag}
+╰▸ 𝗤𝘂𝗶𝘁𝗼 𝗮𝗱𝗺𝗶𝗻𝗶𝘀𝘁𝗿𝗮𝗰𝗶𝗼́𝗻 𝗮 ${targetTag}
 
-• 👤 Usuario:
-${targetTag}
-
-• 🛡️ Acción realizada por:
-${actorTag}
-
-• 🏠 Grupo:
-${groupName}
-
-ℹ️ El cargo de administrador ha sido retirado.
-
-╰━━━━━━━━━━━━━━━╯`,
+╭ 🏠 𝗚𝗿𝘂𝗽𝗼
+╰▸ ${groupName}
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+> ⚠️ ᴇʟ ᴄᴀʀɢᴏ ᴅᴇ ᴀᴅᴍɪɴ ʜᴀ ꜱɪᴅᴏ ʀᴇᴛɪʀᴀᴅᴏ.`
+,
             mentions: [targetJid, actor].filter(Boolean),
           })
 
           try {
             await sock.sendMessage(targetJid, {
   text:
-`╭━━ ⚠️ ACTUALIZACIÓN ━━╮
+`> ⟢ ᴀᴄᴛᴜᴀʟɪᴢᴀᴄɪᴏ́ɴ ⟣
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+╭ 🏠 𝗚𝗿𝘂𝗽𝗼
+╰▸ ${groupName}
 
-ℹ️ Tu cargo de administrador
-ha sido retirado en:
-
-🏠 ${groupName}
-
-🛡️ Acción realizada por:
-${actorTag}
-
-╰━━━━━━━━━━━━━━━╯`,
+╭ 🛡️ 𝗔𝗱𝗺𝗶𝗻 𝗾𝘂𝗲 𝗹𝗼 𝗿𝗲𝗮𝗹𝗶𝘇𝗼́
+╰▸ ${actorTag}
+┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+> ⚠️ ᴛᴜ ᴄᴀʀɢᴏ ᴅᴇ ᴀᴅᴍɪɴ ꜰᴜᴇ ʀᴇᴛɪʀᴀᴅᴏ.`
+,
   mentions: [actor]
 })
             
