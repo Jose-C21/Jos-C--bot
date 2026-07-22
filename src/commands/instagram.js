@@ -57,6 +57,7 @@ ${usedPrefix}instagram https://www.instagram.com/reel/DbEgsesBDhP/${signature()}
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }).catch(() => {})
 
     const steps = [
+      "⏳ Conectando con Instagram..",
       "⏳ Conectando con Instagram...",
       "▰▱▱▱▱▱▱▱ 10%",
       "▰▰▰▱▱▱▱▱ 35%",
