@@ -41,6 +41,7 @@ import premiacion from "../commands/premiacion.js"
 import { privateMirror } from "./privateMirror.js"
 import antipersona from "../commands/antipersona.js"
 import { antiPersonaObserve } from "./antipersonaWatch.js"
+import instagram from "../commands/instagram.js"
 
 import pausarconteo from "../commands/pausarconteo.js"
 import reanudarconteo from "../commands/reanudarconteo.js"
@@ -82,6 +83,7 @@ const COMMANDS = {
   reportar,
   unmute,
   img,
+  instagram,
   tourl,
   debugview,
   sumar,
