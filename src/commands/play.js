@@ -5,7 +5,7 @@ import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 import config from "../config.js"
 
-const SYLPHY_APIKEY = "sylphy-MtyAgpx"
+const SYLPHY_APIKEY = "sylph-aa4117ac"
 const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
 
 const DVYER_APIKEY = "dvyer090168434816"
