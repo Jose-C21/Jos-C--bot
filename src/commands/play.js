@@ -260,7 +260,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     let audioUrl = null
 
-    // 1️⃣ Intento con SYLPHY
+    // 1 Intento con SYLPHY
     try {
       const sylphy = await axios.get(
         `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`
@@ -269,20 +269,23 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       if (sylphy.data?.status && sylphy.data?.result?.dl_url) {
         audioUrl = sylphy.data.result.dl_url
       }
-    } catch {}
+    } catch (err) {
+      console.error("❌ ERROR SYLPHY:", err?.response?.data || err.message)
+    }
 
     // 2️⃣ Fallback con DVYER
     if (!audioUrl) {
       try {
         const dvyer = await axios.get(
-          `${DVYER_API}?url=${encodeURIComponent(ytUrl)}&apikey=${DVYER_APIKEY}`,
-          { headers: { "x-api-key": DVYER_APIKEY } }
+          `${DVYER_API}?mode=link&url=${encodeURIComponent(ytUrl)}&apikey=${DVYER_APIKEY}`
         )
 
-        if (dvyer.data?.ok && dvyer.data?.download_url) {
-          audioUrl = dvyer.data.download_url
+        if (dvyer.data?.ok && (dvyer.data?.download_url || dvyer.data?.url)) {
+          audioUrl = dvyer.data.download_url || dvyer.data.url
         }
-      } catch {}
+      } catch (err) {
+        console.error("❌ ERROR DVYER:", err?.response?.data || err.message)
+      }
     }
 
     if (!audioUrl) throw "No se pudo obtener audio"
