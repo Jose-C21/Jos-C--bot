@@ -41,7 +41,7 @@ export default async function instagram(sock, msg, { args = [], usedPrefix = "."
         text:
 `> ⟢ ɪɴꜱᴛᴀɢʀᴀᴍ ᴅᴇꜱᴄᴀʀɢᴀ ⟣
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-🔗 𝗨𝘀𝗼: ${usedPrefix}ig <enlace>
+🔗 𝗨𝘀𝗼: ${usedPrefix}instagram <enlace>
 
 📸 Reels, videos, fotos e historias.
 
