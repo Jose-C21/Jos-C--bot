@@ -5,11 +5,11 @@ import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 import config from "../config.js"
 
-const SKY_APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
-const SKY_API = "https://api-sky.ultraplus.click/youtube/resolve"
-
 const SYLPHY_APIKEY = "sylphy-MtyAgpx"
 const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
+
+const DVYER_APIKEY = "dvyer090168434816"
+const DVYER_API = "https://dv-yer-api.online/ytmp3"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
@@ -260,6 +260,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     let audioUrl = null
 
+    // 1️⃣ Intento con SYLPHY
     try {
       const sylphy = await axios.get(
         `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`
@@ -270,15 +271,18 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       }
     } catch {}
 
+    // 2️⃣ Fallback con DVYER
     if (!audioUrl) {
-      const sky = await axios.post(
-        SKY_API,
-        { url: ytUrl, type: "audio", format: "mp3" },
-        { headers: { apikey: SKY_APIKEY } }
-      )
+      try {
+        const dvyer = await axios.get(
+          `${DVYER_API}?url=${encodeURIComponent(ytUrl)}&apikey=${DVYER_APIKEY}`,
+          { headers: { "x-api-key": DVYER_APIKEY } }
+        )
 
-      const result = sky.data?.result || sky.data?.data
-      audioUrl = result?.media?.dl_download || result?.media?.direct
+        if (dvyer.data?.ok && dvyer.data?.download_url) {
+          audioUrl = dvyer.data.download_url
+        }
+      } catch {}
     }
 
     if (!audioUrl) throw "No se pudo obtener audio"
