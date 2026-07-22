@@ -39,14 +39,14 @@ export default async function instagram(sock, msg, { args = [], usedPrefix = "."
       chatId,
       {
         text:
-`> ⟢ ɪɴꜱᴛᴀɢʀᴀᴍ ᴅᴇꜱᴄᴀʀɢᴀ ⟣
+`> ⟢ ɪɴꜱᴛᴀɢʀᴀᴍ ᴅᴇꜱᴄᴀʀɢᴀꜱ ⟣
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 🔗 𝗨𝘀𝗼: ${usedPrefix}instagram <enlace>
 
 📸 Reels, videos, fotos e historias.
 
 💬 𝗘𝗷𝗲𝗺𝗽𝗹𝗼:
-${usedPrefix}ig https://www.instagram.com/reel/DbEgsesBDhP/${signature()}`
+${usedPrefix}instagram https://www.instagram.com/reel/DbEgsesBDhP/${signature()}`
       },
       { quoted: msg }
     )
