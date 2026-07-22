@@ -63,13 +63,7 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     portada = await loadImage(THUMB_URL)
   }
 
-  /* ========================= */
-  /* 🎯 PORTADA AJUSTADA PERFECTA */
-  /* ========================= */
-
   const size = 200
-
-  // 🔥 POSICIÓN REAL (ajustada al diseño)
   const x = 412
   const y = 425
 
@@ -88,7 +82,6 @@ async function generarCard({ title, artist, duration, thumbnail }) {
     offsetY = -(drawHeight - size) / 2
   }
 
-  // 🔥 AJUSTE FINO FINAL (CLAVE)
   offsetY += 28
 
   ctx.save()
@@ -106,30 +99,18 @@ async function generarCard({ title, artist, duration, thumbnail }) {
 
   ctx.restore()
 
-
-  /* ========================= */
-  /* 🎯 TEXTO CENTRADO */
-  /* ========================= */
-
   ctx.textAlign = "center"
 
-  // ARTISTA
   ctx.fillStyle = "#ffffff"
   ctx.font = "bold 28px Sans"
   ctx.fillText(artist, 512, 670)
 
-  // TITULO
   ctx.fillStyle = "#ff2e2e"
   ctx.font = "bold 26px Sans"
 
   const lines = dividirTexto(ctx, title, 700)
   ctx.fillText(lines[0] || "", 512, 710)
   if (lines[1]) ctx.fillText(lines[1], 512, 745)
-
-
-  /* ========================= */
-  /* 🎯 TIEMPO (POSICIÓN EXACTA) */
-  /* ========================= */
 
   ctx.fillStyle = "#b3b3b3"
   ctx.font = "24px Sans"
@@ -139,7 +120,6 @@ async function generarCard({ title, artist, duration, thumbnail }) {
 
   ctx.textAlign = "right"
   ctx.fillText(duration, 880, 820)
-
 
   return canvas.toBuffer("image/png")
 }
@@ -260,7 +240,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
     let audioUrl = null
 
-    // 1 Intento con SYLPHY
+    // 1️⃣ Intento con SYLPHY
     try {
       const sylphy = await axios.get(
         `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`
@@ -277,7 +257,8 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     if (!audioUrl) {
       try {
         const dvyer = await axios.get(
-          `${DVYER_API}?mode=link&url=${encodeURIComponent(ytUrl)}&apikey=${DVYER_APIKEY}`
+          `${DVYER_API}?url=${encodeURIComponent(ytUrl)}`,
+          { headers: { "x-api-key": DVYER_APIKEY } }
         )
 
         if (dvyer.data?.ok && (dvyer.data?.download_url || dvyer.data?.url)) {
