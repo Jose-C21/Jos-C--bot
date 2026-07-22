@@ -43,7 +43,7 @@ export default async function instagram(sock, msg, { args = [], usedPrefix = "."
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 🔗 𝗨𝘀𝗼: ${usedPrefix}instagram <enlace>
 
-📸 Reels, videos, fotos e historias.
+📸 Reels, videos y fotos.
 
 💬 𝗘𝗷𝗲𝗺𝗽𝗹𝗼:
 ${usedPrefix}instagram https://www.instagram.com/reel/DbEgsesBDhP/${signature()}`
