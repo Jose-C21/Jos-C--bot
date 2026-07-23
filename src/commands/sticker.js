@@ -19,7 +19,7 @@ function buildUsage(prefix = ".") {
     `-┊ *Uso correcto del comando:*\n` +
     `Responde a una imagen/video con "${prefix}s" para convertirlo en sticker\n\n` +
     `ᴇᴊᴇᴍᴘʟᴏ: ʀᴇꜱᴘᴏɴᴅᴇ ᴀ ᴜɴᴀ ꜰᴏᴛᴏ ᴄᴏɴ ${prefix}s\n\n` +
-    `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n` +
+    `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡 𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺 𝘓𝘰𝘰𝘱\n` +
     `> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
   )
 }
@@ -62,7 +62,7 @@ export default async function sticker(sock, msg, { usedPrefix = "." }) {
 
     const metadata = {
       packname: `⟢ ${senderName} `,
-      author: `частная система - 「 𝐽𝑜𝑠𝑒 𝐶 | 𝐾𝑎𝑡ℎ𝑦 」`
+      author: `𝘑𝘊𝘒𝘡 𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺 𝘓𝘰𝘰𝘱 - 「 𝐽𝑜𝑠𝑒 𝐶 | 𝐾𝑎𝑡ℎ𝑦 」`
     }
 
     const stickerPath =
