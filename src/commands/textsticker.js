@@ -241,8 +241,8 @@ export default async function textsticker(sock, msg, { args = [], usedPrefix = "
     const webpTmp = await framesToAnimatedWebp({ dir, fps })
 
     const stickerFinal = await addExif(webpTmp, {
-      packname: `╰► ${msg.pushName || "Usuario"}`,
-      author: `частная система - 𝐽𝑜𝑠𝑒 𝐶 ↔ 𝐾𝑎𝑡ℎ𝑦`
+      packname: `⟣ ${msg.pushName || "Usuario"}`,
+      author: `𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 - 「 𝐽𝑜𝑠𝑒 𝐶 | 𝐾𝑎𝑡ℎ𝑦 」`
     })
 
     await sock.sendMessage(chatId, { sticker: fs.readFileSync(stickerFinal) }, { quoted: msg })
