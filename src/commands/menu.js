@@ -235,7 +235,7 @@ export default async function menu(sock, msg) {
 > ➤ 𝗛𝗼𝗿𝗮 ⇾ ${hora}
 > ➤ 𝗩𝗲𝗿𝘀𝗶𝗼́𝗻 ⇾ ${versionBot}
 
-┊ ♾️ 𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 ♾️
+⟣┊ ♾️ 𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 ♾️
 
 「 ❑ 𝗠𝗘𝗡𝗨́ 𝗣𝗥𝗜𝗡𝗖𝗜𝗣𝗔𝗟 ❑ 」
 
