@@ -227,7 +227,9 @@ export default async function menu(sock, msg) {
     const versionBot = "5.0.0"
 
     const captionText =
-`⊱┊${saludo}, ${user} ✨
+`「 ✦ 𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 ✦ 」
+
+⊱┊${saludo}, ${user} ✨
 ⊱┊${msgDia}
 
 ❑ ┊𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝗯𝗼𝘁
@@ -297,7 +299,7 @@ export default async function menu(sock, msg) {
 > ➤ .𝗰𝗹𝗶𝗺𝗮 ⇾ ᴄʟɪᴍᴀ ᴅᴇ ᴜɴᴀ ᴄɪᴜᴅᴀᴅ
 > ➤ .𝗮𝗳𝗸 ⇾ ᴍᴏᴅᴏ ᴀᴜꜱᴇɴᴛᴇ
 
-⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система
+⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
 
     let profilePicUrl = FALLBACK_AVATAR
