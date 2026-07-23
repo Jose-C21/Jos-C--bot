@@ -227,10 +227,10 @@ export default async function menu(sock, msg) {
     const versionBot = "5.0.0"
 
     const captionText =
-`「 ✦ 𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 ✦ 」
-
-⊱┊${saludo}, ${user} ✨
+`⊱┊${saludo}, ${user} ✨
 ⊱┊${msgDia}
+
+「 ♾️ 𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 ♾️ 」
 
 ❑ ┊𝗜𝗻𝗳𝗼 𝗱𝗲𝗹 𝗯𝗼𝘁
 > ➤ 𝗙𝗲𝗰𝗵𝗮 ⇾ ${diaSemana}, ${fecha}
