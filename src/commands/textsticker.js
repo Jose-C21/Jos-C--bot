@@ -123,10 +123,7 @@ async function buildFrames(text) {
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, W, H)
 
-    // ✅ borde del sticker (marco fino)
-    ctx.lineWidth = 3
-    ctx.strokeStyle = "rgba(0,0,0,0.22)"
-    ctx.strokeRect(8, 8, W - 16, H - 16)
+    
 
     const color = COLORS[i % COLORS.length]
 
