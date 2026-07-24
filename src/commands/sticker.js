@@ -62,7 +62,7 @@ export default async function sticker(sock, msg, { usedPrefix = "." }) {
 
     const metadata = {
       packname: `⟢ ${senderName} `,
-      author: `𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 - 「 𝐽𝑜𝑠𝑒 𝐶 | 𝐾𝑎𝑡ℎ𝑦 」`
+      author: `𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 - 「 𝐽𝑜𝑠𝑒 𝐶 | 𝐾𝑎𝑡ℎ𝑦 𝑍 」`
     }
 
     const stickerPath =
