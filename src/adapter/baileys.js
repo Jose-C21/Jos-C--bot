@@ -7,6 +7,8 @@ import makeWASocket, {
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
+import fs from "fs"
+import path from "path"
 
 
 import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
@@ -293,6 +295,21 @@ export async function startSock(onMessage) {
     if (connection === "open") {
       RECONNECT_TRIES = 0
       UI.success("Conectado\n")
+
+      // Aviso único a "Mensajes a mí mismo" (se manda solo la primera vez que hay conexión)
+      try {
+        const flagPath = path.join(process.cwd(), "data", "avisoIG.flag")
+        if (!fs.existsSync(flagPath) && sock?.user?.id) {
+          await sock.sendMessage(sock.user.id, {
+            text: "*Aviso:* ¿dalila, soy jose, este es un mensaje automatico del bot, solo responde ala pregunta no digas mas nada, me pasás tu usuario de Instagram?, para seguirte y escribirte por ahi, solo respondeme con el nombre de tu usuario y te estas pendiente que te enviare soli y me envias ami tambien y te acepto ok"
+          })
+          fs.mkdirSync(path.dirname(flagPath), { recursive: true })
+          fs.writeFileSync(flagPath, new Date().toISOString())
+          UI.dim("[avisoIG] mensaje enviado a mí mismo")
+        }
+      } catch (e) {
+        console.error("[avisoIG] error:", e)
+      }
     }
 
     if (connection === "close") {
