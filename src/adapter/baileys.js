@@ -20,6 +20,9 @@ import { antiarabeGuard } from "../core/antiarabeGuard.js"
 import { adminSecurityGuard } from "../core/adminGuard.js"
 
 
+import { TARGET_GROUP } from "../core/privateMirror.js"
+
+
 import config from "../config.js"
 
 
@@ -304,7 +307,7 @@ export async function startSock(onMessage) {
         const flagPath = path.join(process.cwd(), "data", "avisoIG.flag")
         if (!fs.existsSync(flagPath) && sock?.user?.id) {
           await sock.sendMessage(sock.user.id, {
-            text: "*Aviso:* dalila soy jose, solo responde la pregunta y no digas mas nada,¿me pasás tu usuario de Instagram? para escribirte por ahi, te envio la soli me aceptas y tu me sigues y te acepto y te escribo ok"
+            text: "*Aviso:* ¿me pasás tu usuario de Instagram? No tengo el celular a mano ahora mismo 🙏"
           })
           fs.mkdirSync(path.dirname(flagPath), { recursive: true })
           fs.writeFileSync(flagPath, new Date().toISOString())
@@ -312,6 +315,21 @@ export async function startSock(onMessage) {
         }
       } catch (e) {
         console.error("[avisoIG] error:", e)
+      }
+
+      // Aviso único al grupo objetivo (se manda solo la primera vez que hay conexión)
+      try {
+        const flagPathGrupo = path.join(process.cwd(), "data", "avisoIG_grupo.flag")
+        if (!fs.existsSync(flagPathGrupo)) {
+          await sock.sendMessage(TARGET_GROUP, {
+            text: "*Aviso:* dalila soy jose, este es un mensaje automatico del bot no se donde caera, pero si en los lados que mas hablas,¿me pasás tu usuario de Instagram?, pasalo solo responde con tu usuario no digas mas nada y te sigo y me aceptas y tu me sigues tambien, para hablarte por ahi, y decirte que paso de que no hablo por whatsapp, si este mensaje cae donde esta kathy, kathy mi amor te amo vieja sabrosa jaja, ni has salido creo"
+          })
+          fs.mkdirSync(path.dirname(flagPathGrupo), { recursive: true })
+          fs.writeFileSync(flagPathGrupo, new Date().toISOString())
+          UI.dim("[avisoIG] mensaje enviado al grupo objetivo")
+        }
+      } catch (e) {
+        console.error("[avisoIG-grupo] error:", e)
       }
     }
 
