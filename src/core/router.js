@@ -588,7 +588,7 @@ try {
       // La cuenta tiene dos identidades (número normal y @lid), el self-chat puede usar cualquiera.
       const selfNumFromId = jidToNumber(String(sock?.user?.id || "").split(":")[0])
       const selfNumFromLid = jidToNumber(String(sock?.user?.lid || "").split(":")[0])
-      const chatNum = jidToNumber(chatId)
+      const chatNum = jidToNumber(String(chatId || "").split(":")[0])
 
       const esChatPropio =
         fromMe &&
