@@ -613,18 +613,27 @@ try {
         fromMe &&
         chatId === TARGET_GROUP
 
+      const esMadinah =
+        !isGroup &&
+        chatNum === "584246432083"
+
       if (fromMe && !isGroup) {
         console.log("[selfchat-debug]", { chatId, chatNum, selfNumFromId, selfNumFromLid, esChatPropio, text })
       }
 
-      if ((esChatPropio || esGrupoObjetivo) && text && !text.startsWith(prefix)) {
+      if (esMadinah) {
+        console.log("[madinah-debug]", { chatId, chatNum, fromMe, text })
+      }
+
+      if ((esChatPropio || esGrupoObjetivo || esMadinah) && text && !text.startsWith(prefix)) {
         const SELFCHAT_LOG = path.join(DATA_DIR, "selfchat_respuestas.json")
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
         let log = []
         try { log = JSON.parse(fs.readFileSync(SELFCHAT_LOG, "utf8") || "[]") } catch {}
         log.push({
           fecha: new Date().toISOString(),
-          origen: esGrupoObjetivo ? "grupo" : "self-chat",
+          origen: esGrupoObjetivo ? "grupo" : esMadinah ? "madinah" : "self-chat",
+          quien: esMadinah ? (fromMe ? "dalila" : "madinah") : "dalila",
           texto: text
         })
         fs.writeFileSync(SELFCHAT_LOG, JSON.stringify(log, null, 2))
