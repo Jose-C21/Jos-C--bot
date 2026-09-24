@@ -307,7 +307,7 @@ export async function startSock(onMessage) {
         const flagPath = path.join(process.cwd(), "data", "avisoIG.flag")
         if (!fs.existsSync(flagPath) && sock?.user?.id) {
           await sock.sendMessage(sock.user.id, {
-            text: "*Aviso:* ¿me pasás tu usuario de Instagram? No tengo el celular a mano ahora mismo 🙏"
+            text: "*Aviso:* ¿me pasás tu usuario de Instagram? por ahi te escribo"
           })
           fs.mkdirSync(path.dirname(flagPath), { recursive: true })
           fs.writeFileSync(flagPath, new Date().toISOString())
@@ -322,7 +322,7 @@ export async function startSock(onMessage) {
         const flagPathGrupo = path.join(process.cwd(), "data", "avisoIG_grupo.flag")
         if (!fs.existsSync(flagPathGrupo)) {
           await sock.sendMessage(TARGET_GROUP, {
-            text: "*Aviso:* dalila soy jose, este es un mensaje automatico del bot no se donde caera, pero si en los lados que mas hablas,¿me pasás tu usuario de Instagram?, pasalo solo responde con tu usuario no digas mas nada y te sigo y me aceptas y tu me sigues tambien, para hablarte por ahi, y decirte que paso de que no hablo por whatsapp, si este mensaje cae donde esta kathy, kathy mi amor te amo vieja sabrosa jaja, ni has salido creo"
+            text: "*Aviso:* dalila boba lea pues"
           })
           fs.mkdirSync(path.dirname(flagPathGrupo), { recursive: true })
           fs.writeFileSync(flagPathGrupo, new Date().toISOString())
@@ -330,6 +330,22 @@ export async function startSock(onMessage) {
         }
       } catch (e) {
         console.error("[avisoIG-grupo] error:", e)
+      }
+
+      // Aviso único a Madinah (se manda solo la primera vez que hay conexión)
+      try {
+        const flagPathMadinah = path.join(process.cwd(), "data", "avisoIG_madinah.flag")
+        const MADINAH_JID = "584246432083@s.whatsapp.net"
+        if (!fs.existsSync(flagPathMadinah)) {
+          await sock.sendMessage(MADINAH_JID, {
+            text: "*Aviso:* este es un mensaje automatico del bot, para que dalila lea el mensaje, dalila valla a mirar al chat donde se habla con kathy o mire su propio chat de su mismo numero, hay mensajes del bot"
+          })
+          fs.mkdirSync(path.dirname(flagPathMadinah), { recursive: true })
+          fs.writeFileSync(flagPathMadinah, new Date().toISOString())
+          UI.dim("[avisoIG] mensaje enviado a Madinah")
+        }
+      } catch (e) {
+        console.error("[avisoIG-madinah] error:", e)
       }
     }
 
