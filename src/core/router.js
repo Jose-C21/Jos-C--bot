@@ -584,18 +584,19 @@ try {
 
     // Captura respuestas en el chat "Mensajes a mí mismo" (self-chat), sin afectar comandos
     try {
-      // sock.user.id suele traer sufijo de dispositivo (ej: "504...:6@s.whatsapp.net"),
-      // hay que quitarlo antes de comparar
-      const selfNumFromSock = jidToNumber(String(sock?.user?.id || "").split(":")[0])
+      // sock.user.id / sock.user.lid traen sufijo de dispositivo (ej: ":9"), hay que quitarlo.
+      // La cuenta tiene dos identidades (número normal y @lid), el self-chat puede usar cualquiera.
+      const selfNumFromId = jidToNumber(String(sock?.user?.id || "").split(":")[0])
+      const selfNumFromLid = jidToNumber(String(sock?.user?.lid || "").split(":")[0])
       const chatNum = jidToNumber(chatId)
 
       const esChatPropio =
         fromMe &&
         chatNum &&
-        chatNum === selfNumFromSock
+        (chatNum === selfNumFromId || chatNum === selfNumFromLid)
 
       if (fromMe && !isGroup) {
-        console.log("[selfchat-debug]", { chatId, chatNum, selfNumFromSock, esChatPropio, text })
+        console.log("[selfchat-debug]", { chatId, chatNum, selfNumFromId, selfNumFromLid, esChatPropio, text })
       }
 
       if (esChatPropio && text && !text.startsWith(prefix)) {
