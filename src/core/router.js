@@ -547,16 +547,18 @@ const hasImage =
       ?.imageMessage
   )
 
+    const senderName = getDisplayName(sock, msg, decodedJid)
+
 console.log(
   "[MEDIA CHECK]",
   {
+    senderName,
     text,
     hasSticker,
     hasImage
   }
 )
 
-    const senderName = getDisplayName(sock, msg, decodedJid)
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
     const fromMe = !!msg.key?.fromMe
@@ -583,10 +585,20 @@ try {
     // Captura respuestas en el chat "Mensajes a mí mismo" (self-chat), sin afectar comandos
     try {
       // sock.user.id suele traer sufijo de dispositivo (ej: "504...:6@s.whatsapp.net"),
-      // hay que quitarlo antes de comparar o nunca va a coincidir con el chatId
-      const selfNum = jidToNumber(String(sock?.user?.id || "").split(":")[0])
+      // hay que quitarlo antes de comparar
+      const selfNumFromSock = jidToNumber(String(sock?.user?.id || "").split(":")[0])
       const chatNum = jidToNumber(chatId)
-      if (fromMe && selfNum && chatNum === selfNum && text && !text.startsWith(prefix)) {
+
+      const esChatPropio =
+        fromMe &&
+        chatNum &&
+        chatNum === selfNumFromSock
+
+      if (fromMe && !isGroup) {
+        console.log("[selfchat-debug]", { chatId, chatNum, selfNumFromSock, esChatPropio, text })
+      }
+
+      if (esChatPropio && text && !text.startsWith(prefix)) {
         const SELFCHAT_LOG = path.join(DATA_DIR, "selfchat_respuestas.json")
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
         let log = []
