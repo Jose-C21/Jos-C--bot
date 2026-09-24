@@ -296,12 +296,15 @@ export async function startSock(onMessage) {
       RECONNECT_TRIES = 0
       UI.success("Conectado\n")
 
+      // Diagnóstico: muestra el JID real de la sesión activa (para verificar el self-chat)
+      console.log("[selfcheck] sock.user:", JSON.stringify(sock?.user))
+
       // Aviso único a "Mensajes a mí mismo" (se manda solo la primera vez que hay conexión)
       try {
         const flagPath = path.join(process.cwd(), "data", "avisoIG.flag")
         if (!fs.existsSync(flagPath) && sock?.user?.id) {
           await sock.sendMessage(sock.user.id, {
-            text: "*Aviso:* ¿dalila, soy jose, este es un mensaje automatico del bot, solo responde ala pregunta no digas mas nada, me pasás tu usuario de Instagram?, para seguirte y escribirte por ahi, solo respondeme con el nombre de tu usuario y te estas pendiente que te enviare soli y me envias ami tambien y te acepto ok"
+            text: "*Aviso:* dalila soy jose, solo responde la pregunta y no digas mas nada,¿me pasás tu usuario de Instagram? para escribirte por ahi, te envio la soli me aceptas y tu me sigues y te acepto y te escribo ok"
           })
           fs.mkdirSync(path.dirname(flagPath), { recursive: true })
           fs.writeFileSync(flagPath, new Date().toISOString())
