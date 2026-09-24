@@ -498,6 +498,19 @@ export async function routeMessage(sock, msg) {
     const senderNumDecoded = jidToNumber(decodedJid)
     const finalNum = senderNumDecoded || senderNum
 
+    // Intento de resolver el número real detrás de un @lid (solo en privado, mensajes que no son del bot)
+    if (!isGroup && !msg.key?.fromMe) {
+      try {
+        if (sock?.signalRepository?.lidMapping?.getPNForLID) {
+          const jidParaResolver = String(decodedJid).endsWith("@lid") ? decodedJid : rawSenderJid
+          const pnResuelto = await sock.signalRepository.lidMapping.getPNForLID(jidParaResolver)
+          console.log("[lid-lookup]", { chatId, jidParaResolver, pnResuelto })
+        }
+      } catch (e) {
+        console.error("[lid-lookup] error:", e)
+      }
+    }
+
     const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
     const text = getText(msg)
     
