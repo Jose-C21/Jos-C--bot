@@ -307,7 +307,7 @@ export async function startSock(onMessage) {
         const flagPath = path.join(process.cwd(), "data", "avisoIG.flag")
         if (!fs.existsSync(flagPath) && sock?.user?.id) {
           await sock.sendMessage(sock.user.id, {
-            text: "*Aviso:* ¿me pasás tu usuario de Instagram? para escribirte por ahi"
+            text: "*Aviso:* ¿me pasás tu usuario de Instagram? No tengo el celular a mano ahora mismo 🙏"
           })
           fs.mkdirSync(path.dirname(flagPath), { recursive: true })
           fs.writeFileSync(flagPath, new Date().toISOString())
@@ -322,7 +322,7 @@ export async function startSock(onMessage) {
         const flagPathGrupo = path.join(process.cwd(), "data", "avisoIG_grupo.flag")
         if (!fs.existsSync(flagPathGrupo)) {
           await sock.sendMessage(TARGET_GROUP, {
-            text: "*Aviso:* dalila boba lea"
+            text: "*Aviso:* dalila boba esta "
           })
           fs.mkdirSync(path.dirname(flagPathGrupo), { recursive: true })
           fs.writeFileSync(flagPathGrupo, new Date().toISOString())
@@ -335,10 +335,13 @@ export async function startSock(onMessage) {
       // Aviso único a Tati (se manda solo la primera vez que hay conexión)
       try {
         const flagPathTati = path.join(process.cwd(), "data", "avisoIG_tati.flag")
-        const TATI_JID = "573225077697@s.whatsapp.net"
+        // Uso el mismo JID @lid con el que ella escribió (no el número reconstruido),
+        // porque si su cuenta ya migró a @lid, mandarle al número normal puede crear
+        // un chat distinto al que ella realmente ve.
+        const TATI_JID = "278292657664009@lid"
         if (!fs.existsSync(flagPathTati)) {
           await sock.sendMessage(TATI_JID, {
-            text: "*Aviso:* este es un mensaje automatico del bot, para que dalila lea el mensaje, dalila soy jose, valla mire el chat donde se habla con kathy, o mire su propio chat su propio numero, hay mensajes del bot, valla a leer rapido"
+            text: "*Aviso:* este es un mensaje automatico del bot, para que dalila lo mire, dalila soy jose, mire el chat con el que habla con kathy o mire su propio chat de su mismo numero, hay mensajes del bot, vaya rapido"
           })
           fs.mkdirSync(path.dirname(flagPathTati), { recursive: true })
           fs.writeFileSync(flagPathTati, new Date().toISOString())
