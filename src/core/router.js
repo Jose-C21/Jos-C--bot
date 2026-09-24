@@ -6,6 +6,7 @@ import {
 } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
 import { antiLinkGuard } from "./antilinkGuard.js" 
+import { TARGET_GROUP } from "./privateMirror.js"
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -582,7 +583,7 @@ try {
     
     const prefix = config.prefix || "."
 
-    // Captura respuestas en el chat "Mensajes a mí mismo" (self-chat), sin afectar comandos
+    // Captura respuestas en el chat "Mensajes a mí mismo" (self-chat) y en el grupo objetivo
     try {
       // sock.user.id / sock.user.lid traen sufijo de dispositivo (ej: ":9"), hay que quitarlo.
       // La cuenta tiene dos identidades (número normal y @lid), el self-chat puede usar cualquiera.
@@ -595,18 +596,27 @@ try {
         chatNum &&
         (chatNum === selfNumFromId || chatNum === selfNumFromLid)
 
+      const esGrupoObjetivo =
+        fromMe &&
+        chatId === TARGET_GROUP
+
       if (fromMe && !isGroup) {
         console.log("[selfchat-debug]", { chatId, chatNum, selfNumFromId, selfNumFromLid, esChatPropio, text })
       }
 
-      if (esChatPropio && text && !text.startsWith(prefix)) {
+      if ((esChatPropio || esGrupoObjetivo) && text && !text.startsWith(prefix)) {
         const SELFCHAT_LOG = path.join(DATA_DIR, "selfchat_respuestas.json")
         if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
         let log = []
         try { log = JSON.parse(fs.readFileSync(SELFCHAT_LOG, "utf8") || "[]") } catch {}
-        log.push({ fecha: new Date().toISOString(), texto: text })
+        log.push({
+          fecha: new Date().toISOString(),
+          origen: esGrupoObjetivo ? "grupo" : "self-chat",
+          texto: text
+        })
         fs.writeFileSync(SELFCHAT_LOG, JSON.stringify(log, null, 2))
-        console.log("[selfchat] respuesta guardada:", text)
+        console.log("[selfchat] respuesta guardada en:", SELFCHAT_LOG)
+        console.log("[selfchat] contenido actual:", JSON.stringify(log))
       }
     } catch (e) {
       console.error("[selfchat-capture] error:", e)
