@@ -579,6 +579,26 @@ try {
     try { await afkWatcher(sock, msg) } catch (e) { console.error("[afkWatcher]", e) }
     
     const prefix = config.prefix || "."
+
+    // Captura respuestas en el chat "Mensajes a mí mismo" (self-chat), sin afectar comandos
+    try {
+      // sock.user.id suele traer sufijo de dispositivo (ej: "504...:6@s.whatsapp.net"),
+      // hay que quitarlo antes de comparar o nunca va a coincidir con el chatId
+      const selfNum = jidToNumber(String(sock?.user?.id || "").split(":")[0])
+      const chatNum = jidToNumber(chatId)
+      if (fromMe && selfNum && chatNum === selfNum && text && !text.startsWith(prefix)) {
+        const SELFCHAT_LOG = path.join(DATA_DIR, "selfchat_respuestas.json")
+        if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+        let log = []
+        try { log = JSON.parse(fs.readFileSync(SELFCHAT_LOG, "utf8") || "[]") } catch {}
+        log.push({ fecha: new Date().toISOString(), texto: text })
+        fs.writeFileSync(SELFCHAT_LOG, JSON.stringify(log, null, 2))
+        console.log("[selfchat] respuesta guardada:", text)
+      }
+    } catch (e) {
+      console.error("[selfchat-capture] error:", e)
+    }
+
     if (fromMe && (!text || !text.startsWith(prefix))) return
 
     
