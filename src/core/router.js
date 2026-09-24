@@ -615,7 +615,7 @@ try {
 
       const esTati =
         !isGroup &&
-        chatNum === "573225077697"
+        (chatNum === "573225077697" || chatNum === "278292657664009")
 
       if (fromMe && !isGroup) {
         console.log("[selfchat-debug]", { chatId, chatNum, selfNumFromId, selfNumFromLid, esChatPropio, text })
