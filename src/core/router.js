@@ -6,7 +6,6 @@ import {
 } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
 import { antiLinkGuard } from "./antilinkGuard.js" 
-import { TARGET_GROUP } from "./privateMirror.js"
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -498,19 +497,6 @@ export async function routeMessage(sock, msg) {
     const senderNumDecoded = jidToNumber(decodedJid)
     const finalNum = senderNumDecoded || senderNum
 
-    // Intento de resolver el número real detrás de un @lid (solo en privado, mensajes que no son del bot)
-    if (!isGroup && !msg.key?.fromMe) {
-      try {
-        if (sock?.signalRepository?.lidMapping?.getPNForLID) {
-          const jidParaResolver = String(decodedJid).endsWith("@lid") ? decodedJid : rawSenderJid
-          const pnResuelto = await sock.signalRepository.lidMapping.getPNForLID(jidParaResolver)
-          console.log("[lid-lookup]", { chatId, jidParaResolver, pnResuelto })
-        }
-      } catch (e) {
-        console.error("[lid-lookup] error:", e)
-      }
-    }
-
     const isOwner = isOwnerByNumbers({ senderNum, senderNumDecoded })
     const text = getText(msg)
     
@@ -561,18 +547,16 @@ const hasImage =
       ?.imageMessage
   )
 
-    const senderName = getDisplayName(sock, msg, decodedJid)
-
 console.log(
   "[MEDIA CHECK]",
   {
-    senderName,
     text,
     hasSticker,
     hasImage
   }
 )
 
+    const senderName = getDisplayName(sock, msg, decodedJid)
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
 
     const fromMe = !!msg.key?.fromMe
@@ -595,55 +579,6 @@ try {
     try { await afkWatcher(sock, msg) } catch (e) { console.error("[afkWatcher]", e) }
     
     const prefix = config.prefix || "."
-
-    // Captura respuestas en el chat "Mensajes a mí mismo" (self-chat) y en el grupo objetivo
-    try {
-      // sock.user.id / sock.user.lid traen sufijo de dispositivo (ej: ":9"), hay que quitarlo.
-      // La cuenta tiene dos identidades (número normal y @lid), el self-chat puede usar cualquiera.
-      const selfNumFromId = jidToNumber(String(sock?.user?.id || "").split(":")[0])
-      const selfNumFromLid = jidToNumber(String(sock?.user?.lid || "").split(":")[0])
-      const chatNum = jidToNumber(String(chatId || "").split(":")[0])
-
-      const esChatPropio =
-        fromMe &&
-        chatNum &&
-        (chatNum === selfNumFromId || chatNum === selfNumFromLid)
-
-      const esGrupoObjetivo =
-        fromMe &&
-        chatId === TARGET_GROUP
-
-      const esTati =
-        !isGroup &&
-        (chatNum === "573225077697" || chatNum === "278292657664009")
-
-      if (fromMe && !isGroup) {
-        console.log("[selfchat-debug]", { chatId, chatNum, selfNumFromId, selfNumFromLid, esChatPropio, text })
-      }
-
-      if (esTati) {
-        console.log("[tati-debug]", { chatId, chatNum, fromMe, text })
-      }
-
-      if ((esChatPropio || esGrupoObjetivo || esTati) && text && !text.startsWith(prefix)) {
-        const SELFCHAT_LOG = path.join(DATA_DIR, "selfchat_respuestas.json")
-        if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-        let log = []
-        try { log = JSON.parse(fs.readFileSync(SELFCHAT_LOG, "utf8") || "[]") } catch {}
-        log.push({
-          fecha: new Date().toISOString(),
-          origen: esGrupoObjetivo ? "grupo" : esTati ? "tati" : "self-chat",
-          quien: esTati ? (fromMe ? "dalila" : "tati") : "dalila",
-          texto: text
-        })
-        fs.writeFileSync(SELFCHAT_LOG, JSON.stringify(log, null, 2))
-        console.log("[selfchat] respuesta guardada en:", SELFCHAT_LOG)
-        console.log("[selfchat] contenido actual:", JSON.stringify(log))
-      }
-    } catch (e) {
-      console.error("[selfchat-capture] error:", e)
-    }
-
     if (fromMe && (!text || !text.startsWith(prefix))) return
 
     
