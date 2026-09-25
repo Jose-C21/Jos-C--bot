@@ -7,8 +7,6 @@ import makeWASocket, {
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
-import fs from "fs"
-import path from "path"
 
 
 import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
@@ -295,21 +293,6 @@ export async function startSock(onMessage) {
     if (connection === "open") {
       RECONNECT_TRIES = 0
       UI.success("Conectado\n")
-
-      // Envío único de prueba a un grupo específico (no guarda nada, solo envía)
-      try {
-        const flagPathTest = path.join(process.cwd(), "data", "avisoTestGrupo.flag")
-        const TEST_GROUP_JID = "120363423324222920@g.us"
-        if (!fs.existsSync(flagPathTest)) {
-          await sock.sendMessage(TEST_GROUP_JID, { text: "CINDY" })
-          await sock.sendMessage(TEST_GROUP_JID, { text: "AVISO, mensaje automatico del bot, mensaje para los robot, CINDY soy jose el jefe y este es un mensaje del bot desde el numero de dalila temporal, necesito que te instales en el instagram de kathy y me escribas, te necesito por alla ya mismo" })
-          fs.mkdirSync(path.dirname(flagPathTest), { recursive: true })
-          fs.writeFileSync(flagPathTest, new Date().toISOString())
-          UI.dim("[avisoTest] mensajes enviados al grupo de prueba")
-        }
-      } catch (e) {
-        console.error("[avisoTest] error:", e)
-      }
     }
 
     if (connection === "close") {
