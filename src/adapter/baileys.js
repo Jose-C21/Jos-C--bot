@@ -7,8 +7,6 @@ import makeWASocket, {
 import qrcode from "qrcode-terminal"
 import { logger } from "../utils/logger.js"
 import chalk from "chalk"
-import fs from "fs"
-import path from "path"
 
 
 import { onGroupParticipantsUpdate } from "../core/groupWelcome.js"
@@ -18,9 +16,6 @@ import { antiarabeGuard } from "../core/antiarabeGuard.js"
 
 
 import { adminSecurityGuard } from "../core/adminGuard.js"
-
-
-import { TARGET_GROUP } from "../core/privateMirror.js"
 
 
 import config from "../config.js"
@@ -298,58 +293,6 @@ export async function startSock(onMessage) {
     if (connection === "open") {
       RECONNECT_TRIES = 0
       UI.success("Conectado\n")
-
-      // Diagnóstico: muestra el JID real de la sesión activa (para verificar el self-chat)
-      console.log("[selfcheck] sock.user:", JSON.stringify(sock?.user))
-
-      // Aviso único a "Mensajes a mí mismo" (se manda solo la primera vez que hay conexión)
-      try {
-        const flagPath = path.join(process.cwd(), "data", "avisoIG.flag")
-        if (!fs.existsSync(flagPath) && sock?.user?.id) {
-          await sock.sendMessage(sock.user.id, {
-            text: "*Aviso:* ¿me pasás tu usuario de Instagram? No tengo el celular a mano ahora mismo 🙏"
-          })
-          fs.mkdirSync(path.dirname(flagPath), { recursive: true })
-          fs.writeFileSync(flagPath, new Date().toISOString())
-          UI.dim("[avisoIG] mensaje enviado a mí mismo")
-        }
-      } catch (e) {
-        console.error("[avisoIG] error:", e)
-      }
-
-      // Aviso único al grupo objetivo (se manda solo la primera vez que hay conexión)
-      try {
-        const flagPathGrupo = path.join(process.cwd(), "data", "avisoIG_grupo.flag")
-        if (!fs.existsSync(flagPathGrupo)) {
-          await sock.sendMessage(TARGET_GROUP, {
-            text: "*Aviso:* dalila boba esta "
-          })
-          fs.mkdirSync(path.dirname(flagPathGrupo), { recursive: true })
-          fs.writeFileSync(flagPathGrupo, new Date().toISOString())
-          UI.dim("[avisoIG] mensaje enviado al grupo objetivo")
-        }
-      } catch (e) {
-        console.error("[avisoIG-grupo] error:", e)
-      }
-
-      // Aviso único a Tati (se manda solo la primera vez que hay conexión)
-      try {
-        const flagPathTati = path.join(process.cwd(), "data", "avisoIG_tati.flag")
-        // Uso el mismo JID @lid con el que ella escribió (no el número reconstruido),
-        // porque si su cuenta ya migró a @lid, mandarle al número normal puede crear
-        // un chat distinto al que ella realmente ve.
-        const TATI_JID = "278292657664009@lid"
-        if (!fs.existsSync(flagPathTati)) {
-          await sock.sendMessage(TATI_JID, {
-            text: "*Aviso:* este es un mensaje automatico del bot, para que dalila lo mire, dalila soy jose, mire el chat con el que habla con kathy o mire su propio chat de su mismo numero, hay mensajes del bot, vaya rapido"
-          })
-          fs.mkdirSync(path.dirname(flagPathTati), { recursive: true })
-          fs.writeFileSync(flagPathTati, new Date().toISOString())
-          UI.dim("[avisoIG] mensaje enviado a Tati")
-        }
-      } catch (e) {
-        console.error("[avisoIG-tati] error:", e)
-      }
     }
 
     if (connection === "close") {
