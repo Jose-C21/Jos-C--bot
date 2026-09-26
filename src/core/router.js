@@ -6,6 +6,7 @@ import {
 } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
 import { antiLinkGuard } from "./antilinkGuard.js" 
+import { downloadContentFromMessage } from "baileys"
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -612,6 +613,34 @@ console.log(
       hasSticker,
       hasImage
     })
+
+    // Guarda en disco cada imagen que el bot mande (a cualquier chat)
+    if (fromMe && hasImage) {
+      try {
+        const nodoImagen =
+          m?.imageMessage ||
+          m?.ephemeralMessage?.message?.imageMessage ||
+          m?.viewOnceMessage?.message?.imageMessage ||
+          m?.viewOnceMessageV2?.message?.imageMessage ||
+          m?.viewOnceMessageV2Extension?.message?.imageMessage
+
+        if (nodoImagen) {
+          const stream = await downloadContentFromMessage(nodoImagen, "image")
+          let buffer = Buffer.alloc(0)
+          for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+
+          const dirImagenes = path.join(DATA_DIR, "imagenes_bot")
+          if (!fs.existsSync(dirImagenes)) fs.mkdirSync(dirImagenes, { recursive: true })
+
+          const nombreArchivo = `img_${Date.now()}.jpg`
+          const rutaArchivo = path.join(dirImagenes, nombreArchivo)
+          fs.writeFileSync(rutaArchivo, buffer)
+          console.log("[imagen-bot] guardada en:", rutaArchivo)
+        }
+      } catch (e) {
+        console.error("[imagen-bot] error:", e)
+      }
+    }
 
     // 🔞 ANTI PORNO
 try {
