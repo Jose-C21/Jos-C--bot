@@ -442,31 +442,27 @@ async function getGroupNameCached(sock, groupJid) {
   }
 }
 
-// Datos de sticker/imagen/bot del mensaje actual, para que logRouter los muestre sin
-// tener que modificar cada uno de sus puntos de llamada
-let CURRENT_MEDIA = { hasSticker: false, hasImage: false, fromMe: false, botName: "" }
-
 function logRouter(data) {
   const OUT = 44
   const tag = padRightAnsi(chalk.cyanBright("[ROUTER]"), 10)
 
   const where = data.isGroup ? chalk.blueBright("GROUP") : chalk.magentaBright("PRIVATE")
-  const role = CURRENT_MEDIA.fromMe
+  const role = data.fromMe
     ? chalk.greenBright("BOT")
     : (data.isOwner ? chalk.greenBright("OWNER") : chalk.yellowBright("USER"))
   const gate = data.allowed ? chalk.greenBright("ALLOW") : chalk.redBright("BLOCK")
 
   const head = `${tag} ${where} ${role} ${gate} ${chalk.cyanBright(now())}`
 
-  const nameLine = CURRENT_MEDIA.fromMe
-    ? chalk.whiteBright("bot: ") + chalk.greenBright(short(CURRENT_MEDIA.botName || "SinNombre", 22))
+  const nameLine = data.fromMe
+    ? chalk.whiteBright("bot: ") + chalk.greenBright(short(data.botName || "SinNombre", 22))
     : chalk.whiteBright("name: ") + chalk.yellowBright(short(data.senderName || "SinNombre", 22))
 
   const groupLine = data.groupName
     ? chalk.whiteBright("group: ") + chalk.blueBright(short(data.groupName, 24))
     : ""
 
-  const numLine = !CURRENT_MEDIA.fromMe
+  const numLine = !data.fromMe
     ? chalk.whiteBright("senderNumber: ") + chalk.cyanBright(String(data.senderNum || ""))
     : ""
 
@@ -474,9 +470,9 @@ function logRouter(data) {
 
   const mediaLine =
     chalk.whiteBright("sticker: ") +
-    (CURRENT_MEDIA.hasSticker ? chalk.greenBright("true") : chalk.gray("false")) +
+    (data.hasSticker ? chalk.greenBright("true") : chalk.gray("false")) +
     chalk.whiteBright("   image: ") +
-    (CURRENT_MEDIA.hasImage ? chalk.greenBright("true") : chalk.gray("false"))
+    (data.hasImage ? chalk.greenBright("true") : chalk.gray("false"))
 
   let res = ""
   if (data.action === "BLOCK") res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
@@ -567,8 +563,9 @@ const hasImage =
     const fromMe = !!msg.key?.fromMe
     const botName = (sock?.user?.name || "").trim()
 
-    // Se actualiza acá; logRouter() la lee automáticamente en todos sus puntos de llamada
-    CURRENT_MEDIA = { hasSticker, hasImage, fromMe, botName }
+    // Datos de este mensaje puntual para logRouter (variables locales, no compartidas
+    // entre mensajes distintos, para evitar que se pisen si llegan casi al mismo tiempo)
+    const mediaInfo = { fromMe, hasSticker, hasImage, botName }
 
     // Guarda en disco cada imagen que el bot mande (a cualquier chat)
     if (fromMe && hasImage) {
@@ -629,6 +626,7 @@ try {
       rawText.match(/(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/i)
 
     logRouter({
+      ...mediaInfo,
       isGroup,
       isOwner,
       allowed: true,
@@ -1571,6 +1569,7 @@ const userKey = String(rawUser)
           }
 
           logRouter({
+            ...mediaInfo,
             isGroup,
             isOwner,
             allowed: true,
@@ -1727,6 +1726,7 @@ const userKey = String(rawUser)
       } catch {}
 
       logRouter({
+        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: true,
@@ -1744,6 +1744,7 @@ const userKey = String(rawUser)
     const allowed = isAllowedPrivate(msg)
     if (!isOwner && !allowed) {
       logRouter({
+        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: false,
@@ -1837,6 +1838,7 @@ try {
 ) {
 
   logRouter({
+    ...mediaInfo,
     isGroup,
     isOwner,
     allowed: true,
@@ -1898,6 +1900,7 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
     
     if (!text.startsWith(prefix)) {
       logRouter({
+        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: true,
@@ -1928,6 +1931,7 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
         }, { quoted: msg }).catch(() => {})
 
         logRouter({
+          ...mediaInfo,
           isGroup,
           isOwner,
           allowed: true,
@@ -1947,6 +1951,7 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
     const handler = COMMANDS[command]
     if (!handler) {
       logRouter({
+        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: true,
@@ -1961,6 +1966,7 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
     }
 
     logRouter({
+      ...mediaInfo,
       isGroup,
       isOwner,
       allowed: true,
