@@ -479,6 +479,46 @@ function logRouter(data) {
   console.log(chalk.cyanBright("─".repeat(OUT)))
 }
 
+function logMediaCheck(data) {
+  const OUT = 44
+  const tag = padRightAnsi(chalk.magentaBright("[MEDIA CHECK]"), 15)
+
+  const where = data.isGroup ? chalk.blueBright("GROUP") : chalk.magentaBright("PRIVATE")
+  const quien = data.fromMe ? chalk.greenBright("BOT") : chalk.yellowBright("USER")
+
+  const head = `${tag} ${where} ${quien} ${chalk.cyanBright(now())}`
+
+  // Si el mensaje lo mandó el propio bot, mostramos el nombre de la cuenta vinculada
+  // en vez del nombre del remitente (no aplica, porque el remitente ES el bot)
+  const nameLine = data.fromMe
+    ? chalk.whiteBright("bot: ") + chalk.greenBright(short(data.botName || "SinNombre", 22))
+    : chalk.whiteBright("name: ") + chalk.yellowBright(short(data.senderName || "SinNombre", 22))
+
+  const groupLine = data.groupName
+    ? chalk.whiteBright("group: ") + chalk.blueBright(short(data.groupName, 24))
+    : ""
+
+  const numLine = !data.fromMe
+    ? chalk.whiteBright("senderNumber: ") + chalk.cyanBright(String(data.senderNum || ""))
+    : ""
+
+  const txtLine = chalk.whiteBright("text: ") + chalk.cyanBright(`"${short(data.text ?? "", 60)}"`)
+
+  const mediaLine =
+    chalk.whiteBright("sticker: ") +
+    (data.hasSticker ? chalk.greenBright("true") : chalk.gray("false")) +
+    chalk.whiteBright("   image: ") +
+    (data.hasImage ? chalk.greenBright("true") : chalk.gray("false"))
+
+  console.log(head)
+  console.log("  " + nameLine)
+  if (groupLine) console.log("  " + groupLine)
+  if (numLine) console.log("  " + numLine)
+  console.log("  " + txtLine)
+  console.log("  " + mediaLine)
+  console.log(chalk.magentaBright("─".repeat(OUT)))
+}
+
 export async function routeMessage(sock, msg) {
   try {
     if (!msg?.message) return
@@ -558,9 +598,21 @@ console.log(
 
     const senderName = getDisplayName(sock, msg, decodedJid)
     const groupName = isGroup ? await getGroupNameCached(sock, chatId) : ""
-
     const fromMe = !!msg.key?.fromMe
-    
+    const botName = (sock?.user?.name || "").trim()
+
+    logMediaCheck({
+      isGroup,
+      groupName,
+      fromMe,
+      senderName,
+      botName,
+      senderNum: finalNum,
+      text,
+      hasSticker,
+      hasImage
+    })
+
     // 🔞 ANTI PORNO
 try {
 
