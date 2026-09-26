@@ -6,7 +6,6 @@ import {
 } from "../utils/jid.js"
 import { isAllowedPrivate } from "./middleware/allowlist.js"
 import { antiLinkGuard } from "./antilinkGuard.js" 
-import { downloadContentFromMessage } from "baileys"
 import chalk from "chalk"
 import fs from "fs"
 import path from "path"
@@ -447,12 +446,47 @@ function logRouter(data) {
   const tag = padRightAnsi(chalk.cyanBright("[ROUTER]"), 10)
 
   const where = data.isGroup ? chalk.blueBright("GROUP") : chalk.magentaBright("PRIVATE")
-  const role = data.fromMe
-    ? chalk.greenBright("BOT")
-    : (data.isOwner ? chalk.greenBright("OWNER") : chalk.yellowBright("USER"))
+  const role = data.isOwner ? chalk.greenBright("OWNER") : chalk.yellowBright("USER")
   const gate = data.allowed ? chalk.greenBright("ALLOW") : chalk.redBright("BLOCK")
 
   const head = `${tag} ${where} ${role} ${gate} ${chalk.cyanBright(now())}`
+
+  const nameLine =
+    chalk.whiteBright("name: ") +
+    chalk.yellowBright(short(data.senderName || "SinNombre", 22))
+
+  const groupLine = data.groupName
+    ? chalk.whiteBright("group: ") + chalk.blueBright(short(data.groupName, 24))
+    : ""
+
+  const numLine =
+    chalk.whiteBright("senderNumber: ") + chalk.cyanBright(String(data.senderNum || ""))
+
+  const txtLine = chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
+
+  let res = ""
+  if (data.action === "BLOCK") res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
+  else if (data.action === "SKIP") res = chalk.yellowBright("↷ SKIP") + chalk.whiteBright(`  ${data.reason || ""}`)
+  else if (data.action === "RUN") res = chalk.greenBright("▶ RUN") + chalk.cyanBright(`  .${data.command || ""}`)
+  else res = chalk.whiteBright("…")
+
+  console.log(head)
+  console.log("  " + nameLine)
+  if (groupLine) console.log("  " + groupLine)
+  console.log("  " + numLine)
+  console.log("  " + txtLine)
+  console.log("  " + res)
+  console.log(chalk.cyanBright("─".repeat(OUT)))
+}
+
+function logMediaCheck(data) {
+  const OUT = 44
+  const tag = padRightAnsi(chalk.magentaBright("[MEDIA CHECK]"), 15)
+
+  const where = data.isGroup ? chalk.blueBright("GROUP") : chalk.magentaBright("PRIVATE")
+  const quien = data.fromMe ? chalk.greenBright("BOT") : chalk.yellowBright("USER")
+
+  const head = `${tag} ${where} ${quien} ${chalk.cyanBright(now())}`
 
   const nameLine = data.fromMe
     ? chalk.whiteBright("bot: ") + chalk.greenBright(short(data.botName || "SinNombre", 22))
@@ -466,7 +500,7 @@ function logRouter(data) {
     ? chalk.whiteBright("senderNumber: ") + chalk.cyanBright(String(data.senderNum || ""))
     : ""
 
-  const txtLine = chalk.whiteBright("text: ") + chalk.cyanBright(`"${data.text ?? ""}"`)
+  const txtLine = chalk.whiteBright("text: ") + chalk.cyanBright(`"${short(data.text ?? "", 60)}"`)
 
   const mediaLine =
     chalk.whiteBright("sticker: ") +
@@ -474,20 +508,13 @@ function logRouter(data) {
     chalk.whiteBright("   image: ") +
     (data.hasImage ? chalk.greenBright("true") : chalk.gray("false"))
 
-  let res = ""
-  if (data.action === "BLOCK") res = chalk.redBright("× BLOCK") + chalk.whiteBright(`  ${data.reason || ""}`)
-  else if (data.action === "SKIP") res = chalk.yellowBright("↷ SKIP") + chalk.whiteBright(`  ${data.reason || ""}`)
-  else if (data.action === "RUN") res = chalk.greenBright("▶ RUN") + chalk.cyanBright(`  .${data.command || ""}`)
-  else res = chalk.whiteBright("…")
-
   console.log(head)
   console.log("  " + nameLine)
   if (groupLine) console.log("  " + groupLine)
   if (numLine) console.log("  " + numLine)
   console.log("  " + txtLine)
   console.log("  " + mediaLine)
-  console.log("  " + res)
-  console.log(chalk.cyanBright("─".repeat(OUT)))
+  console.log(chalk.magentaBright("─".repeat(OUT)))
 }
 
 export async function routeMessage(sock, msg) {
@@ -563,37 +590,17 @@ const hasImage =
     const fromMe = !!msg.key?.fromMe
     const botName = (sock?.user?.name || "").trim()
 
-    // Datos de este mensaje puntual para logRouter (variables locales, no compartidas
-    // entre mensajes distintos, para evitar que se pisen si llegan casi al mismo tiempo)
-    const mediaInfo = { fromMe, hasSticker, hasImage, botName }
-
-    // Guarda en disco cada imagen que el bot mande (a cualquier chat)
-    if (fromMe && hasImage) {
-      try {
-        const nodoImagen =
-          m?.imageMessage ||
-          m?.ephemeralMessage?.message?.imageMessage ||
-          m?.viewOnceMessage?.message?.imageMessage ||
-          m?.viewOnceMessageV2?.message?.imageMessage ||
-          m?.viewOnceMessageV2Extension?.message?.imageMessage
-
-        if (nodoImagen) {
-          const stream = await downloadContentFromMessage(nodoImagen, "image")
-          let buffer = Buffer.alloc(0)
-          for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
-
-          const dirImagenes = path.join(DATA_DIR, "imagenes_bot")
-          if (!fs.existsSync(dirImagenes)) fs.mkdirSync(dirImagenes, { recursive: true })
-
-          const nombreArchivo = `img_${Date.now()}.jpg`
-          const rutaArchivo = path.join(dirImagenes, nombreArchivo)
-          fs.writeFileSync(rutaArchivo, buffer)
-          console.log("[imagen-bot] guardada en:", rutaArchivo)
-        }
-      } catch (e) {
-        console.error("[imagen-bot] error:", e)
-      }
-    }
+    logMediaCheck({
+      isGroup,
+      groupName,
+      fromMe,
+      senderName,
+      botName,
+      senderNum: finalNum,
+      text,
+      hasSticker,
+      hasImage
+    })
 
     // 🔞 ANTI PORNO
 try {
@@ -626,7 +633,6 @@ try {
       rawText.match(/(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/i)
 
     logRouter({
-      ...mediaInfo,
       isGroup,
       isOwner,
       allowed: true,
@@ -1569,7 +1575,6 @@ const userKey = String(rawUser)
           }
 
           logRouter({
-            ...mediaInfo,
             isGroup,
             isOwner,
             allowed: true,
@@ -1726,7 +1731,6 @@ const userKey = String(rawUser)
       } catch {}
 
       logRouter({
-        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: true,
@@ -1744,7 +1748,6 @@ const userKey = String(rawUser)
     const allowed = isAllowedPrivate(msg)
     if (!isOwner && !allowed) {
       logRouter({
-        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: false,
@@ -1838,7 +1841,6 @@ try {
 ) {
 
   logRouter({
-    ...mediaInfo,
     isGroup,
     isOwner,
     allowed: true,
@@ -1900,7 +1902,6 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
     
     if (!text.startsWith(prefix)) {
       logRouter({
-        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: true,
@@ -1931,7 +1932,6 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
         }, { quoted: msg }).catch(() => {})
 
         logRouter({
-          ...mediaInfo,
           isGroup,
           isOwner,
           allowed: true,
@@ -1951,7 +1951,6 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
     const handler = COMMANDS[command]
     if (!handler) {
       logRouter({
-        ...mediaInfo,
         isGroup,
         isOwner,
         allowed: true,
@@ -1966,7 +1965,6 @@ if (textoPlano.includes("jk inicia las premiaciones")) {
     }
 
     logRouter({
-      ...mediaInfo,
       isGroup,
       isOwner,
       allowed: true,
