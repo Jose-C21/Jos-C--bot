@@ -10,7 +10,7 @@ if(!g)return r("❌ Número inválido.")
 try{
 const m=await sock.sendMessage(g.id,{text:"🔎 Escaneando grupo..."})
 await new Promise(x=>setTimeout(x,2500))
-const res=`🔎 *${g.subject}*\n👥 Miembros: ${g.participants.length}\n👮 Admins: ${g.participants.filter(p=>p.admin).length}`
-await sock.sendMessage(g.id,{text:res,edit:m.key}).catch(()=>sock.sendMessage(g.id,{text:res}))
-await r(`✅ Escaneo enviado a *${g.subject}*`)
+await sock.sendMessage(g.id,{text:`🔎 *${g.subject}*\n👥 Miembros: ${g.participants.length}\n👮 Admins: ${g.participants.filter(p=>p.admin).length}`})
+await sock.sendMessage(g.id,{text:"✅ Escaneo terminado",edit:m.key}).catch(()=>{})
+await sock.sendMessage(c,{react:{text:"✅",key:msg.key}})
 }catch{await r("❌ No pude enviar el mensaje al grupo.")}}
