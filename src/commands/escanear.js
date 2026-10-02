@@ -9,7 +9,7 @@ const g=gs[i-1]
 if(!g)return r("❌ Número inválido.")
 try{
 const m=await sock.sendMessage(g.id,{text:"🔎 Escaneando grupo..."})
-await new Promise(x=>setTimeout(x,2500))
+await new Promise(x=>setTimeout(x,5000))
 await sock.sendMessage(g.id,{text:`🔎 *${g.subject}*\n👥 Miembros: ${g.participants.length}\n👮 Admins: ${g.participants.filter(p=>p.admin).length}`})
 await sock.sendMessage(g.id,{text:"✅ Escaneo terminado",edit:m.key}).catch(()=>{})
 await sock.sendMessage(c,{react:{text:"✅",key:msg.key}})
