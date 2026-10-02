@@ -128,29 +128,19 @@ async function generarCard({ title, artist, duration, thumbnail }) {
 /* ========================= */
 
 function trad(en = "") {
-  const ab = String(en).trim().match(/^(\d+)\s*(y|mo|w|d|h|m|s)\s*ago$/i)
-  if (ab) {
-    const n = +ab[1]
-    const u = { y: ["año","años"], mo: ["mes","meses"], w: ["semana","semanas"], d: ["día","días"], h: ["hora","horas"], m: ["minuto","minutos"], s: ["segundo","segundos"] }[ab[2].toLowerCase()]
-    return `hace ${n} ${n === 1 ? u[0] : u[1]}`
-  }
-
-  const map = {
-    "years ago": "años", "year ago": "año",
-    "months ago": "meses", "month ago": "mes",
-    "weeks ago": "semanas", "week ago": "semana",
-    "days ago": "días", "day ago": "día",
-    "hours ago": "horas", "hour ago": "hora",
-    "minutes ago": "minutos", "minute ago": "minuto",
-    "seconds ago": "segundos", "second ago": "segundo"
-  }
-
-  const out = Object.entries(map).reduce((t, [e, es]) => {
-    return t.replace(new RegExp(`\\b${e}\\b`, "g"), es)
-  }, en || "")
-
-  return ("hace " + out).trim()
+  const raw = String(en || "").replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").replace(/\s+/g, " ").trim()
+  if (!raw) return "fecha desconocida"
+  const s = raw.toLowerCase()
+  const es = s.match(/hace .+$/)
+  if (es) return es[0]
+  if (/^(just now|now)$/.test(s)) return "hace un momento"
+  const m = s.match(/(\d+)\s*(years?|yrs?|y|months?|mos?|weeks?|wks?|w|days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\s*ago/)
+  if (!m) return raw
+  const n = +m[1], k = m[2].slice(0, 2) === "mo" ? "mo" : m[2][0]
+  const u = { y: ["año","años"], mo: ["mes","meses"], w: ["semana","semanas"], d: ["día","días"], h: ["hora","horas"], m: ["minuto","minutos"], s: ["segundo","segundos"] }[k]
+  return `hace ${n} ${n === 1 ? u[0] : u[1]}`
 }
+
 
 
 function safeFileName(name = "") {
