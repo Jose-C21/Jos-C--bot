@@ -128,6 +128,13 @@ async function generarCard({ title, artist, duration, thumbnail }) {
 /* ========================= */
 
 function trad(en = "") {
+  const ab = String(en).trim().match(/^(\d+)\s*(y|mo|w|d|h|m|s)\s*ago$/i)
+  if (ab) {
+    const n = +ab[1]
+    const u = { y: ["año","años"], mo: ["mes","meses"], w: ["semana","semanas"], d: ["día","días"], h: ["hora","horas"], m: ["minuto","minutos"], s: ["segundo","segundos"] }[ab[2].toLowerCase()]
+    return `hace ${n} ${n === 1 ? u[0] : u[1]}`
+  }
+
   const map = {
     "years ago": "años", "year ago": "año",
     "months ago": "meses", "month ago": "mes",
@@ -144,6 +151,7 @@ function trad(en = "") {
 
   return ("hace " + out).trim()
 }
+
 
 function safeFileName(name = "") {
   return name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50) || "audio"
