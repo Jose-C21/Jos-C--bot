@@ -13,6 +13,7 @@ import path from "path"
 
 import { checkRateLimit, buildUserMentionJid, buildUserMentionTag } from "./ratelimit.js"
 import reportar from "../commands/reportar.js"
+import escanear from "../commands/escanear.js"
 
 import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
