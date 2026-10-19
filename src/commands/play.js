@@ -5,18 +5,13 @@ import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 import config from "../config.js"
 
+const DVYER_APIKEY = "dvyer090168434816"
+const DVYER_API = "https://dvyer-api.com/ytmp3"
+
 const SYLPHY_APIKEY = "sylph-aa4117ac"
 const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
 
-const DVYER_APIKEY = "dvyer090168434816"
-const DVYER_API = "https://dv-yer-api.online/ytmp3"
-
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
-
-
-/* ========================= */
-/* 🔥 UTILIDADES */
-/* ========================= */
 
 function formatearTiempo(segundos) {
   if (!segundos || isNaN(segundos)) return "0:00"
@@ -29,7 +24,6 @@ function dividirTexto(ctx, text, maxWidth) {
   let words = (text || "").split(" ")
   let lines = []
   let line = ""
-
   for (let word of words) {
     let test = line + word + " "
     if (ctx.measureText(test).width > maxWidth) {
@@ -39,15 +33,9 @@ function dividirTexto(ctx, text, maxWidth) {
       line = test
     }
   }
-
   lines.push(line.trim())
   return lines.slice(0, 2)
 }
-
-
-/* ========================= */
-/* 🎧 GENERADOR FINAL PRO */
-/* ========================= */
 
 async function generarCard({ title, artist, duration, thumbnail }) {
   const canvas = createCanvas(1024, 1024)
@@ -66,7 +54,6 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   const size = 200
   const x = 412
   const y = 425
-
   const imgRatio = portada.width / portada.height
 
   let drawWidth = size
@@ -88,44 +75,29 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   ctx.beginPath()
   ctx.roundRect(x, y, size, size, 25)
   ctx.clip()
-
-  ctx.drawImage(
-    portada,
-    x + offsetX,
-    y + offsetY,
-    drawWidth,
-    drawHeight
-  )
-
+  ctx.drawImage(portada, x + offsetX, y + offsetY, drawWidth, drawHeight)
   ctx.restore()
 
   ctx.textAlign = "center"
-
   ctx.fillStyle = "#ffffff"
   ctx.font = "bold 28px Sans"
   ctx.fillText(artist, 512, 670)
 
   ctx.fillStyle = "#ff2e2e"
   ctx.font = "bold 26px Sans"
-
   const lines = dividirTexto(ctx, title, 700)
   ctx.fillText(lines[0] || "", 512, 710)
   if (lines[1]) ctx.fillText(lines[1], 512, 745)
 
   ctx.fillStyle = "#b3b3b3"
   ctx.font = "24px Sans"
-
   ctx.textAlign = "left"
   ctx.fillText("0:00", 140, 820)
-
   ctx.textAlign = "right"
   ctx.fillText(duration, 880, 820)
 
   return canvas.toBuffer("image/png")
 }
-
-
-/* ========================= */
 
 function trad(en = "") {
   const raw = String(en || "").replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").replace(/\s+/g, " ").trim()
@@ -141,8 +113,6 @@ function trad(en = "") {
   return `hace ${n} ${n === 1 ? u[0] : u[1]}`
 }
 
-
-
 function safeFileName(name = "") {
   return name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50) || "audio"
 }
@@ -157,10 +127,53 @@ function signature() {
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 }
 
+/* 1️⃣ DVYER NUEVO: pide el link y reintenta hasta que el audio esté listo */
+async function dvyerAudio(ytUrl) {
+  try {
+    const { data } = await axios.get(DVYER_API, {
+      params: { mode: "link", url: ytUrl, apikey: DVYER_APIKEY },
+      timeout: 30000
+    })
 
-/* ========================= */
-/* 🚀 PLAY */
-/* ========================= */
+    const link = data?.ok && (data.download_url || data.stream_url || data.url)
+    if (!link) return null
+
+    for (let i = 0; i < 15; i++) {
+      try {
+        const r = await axios.get(link, {
+          responseType: "arraybuffer",
+          timeout: 60000,
+          validateStatus: () => true
+        })
+        const ct = String(r.headers["content-type"] || "")
+        if (r.status === 200 && /audio|octet-stream/.test(ct) && r.data.length > 10000) {
+          return Buffer.from(r.data)
+        }
+      } catch {}
+      await new Promise(r => setTimeout(r, 3000))
+    }
+  } catch (err) {
+    console.error("❌ ERROR DVYER:", err?.response?.data || err.message)
+  }
+  return null
+}
+
+/* 2️⃣ SYLPHY: respaldo */
+async function sylphyAudio(ytUrl) {
+  try {
+    const { data } = await axios.get(
+      `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
+      { timeout: 30000 }
+    )
+    const dl = data?.status && data?.result?.dl_url
+    if (!dl) return null
+    const bin = await axios.get(dl, { responseType: "arraybuffer", timeout: 60000 })
+    return Buffer.from(bin.data)
+  } catch (err) {
+    console.error("❌ ERROR SYLPHY:", err?.response?.data || err.message)
+    return null
+  }
+}
 
 export default async function play(sock, msg, { args, usedPrefix = "." }) {
 
@@ -209,9 +222,6 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
       signature()
 
-    const thumb2 = await fetchBuffer(THUMB_URL)
-    const jidUsuario = msg?.key?.participant || msg?.participant || msg?.key?.remoteJid
-
     const bufferImg = await generarCard({
       title,
       artist: allArtists,
@@ -224,9 +234,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       caption: finalCaption
     }, { quoted: msg })
 
-
     if (fs.existsSync(filePath)) {
-
       await sock.sendMessage(chatId, {
         audio: fs.readFileSync(filePath),
         mimetype: "audio/mpeg"
@@ -236,45 +244,14 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
       return
     }
 
-    let audioUrl = null
+    let audioBuf = await dvyerAudio(ytUrl)
+    if (!audioBuf) audioBuf = await sylphyAudio(ytUrl)
+    if (!audioBuf) throw "No se pudo obtener audio"
 
-    // 1️⃣ Intento con SYLPHY
-    try {
-      const sylphy = await axios.get(
-        `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`
-      )
-
-      if (sylphy.data?.status && sylphy.data?.result?.dl_url) {
-        audioUrl = sylphy.data.result.dl_url
-      }
-    } catch (err) {
-      console.error("❌ ERROR SYLPHY:", err?.response?.data || err.message)
-    }
-
-    // 2️⃣ Fallback con DVYER
-    if (!audioUrl) {
-      try {
-        const dvyer = await axios.get(
-          `${DVYER_API}?url=${encodeURIComponent(ytUrl)}`,
-          { headers: { "x-api-key": DVYER_APIKEY } }
-        )
-
-        if (dvyer.data?.ok && (dvyer.data?.download_url || dvyer.data?.url)) {
-          audioUrl = dvyer.data.download_url || dvyer.data.url
-        }
-      } catch (err) {
-        console.error("❌ ERROR DVYER:", err?.response?.data || err.message)
-      }
-    }
-
-    if (!audioUrl) throw "No se pudo obtener audio"
-
-    const bin = await axios.get(audioUrl, { responseType: "arraybuffer" })
-
-    fs.writeFileSync(filePath, Buffer.from(bin.data))
+    fs.writeFileSync(filePath, audioBuf)
 
     await sock.sendMessage(chatId, {
-      audio: fs.readFileSync(filePath),
+      audio: audioBuf,
       mimetype: "audio/mpeg"
     }, { quoted: msg })
 
