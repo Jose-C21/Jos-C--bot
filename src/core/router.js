@@ -10,6 +10,7 @@ import chalk from "chalk"
 import fs from "fs"
 import path from "path"
 
+import activos from "../commands/activos.js"
 
 import { checkRateLimit, buildUserMentionJid, buildUserMentionTag } from "./ratelimit.js"
 import reportar from "../commands/reportar.js"
@@ -109,6 +110,9 @@ estadoconteo,
   dsticker: detectarSticker,
   setstickeralert,
   detectar,
+  funciones: activos,
+
+
   
   
   warn: warnSystem,
