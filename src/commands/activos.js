@@ -3,7 +3,7 @@ import path from "path"
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 const P = path.join(process.cwd(), "data", "activos.json")
-const F = [["bienvenida","Bienvenida","bienvenida on/off"],["despedidas","Despedidas","bienvenida on/off despedidas"],["antilink","Antilink","antilink on/off"],["antis","Antis","antis on/off"],["antiarabe","Anti árabe","antiarabe on/off"],["antipersona","Anti persona","antipersona on/off"],["antiestado","Anti estado","antiestado on/off"],["antiporno","Anti porno","antiporno on/off"],["conteooff","Conteo mensajes","pausarconteo / reanudarconteo",true]]
+const F = [["bienvenida","Bienvenida","bienvenida on/off"],["antilink","Antilink","antilink on/off"],["antis","Antis","antis on/off"],["antiarabe","Anti árabe","antiarabe on/off"],["antipersona","Anti persona","antipersona on/off"],["antiestado","Anti estado","antiestado on/off"],["antiporno","Anti porno","antiporno on/off"],["conteooff","Conteo mensajes","pausarconteo / reanudarconteo",true]]
 const rd = () => { try { return JSON.parse(fs.readFileSync(P, "utf8") || "{}") } catch { return {} } }
 const own = (a, b) => { const o = [...(config.owners || []), ...(config.ownersLid || [])].map(String); return o.includes(String(a)) || o.includes(String(b)) }
 export default async function activos(sock, msg, { usedPrefix = "." } = {}) {
