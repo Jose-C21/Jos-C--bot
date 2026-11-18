@@ -4,7 +4,6 @@ import yts from "yt-search"
 import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
-// Cambiado al nuevo endpoint v2
 const KYIO_API = "https://api.kyio.web.id/api/v2/ytdl-v2"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
@@ -59,25 +58,34 @@ function trad(en = "") {
 
 const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50) || "audio"
 
-const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
+const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
+> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
+/* KYIO V2: Usa el parámetro q y realiza reintentos por si el archivo multimedia se está generando */
 async function kyioAudio(ytUrl) {
   try {
-    // Usando el parámetro 'q' que requiere este nuevo endpoint
-    const { data } = await axios.get(KYIO_API, { params: { q: ytUrl }, timeout: 60000 })
-    
-    // Obtenemos el link directo de descarga de la propiedad result
-    const audioUrl = data?.result?.downloadUrl || data?.result?.secureUrl
-    if (!audioUrl) return null
+    const { data } = await axios.get(KYIO_API, { params: { q: ytUrl }, timeout: 30000 })
+    const link = data?.result?.downloadUrl || data?.result?.secureUrl
+    if (!link) return null
 
-    // Descargamos el binario de audio usando la URL directa
-    const r = await axios.get(audioUrl, { responseType: "arraybuffer", timeout: 90000 })
-    const buf = Buffer.from(r.data)
-    return buf.length > 10000 ? { buf, ext: "mp4" } : null
+    for (let i = 0; i < 15; i++) {
+      try {
+        const r = await axios.get(link, {
+          responseType: "arraybuffer",
+          timeout: 60000,
+          validateStatus: () => true
+        })
+        const ct = String(r.headers["content-type"] || "")
+        if (r.status === 200 && /audio|video|octet-stream/.test(ct) && r.data.length > 10000) {
+          return Buffer.from(r.data)
+        }
+      } catch {}
+      await new Promise(r => setTimeout(r, 3000))
+    }
   } catch (err) {
-    console.error("❌ ERROR KYIO:", err?.response?.status || err.message)
-    return null
+    console.error("❌ ERROR KYIO:", err?.response?.data || err.message)
   }
+  return null
 }
 
 export default async function play2(sock, msg, { args, usedPrefix = "." }) {
@@ -108,6 +116,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     const subido = trad(video.uploadedAt || video.ago || "")
     const allArtists = video.author?.name || "Artista desconocido"
     const clean = safeFileName(title)
+    const filePath = path.join(cacheDir, `${clean}.mp4`)
 
     const finalCaption =
       `🔘 TITULO: ${title}\n\n` +
@@ -119,18 +128,17 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     const bufferImg = await generarCard({ title, artist: allArtists, duration, thumbnail: video.image || video.thumbnail })
     await sock.sendMessage(chatId, { image: bufferImg, caption: finalCaption }, { quoted: msg })
 
-    const filePath = path.join(cacheDir, `${clean}.mp4`)
     if (fs.existsSync(filePath)) {
       await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: "audio/mp4" }, { quoted: msg })
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
       return
     }
 
-    const audio = await kyioAudio(ytUrl)
-    if (!audio) throw "No se pudo obtener audio"
+    const audioBuf = await kyioAudio(ytUrl)
+    if (!audioBuf) throw "No se pudo obtener audio"
 
-    fs.writeFileSync(filePath, audio.buf)
-    await sock.sendMessage(chatId, { audio: audio.buf, mimetype: "audio/mp4" }, { quoted: msg })
+    fs.writeFileSync(filePath, audioBuf)
+    await sock.sendMessage(chatId, { audio: audioBuf, mimetype: "audio/mp4" }, { quoted: msg })
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
   } catch (e) {
     console.error("❌ ERROR PLAY2:", e)
