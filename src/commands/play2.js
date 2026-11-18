@@ -58,17 +58,18 @@ function trad(en = "") {
 
 const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50) || "audio"
 
-const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
-> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
+const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
-/* KYIO: única API de este comando (sin apikey), devuelve m4a (itag 140) */
 async function kyioAudio(ytUrl) {
   try {
-    const { data } = await axios.get(KYIO_API, { params: { url: ytUrl }, timeout: 30000 })
-    const audios = data?.result?.audios || []
-    const a = audios.find(x => x.itag === 140) || audios.find(x => /audio\/mp4/.test(x.mimeType || ""))
+    // Aumentamos el timeout de la petición inicial a 60 segundos
+    const { data } = await axios.get(KYIO_API, { params: { url: ytUrl }, timeout: 60000 })
+    const audios = data?.result?.audios || data?.audios || []
+    const a = audios.find(x => x.itag === 140) || audios.find(x => /audio\/mp4|audio\//.test(x.mimeType || "")) || audios[0]
     if (!a?.url) return null
-    const r = await axios.get(a.url, { responseType: "arraybuffer", timeout: 60000 })
+    
+    // Timeout de 90 segundos para la descarga del binario de audio
+    const r = await axios.get(a.url, { responseType: "arraybuffer", timeout: 90000 })
     const buf = Buffer.from(r.data)
     return buf.length > 10000 ? { buf, ext: "m4a" } : null
   } catch (err) {
