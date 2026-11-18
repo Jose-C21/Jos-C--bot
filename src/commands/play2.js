@@ -64,16 +64,19 @@ const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊
 
 /* youtubei.js: descarga el audio directo de YouTube (formato m4a) */
 async function ytAudio(id) {
-  try {
-    const info = await yt.getInfo(id)
-    const stream = await info.download({ type: "audio", quality: "best" })
-    const chunks = []
-    for await (const c of stream) chunks.push(c)
-    return Buffer.concat(chunks)
-  } catch (err) {
-    console.error("❌ ERROR YTJS:", err)
-    return null
+  for (const client of ["IOS", "ANDROID", "TV", "WEB_EMBEDDED", "MWEB", "WEB"]) {
+    try {
+      const info = await yt.getInfo(id, { client })
+      const stream = await info.download({ type: "audio", quality: "best", client })
+      const chunks = []
+      for await (const c of stream) chunks.push(c)
+      const buf = Buffer.concat(chunks)
+      if (buf.length > 10000) { console.log("✅ YTJS ok con cliente:", client); return buf }
+    } catch (err) {
+      console.error("❌ YTJS", client, "->", err?.message || err)
+    }
   }
+  return null
 }
 
 export default async function play2(sock, msg, { args, usedPrefix = "." }) {
