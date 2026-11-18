@@ -4,7 +4,8 @@ import yts from "yt-search"
 import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
-const KYIO_API = "https://api.kyio.web.id/api/v2/downloader/ytdl-clipto"
+// Cambiado al nuevo endpoint v2
+const KYIO_API = "https://api.kyio.web.id/api/v2/ytdl-v2"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 const MAX_SEG = 1800
@@ -62,16 +63,17 @@ const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊
 
 async function kyioAudio(ytUrl) {
   try {
-    // Aumentamos el timeout de la petición inicial a 60 segundos
-    const { data } = await axios.get(KYIO_API, { params: { url: ytUrl }, timeout: 60000 })
-    const audios = data?.result?.audios || data?.audios || []
-    const a = audios.find(x => x.itag === 140) || audios.find(x => /audio\/mp4|audio\//.test(x.mimeType || "")) || audios[0]
-    if (!a?.url) return null
+    // Usando el parámetro 'q' que requiere este nuevo endpoint
+    const { data } = await axios.get(KYIO_API, { params: { q: ytUrl }, timeout: 60000 })
     
-    // Timeout de 90 segundos para la descarga del binario de audio
-    const r = await axios.get(a.url, { responseType: "arraybuffer", timeout: 90000 })
+    // Obtenemos el link directo de descarga de la propiedad result
+    const audioUrl = data?.result?.downloadUrl || data?.result?.secureUrl
+    if (!audioUrl) return null
+
+    // Descargamos el binario de audio usando la URL directa
+    const r = await axios.get(audioUrl, { responseType: "arraybuffer", timeout: 90000 })
     const buf = Buffer.from(r.data)
-    return buf.length > 10000 ? { buf, ext: "m4a" } : null
+    return buf.length > 10000 ? { buf, ext: "mp4" } : null
   } catch (err) {
     console.error("❌ ERROR KYIO:", err?.response?.status || err.message)
     return null
@@ -117,7 +119,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     const bufferImg = await generarCard({ title, artist: allArtists, duration, thumbnail: video.image || video.thumbnail })
     await sock.sendMessage(chatId, { image: bufferImg, caption: finalCaption }, { quoted: msg })
 
-    const filePath = path.join(cacheDir, `${clean}.m4a`)
+    const filePath = path.join(cacheDir, `${clean}.mp4`)
     if (fs.existsSync(filePath)) {
       await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: "audio/mp4" }, { quoted: msg })
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
