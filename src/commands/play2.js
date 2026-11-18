@@ -1,14 +1,13 @@
 import fs from "fs"
 import path from "path"
 import yts from "yt-search"
+import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
-import { Innertube, Platform } from "youtubei.js"
 
-Platform.shim.eval = async d => new Function(d.output)()
-const yt = await Innertube.create()
+const KYIO_API = "https://api.kyio.web.id/api/v2/downloader/ytdl-clipto"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
-const MAX_SEG = 1200
+const MAX_SEG = 1800
 
 const formatearTiempo = s => { if (!s || isNaN(s)) return "0:00"; return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` }
 
@@ -62,21 +61,20 @@ const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 
 const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
-/* youtubei.js: descarga el audio directo de YouTube (formato m4a) */
-async function ytAudio(id) {
-  for (const client of ["IOS", "ANDROID", "TV", "WEB_EMBEDDED", "MWEB", "WEB"]) {
-    try {
-      const info = await yt.getInfo(id, { client })
-      const stream = await info.download({ type: "audio", quality: "best", client })
-      const chunks = []
-      for await (const c of stream) chunks.push(c)
-      const buf = Buffer.concat(chunks)
-      if (buf.length > 10000) { console.log("✅ YTJS ok con cliente:", client); return buf }
-    } catch (err) {
-      console.error("❌ YTJS", client, "->", err?.message || err)
-    }
+/* KYIO: única API de este comando (sin apikey), devuelve m4a (itag 140) */
+async function kyioAudio(ytUrl) {
+  try {
+    const { data } = await axios.get(KYIO_API, { params: { url: ytUrl }, timeout: 30000 })
+    const audios = data?.result?.audios || []
+    const a = audios.find(x => x.itag === 140) || audios.find(x => /audio\/mp4/.test(x.mimeType || ""))
+    if (!a?.url) return null
+    const r = await axios.get(a.url, { responseType: "arraybuffer", timeout: 60000 })
+    const buf = Buffer.from(r.data)
+    return buf.length > 10000 ? { buf, ext: "m4a" } : null
+  } catch (err) {
+    console.error("❌ ERROR KYIO:", err?.response?.status || err.message)
+    return null
   }
-  return null
 }
 
 export default async function play2(sock, msg, { args, usedPrefix = "." }) {
@@ -98,14 +96,15 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     const res = await yts(text)
     if (!res?.videos?.length) throw "Sin resultados"
     const video = res.videos[0]
-    if (video.seconds > MAX_SEG) throw "El video es muy largo (máx. 20 min)"
+    if (video.seconds > MAX_SEG) throw "El video es muy largo (máx. 30 min)"
 
     const title = video.title
+    const ytUrl = video.url
     const duration = video.seconds ? formatearTiempo(video.seconds) : video.timestamp
     const views = video.views || 0
     const subido = trad(video.uploadedAt || video.ago || "")
     const allArtists = video.author?.name || "Artista desconocido"
-    const filePath = path.join(cacheDir, `${safeFileName(title)}.m4a`)
+    const clean = safeFileName(title)
 
     const finalCaption =
       `🔘 TITULO: ${title}\n\n` +
@@ -117,17 +116,18 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     const bufferImg = await generarCard({ title, artist: allArtists, duration, thumbnail: video.image || video.thumbnail })
     await sock.sendMessage(chatId, { image: bufferImg, caption: finalCaption }, { quoted: msg })
 
+    const filePath = path.join(cacheDir, `${clean}.m4a`)
     if (fs.existsSync(filePath)) {
       await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: "audio/mp4" }, { quoted: msg })
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
       return
     }
 
-    const audioBuf = await ytAudio(video.videoId)
-    if (!audioBuf || audioBuf.length < 10000) throw "No se pudo obtener audio"
+    const audio = await kyioAudio(ytUrl)
+    if (!audio) throw "No se pudo obtener audio"
 
-    fs.writeFileSync(filePath, audioBuf)
-    await sock.sendMessage(chatId, { audio: audioBuf, mimetype: "audio/mp4" }, { quoted: msg })
+    fs.writeFileSync(filePath, audio.buf)
+    await sock.sendMessage(chatId, { audio: audio.buf, mimetype: "audio/mp4" }, { quoted: msg })
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
   } catch (e) {
     console.error("❌ ERROR PLAY2:", e)
