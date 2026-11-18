@@ -61,11 +61,15 @@ const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 
 const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
-/* KYIO V2: Usa el parámetro q y realiza reintentos por si el archivo multimedia se está generando */
+/* Petición sin apikey al endpoint v2 utilizando el parámetro q */
 async function kyioAudio(ytUrl) {
   try {
-    const { data } = await axios.get(KYIO_API, { params: { q: ytUrl }, timeout: 30000 })
-    const link = data?.result?.downloadUrl || data?.result?.secureUrl
+    const { data } = await axios.get(KYIO_API, {
+      params: { q: ytUrl },
+      timeout: 30000
+    })
+
+    const link = data?.result?.downloadUrl || data?.result?.secureUrl || data?.downloadUrl || data?.secureUrl
     if (!link) return null
 
     for (let i = 0; i < 15; i++) {
