@@ -84,50 +84,27 @@ async function kyioAudio(ytUrl) {
   try {
     const { data } = await axios.get(KYIO_API, {
       params: { apikey: KYIO_APIKEY, q: ytUrl },
-      headers: {
-        "x-api-key": KYIO_APIKEY,
-        "Authorization": `Bearer ${KYIO_APIKEY}`,
-        "User-Agent": "Mozilla/5.0"
-      },
       timeout: 30000
     })
 
-    const link = data?.result?.downloadUrl || data?.result?.secureUrl || data?.downloadUrl || data?.secureUrl
-    if (!link) {
-      console.error("❌ KYIO sin link en respuesta:", JSON.stringify(data)?.slice(0, 300))
-      return null
-    }
+    const res = data?.result
+    const link = res?.downloadUrl || res?.secureUrl
+    if (!link) return null
 
-    for (let i = 0; i < 15; i++) {
-      try {
-        const r = await axios.get(link, {
-          responseType: "arraybuffer",
-          timeout: 60000,
-          headers: {
-            "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
-            "Referer": "https://www.youtube.com/"
-          },
-          validateStatus: () => true
-        })
-        const ct = String(r.headers["content-type"] || "")
-        const bytes = r.data?.byteLength || 0
-        if (r.status === 200 && /audio|video|octet-stream/.test(ct) && bytes > 10000) {
-          return Buffer.from(r.data)
-        }
-        if (i === 0 || i === 14) {
-          console.error(`⚠️ Intento ${i + 1} descarga -> status: ${r.status}, ct: ${ct}, bytes: ${bytes}`)
-        }
-      } catch (dlErr) {
-        if (i === 0 || i === 14) {
-          console.error(`⚠️ Error descarga intento ${i + 1}:`, dlErr.message)
-        }
+    const r = await axios.get(link, {
+      responseType: "arraybuffer",
+      timeout: 60000,
+      headers: {
+        "User-Agent": "Mozilla/5.0"
       }
-      await new Promise(r => setTimeout(r, 3000))
-    }
+    })
+
+    const buf = Buffer.from(r.data)
+    return buf.byteLength > 10000 ? buf : null
   } catch (err) {
     console.error("❌ ERROR KYIO:", err?.response?.status || "", err?.response?.data || err.message)
+    return null
   }
-  return null
 }
 
 export default async function play2(sock, msg, { args, usedPrefix = "." }) {
