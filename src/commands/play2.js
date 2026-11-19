@@ -5,17 +5,26 @@ import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
 const KYIO_API = "https://api.kyio.web.id/api/v2/ytdl-v2"
+const KYIO_APIKEY = "joseC-KathyZ"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 const MAX_SEG = 1800
 
-const formatearTiempo = s => { if (!s || isNaN(s)) return "0:00"; return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` }
+const formatearTiempo = s => {
+  if (!s || isNaN(s)) return "0:00"
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+}
 
 function dividirTexto(ctx, text, maxWidth) {
   let lines = [], line = ""
   for (let w of (text || "").split(" ")) {
     let t = line + w + " "
-    if (ctx.measureText(t).width > maxWidth) { lines.push(line.trim()); line = w + " " } else line = t
+    if (ctx.measureText(t).width > maxWidth) {
+      lines.push(line.trim())
+      line = w + " "
+    } else {
+      line = t
+    }
   }
   lines.push(line.trim())
   return lines.slice(0, 2)
@@ -25,10 +34,20 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   const canvas = createCanvas(1024, 1024), ctx = canvas.getContext("2d")
   ctx.drawImage(await loadImage(path.join(process.cwd(), "assets", "player5.png")), 0, 0, 1024, 1024)
   let portada
-  try { portada = await loadImage(thumbnail) } catch { portada = await loadImage(THUMB_URL) }
+  try {
+    portada = await loadImage(thumbnail)
+  } catch {
+    portada = await loadImage(THUMB_URL)
+  }
   const size = 200, x = 412, y = 425, r = portada.width / portada.height
   let dw = size, dh = size, ox = 0, oy = 0
-  if (r > 1) { dw = size * r; ox = -(dw - size) / 2 } else { dh = size / r; oy = -(dh - size) / 2 }
+  if (r > 1) {
+    dw = size * r
+    ox = -(dw - size) / 2
+  } else {
+    dh = size / r
+    oy = -(dh - size) / 2
+  }
   oy += 28
   ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, size, size, 25); ctx.clip()
   ctx.drawImage(portada, x + ox, y + oy, dw, dh); ctx.restore()
@@ -61,11 +80,10 @@ const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 
 const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
-/* Petición sin apikey al endpoint v2 utilizando el parámetro q */
 async function kyioAudio(ytUrl) {
   try {
     const { data } = await axios.get(KYIO_API, {
-      params: { q: ytUrl },
+      params: { apikey: KYIO_APIKEY, q: ytUrl },
       timeout: 30000
     })
 
@@ -77,17 +95,20 @@ async function kyioAudio(ytUrl) {
         const r = await axios.get(link, {
           responseType: "arraybuffer",
           timeout: 60000,
+          headers: {
+            "User-Agent": "Mozilla/5.0"
+          },
           validateStatus: () => true
         })
         const ct = String(r.headers["content-type"] || "")
-        if (r.status === 200 && /audio|video|octet-stream/.test(ct) && r.data.length > 10000) {
+        if (r.status === 200 && /audio|video|octet-stream/.test(ct) && r.data.byteLength > 10000) {
           return Buffer.from(r.data)
         }
       } catch {}
       await new Promise(r => setTimeout(r, 3000))
     }
   } catch (err) {
-    console.error("❌ ERROR KYIO:", err?.response?.data || err.message)
+    console.error("❌ ERROR KYIO:", err?.response?.status || "", err?.response?.data || err.message)
   }
   return null
 }
@@ -101,7 +122,9 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
   if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true })
 
   if (!text) {
-    await sock.sendMessage(chatId, { text: `✳️ Uso:\n*${usedPrefix}play2* <título o artista>\n\n${signature()}` }, { quoted: msg })
+    await sock.sendMessage(chatId, {
+      text: `✳️ Uso:\n*${usedPrefix}play2* <título o artista>\n\n${signature()}`
+    }, { quoted: msg })
     return
   }
 
@@ -129,11 +152,21 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
       `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
       signature()
 
-    const bufferImg = await generarCard({ title, artist: allArtists, duration, thumbnail: video.image || video.thumbnail })
+    const bufferImg = await generarCard({
+      title,
+      artist: allArtists,
+      duration,
+      thumbnail: video.image || video.thumbnail
+    })
+
     await sock.sendMessage(chatId, { image: bufferImg, caption: finalCaption }, { quoted: msg })
 
     if (fs.existsSync(filePath)) {
-      await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: "audio/mp4" }, { quoted: msg })
+      await sock.sendMessage(chatId, {
+        audio: fs.readFileSync(filePath),
+        mimetype: "audio/mp4",
+        ptt: false
+      }, { quoted: msg })
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
       return
     }
@@ -142,7 +175,11 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     if (!audioBuf) throw "No se pudo obtener audio"
 
     fs.writeFileSync(filePath, audioBuf)
-    await sock.sendMessage(chatId, { audio: audioBuf, mimetype: "audio/mp4" }, { quoted: msg })
+    await sock.sendMessage(chatId, {
+      audio: audioBuf,
+      mimetype: "audio/mp4",
+      ptt: false
+    }, { quoted: msg })
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
   } catch (e) {
     console.error("❌ ERROR PLAY2:", e)
