@@ -80,6 +80,24 @@ const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 
 const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
+function formatErrData(data) {
+  if (!data) return ""
+  if (Buffer.isBuffer(data)) return data.toString("utf8").slice(0, 250)
+  if (typeof data === "object") return JSON.stringify(data).slice(0, 250)
+  return String(data).slice(0, 250)
+}
+
+async function downloadDirect(url) {
+  if (!url) return null
+  const r = await axios.get(url, {
+    responseType: "arraybuffer",
+    timeout: 60000,
+    maxRedirects: 5
+  })
+  const buf = Buffer.from(r.data)
+  return buf.byteLength > 10000 ? buf : null
+}
+
 async function kyioAudio(ytUrl) {
   try {
     const { data } = await axios.get(KYIO_API, {
@@ -88,21 +106,28 @@ async function kyioAudio(ytUrl) {
     })
 
     const res = data?.result
-    const link = res?.downloadUrl || res?.secureUrl
-    if (!link) return null
+    const candidates = [res?.secureUrl, res?.downloadUrl].filter(Boolean)
+    if (!candidates.length) {
+      console.error("❌ KYIO sin URL en result:", formatErrData(data))
+      return null
+    }
 
-    const r = await axios.get(link, {
-      responseType: "arraybuffer",
-      timeout: 60000,
-      headers: {
-        "User-Agent": "Mozilla/5.0"
+    for (const link of candidates) {
+      try {
+        const buf = await downloadDirect(link)
+        if (buf) return buf
+      } catch (dlErr) {
+        const status = dlErr?.response?.status || ""
+        const detail = formatErrData(dlErr?.response?.data) || dlErr.message
+        console.error(`❌ ERROR DESCARGA KYIO ${status}:`, detail)
       }
-    })
+    }
 
-    const buf = Buffer.from(r.data)
-    return buf.byteLength > 10000 ? buf : null
+    return null
   } catch (err) {
-    console.error("❌ ERROR KYIO:", err?.response?.status || "", err?.response?.data || err.message)
+    const status = err?.response?.status || ""
+    const detail = formatErrData(err?.response?.data) || err.message
+    console.error(`❌ ERROR KYIO ${status}:`, detail)
     return null
   }
 }
