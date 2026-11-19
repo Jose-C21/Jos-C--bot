@@ -84,11 +84,19 @@ async function kyioAudio(ytUrl) {
   try {
     const { data } = await axios.get(KYIO_API, {
       params: { apikey: KYIO_APIKEY, q: ytUrl },
+      headers: {
+        "x-api-key": KYIO_APIKEY,
+        "Authorization": `Bearer ${KYIO_APIKEY}`,
+        "User-Agent": "Mozilla/5.0"
+      },
       timeout: 30000
     })
 
     const link = data?.result?.downloadUrl || data?.result?.secureUrl || data?.downloadUrl || data?.secureUrl
-    if (!link) return null
+    if (!link) {
+      console.error("❌ KYIO sin link en respuesta:", JSON.stringify(data)?.slice(0, 300))
+      return null
+    }
 
     for (let i = 0; i < 15; i++) {
       try {
@@ -96,15 +104,24 @@ async function kyioAudio(ytUrl) {
           responseType: "arraybuffer",
           timeout: 60000,
           headers: {
-            "User-Agent": "Mozilla/5.0"
+            "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip",
+            "Referer": "https://www.youtube.com/"
           },
           validateStatus: () => true
         })
         const ct = String(r.headers["content-type"] || "")
-        if (r.status === 200 && /audio|video|octet-stream/.test(ct) && r.data.byteLength > 10000) {
+        const bytes = r.data?.byteLength || 0
+        if (r.status === 200 && /audio|video|octet-stream/.test(ct) && bytes > 10000) {
           return Buffer.from(r.data)
         }
-      } catch {}
+        if (i === 0 || i === 14) {
+          console.error(`⚠️ Intento ${i + 1} descarga -> status: ${r.status}, ct: ${ct}, bytes: ${bytes}`)
+        }
+      } catch (dlErr) {
+        if (i === 0 || i === 14) {
+          console.error(`⚠️ Error descarga intento ${i + 1}:`, dlErr.message)
+        }
+      }
       await new Promise(r => setTimeout(r, 3000))
     }
   } catch (err) {
