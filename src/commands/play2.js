@@ -4,8 +4,8 @@ import yts from "yt-search"
 import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
-const KYIO_API = "https://api.kyio.web.id/api/v2/ytdl-v2"
-const KYIO_APIKEY = "joseC-KathyZ"
+const KYIO_API = "https://api.kyio.web.id/api/v2/yt-audio"
+const KYIO_APIKEY = "JoseC-KathyZ"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 const MAX_SEG = 1800
@@ -87,17 +87,6 @@ function formatErrData(data) {
   return String(data).slice(0, 250)
 }
 
-async function downloadDirect(url) {
-  if (!url) return null
-  const r = await axios.get(url, {
-    responseType: "arraybuffer",
-    timeout: 60000,
-    maxRedirects: 5
-  })
-  const buf = Buffer.from(r.data)
-  return buf.byteLength > 10000 ? buf : null
-}
-
 async function kyioAudio(ytUrl) {
   try {
     const { data } = await axios.get(KYIO_API, {
@@ -105,25 +94,20 @@ async function kyioAudio(ytUrl) {
       timeout: 30000
     })
 
-    const res = data?.result
-    const candidates = [res?.secureUrl, res?.downloadUrl].filter(Boolean)
-    if (!candidates.length) {
-      console.error("❌ KYIO sin URL en result:", formatErrData(data))
+    const link = data?.result?.download_url
+    if (!link) {
+      console.error("❌ KYIO sin download_url:", formatErrData(data))
       return null
     }
 
-    for (const link of candidates) {
-      try {
-        const buf = await downloadDirect(link)
-        if (buf) return buf
-      } catch (dlErr) {
-        const status = dlErr?.response?.status || ""
-        const detail = formatErrData(dlErr?.response?.data) || dlErr.message
-        console.error(`❌ ERROR DESCARGA KYIO ${status}:`, detail)
-      }
-    }
+    const r = await axios.get(link, {
+      responseType: "arraybuffer",
+      timeout: 60000,
+      maxRedirects: 5
+    })
 
-    return null
+    const buf = Buffer.from(r.data)
+    return buf.byteLength > 10000 ? buf : null
   } catch (err) {
     const status = err?.response?.status || ""
     const detail = formatErrData(err?.response?.data) || err.message
@@ -162,7 +146,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     const subido = trad(video.uploadedAt || video.ago || "")
     const allArtists = video.author?.name || "Artista desconocido"
     const clean = safeFileName(title)
-    const filePath = path.join(cacheDir, `${clean}.mp4`)
+    const filePath = path.join(cacheDir, `${clean}.m4a`)
 
     const finalCaption =
       `🔘 TITULO: ${title}\n\n` +
