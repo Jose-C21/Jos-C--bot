@@ -4,7 +4,7 @@ import yts from "yt-search"
 import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
-const LOL_API = "https://api.lolhuman.xyz/api/ytaudio"
+const LOL_API = "https://api.lolhuman.xyz/api/ytplay"
 const LOL_APIKEY = "0f1858daee91a3f548edc9cf"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
@@ -63,17 +63,18 @@ const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
 /* LOLHUMAN: única API de este comando */
-async function lolAudio(ytUrl) {
+async function lolAudio(query) {
   try {
     const { data } = await axios.get(LOL_API, {
-      params: { apikey: LOL_APIKEY, url: ytUrl },
+      params: { apikey: LOL_APIKEY, query },
       headers: { "User-Agent": "Mozilla/5.0" },
       timeout: 60000
     })
     if (data?.status !== 200) throw new Error(data?.message || "respuesta inválida")
     const r = data?.result || {}
-    const link = r.link?.link || (typeof r.link === "string" && r.link) || r.download_url || r.url || r.audio?.link || r.audio?.url
-    if (!link) throw new Error("sin link de descarga")
+    const pick = x => (typeof x === "string" ? x : x?.link || x?.url || x?.download_url)
+    const link = pick(Array.isArray(r.audio) ? r.audio[0] : r.audio) || pick(r.link) || r.download_url || r.url
+    if (!link) { console.error("❌ LOLHUMAN RESULT:", JSON.stringify(r).slice(0, 800)); throw new Error("sin link de descarga") }
     const dl = await axios.get(link, {
       responseType: "arraybuffer",
       timeout: 90000,
@@ -134,7 +135,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
       return
     }
 
-    const audioBuf = await lolAudio(ytUrl)
+    const audioBuf = await lolAudio(`${title} ${allArtists}`)
     if (!audioBuf) throw "No se pudo obtener audio"
 
     fs.writeFileSync(filePath, audioBuf)
