@@ -5,6 +5,7 @@ import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
 
+const MIME = "audio/mpeg"
 const RAPID_HOST ="youtube-info-download-api.p.rapidapi.com"
 const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
 const RAPID_HEADERS = { "x-rapidapi-host": RAPID_HOST, "x-rapidapi-key": RAPID_KEY }
@@ -68,7 +69,7 @@ const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊
 async function rapidAudio(ytUrl) {
   try {
     const { data: st } = await axios.get(`https://${RAPID_HOST}/ajax/download.php`, {
-      params: { format: "m4a", url: ytUrl },
+      params: { format: "mp3", audio_quality: 128, url: ytUrl },
       headers: RAPID_HEADERS,
       timeout: 30000
     })
@@ -131,7 +132,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     const subido = trad(video.uploadedAt || video.ago || "")
     const allArtists = video.author?.name || "Artista desconocido"
     const clean = safeFileName(title)
-    const filePath = path.join(cacheDir, `${clean}.m4a`)
+    const filePath = path.join(cacheDir, `${clean}.mp3`)
 
     const finalCaption =
       `🔘 TITULO: ${title}\n\n` +
@@ -145,17 +146,17 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
 
     if (fs.existsSync(filePath)) {
       console.log(`[PLAY2] CACHE: ${clean} ${(fs.statSync(filePath).size / 1048576).toFixed(1)} MB`)
-      await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: "audio/mp4", ptt: false }, { quoted: msg })
+      await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: MIME, ptt: false }, { quoted: msg })
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
       return
     }
 
-    let audioBuf = await rapidAudio(ytUrl)
+    const audioBuf = await rapidAudio(ytUrl)
     if (!audioBuf) throw "No se pudo obtener audio"
-    console.log(`[PLAY2] API: ${clean} ${(audioBuf.length / 1048576).toFixed(1)} MB (m4a, ${video.seconds}s)`)
+    console.log(`[PLAY2] API: ${clean} ${(audioBuf.length / 1048576).toFixed(1)} MB (mp3, pedido 128, ${video.seconds}s)`)
 
     fs.writeFileSync(filePath, audioBuf)
-    await sock.sendMessage(chatId, { audio: audioBuf, mimetype: "audio/mp4", ptt: false }, { quoted: msg })
+    await sock.sendMessage(chatId, { audio: audioBuf, mimetype: MIME, ptt: false }, { quoted: msg })
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
   } catch (e) {
     console.error("❌ ERROR PLAY2:", e)
