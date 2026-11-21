@@ -18,7 +18,6 @@ import escanear from "../commands/escanear.js"
 
 import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
-import play2 from "../commands/play2.js"
 import resetsession from "../commands/resetsession.js"
 import mute from "../commands/mute.js"
 import unmute from "../commands/unmute.js"
@@ -82,7 +81,6 @@ const COMMANDS = {
   resetsession,
   s: sticker,
   play,
-  play2,
   mute,
   reportar,
   unmute,
