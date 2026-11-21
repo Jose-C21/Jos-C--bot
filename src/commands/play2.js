@@ -5,7 +5,8 @@ import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
 
-const RAPID_HOST = "youtube-info-download-api.p.rapidapi.com"
+const AUDIO_KBPS = 128 // 64 a 320 (320 = máxima calidad, pesa ~2.5x más)
+const RAPID_HOST ="youtube-info-download-api.p.rapidapi.com"
 const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
 const RAPID_HEADERS = { "x-rapidapi-host": RAPID_HOST, "x-rapidapi-key": RAPID_KEY }
 
@@ -68,7 +69,7 @@ const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊
 async function rapidAudio(ytUrl) {
   try {
     const { data: st } = await axios.get(`https://${RAPID_HOST}/ajax/download.php`, {
-      params: { format: "mp3", url: ytUrl },
+      params: { format: "mp3", audio_quality: AUDIO_KBPS, url: ytUrl },
       headers: RAPID_HEADERS,
       timeout: 30000
     })
