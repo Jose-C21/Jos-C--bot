@@ -145,6 +145,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
     await sock.sendMessage(chatId, { image: bufferImg, caption: finalCaption }, { quoted: msg })
 
     if (fs.existsSync(filePath)) {
+      console.log(`[PLAY2] CACHE: ${clean} ${(fs.statSync(filePath).size / 1048576).toFixed(1)} MB`)
       await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: "audio/mpeg", ptt: false }, { quoted: msg })
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
       return
@@ -152,6 +153,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
 
     let audioBuf = await rapidAudio(ytUrl)
     if (!audioBuf) throw "No se pudo obtener audio"
+    console.log(`[PLAY2] API: ${clean} ${(audioBuf.length / 1048576).toFixed(1)} MB (pedido ${AUDIO_KBPS} kbps, ${video.seconds}s)`)
 
     fs.writeFileSync(filePath, audioBuf)
     await sock.sendMessage(chatId, { audio: audioBuf, mimetype: "audio/mpeg", ptt: false }, { quoted: msg })
