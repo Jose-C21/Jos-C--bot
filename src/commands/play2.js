@@ -4,33 +4,19 @@ import yts from "yt-search"
 import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
-const KYIO_API = "https://api.kyio.web.id/api/v2/yt-audio"
-const KYIO_APIKEY = "JoseC-KathyZ"
-
-const DVYER_APIKEY = "dvyer090168434816"
-const DVYER_API = "https://dvyer-api.com/ytmp3"
-
-const SYLPHY_APIKEY = "sylph-aa4117ac"
-const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
+const LOL_API = "https://api.lolhuman.xyz/api/ytaudio"
+const LOL_APIKEY = "0f1858daee91a3f548edc9cf"
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 const MAX_SEG = 1800
 
-const formatearTiempo = s => {
-  if (!s || isNaN(s)) return "0:00"
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
-}
+const formatearTiempo = s => { if (!s || isNaN(s)) return "0:00"; return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` }
 
 function dividirTexto(ctx, text, maxWidth) {
   let lines = [], line = ""
   for (let w of (text || "").split(" ")) {
     let t = line + w + " "
-    if (ctx.measureText(t).width > maxWidth) {
-      lines.push(line.trim())
-      line = w + " "
-    } else {
-      line = t
-    }
+    if (ctx.measureText(t).width > maxWidth) { lines.push(line.trim()); line = w + " " } else line = t
   }
   lines.push(line.trim())
   return lines.slice(0, 2)
@@ -40,20 +26,10 @@ async function generarCard({ title, artist, duration, thumbnail }) {
   const canvas = createCanvas(1024, 1024), ctx = canvas.getContext("2d")
   ctx.drawImage(await loadImage(path.join(process.cwd(), "assets", "player5.png")), 0, 0, 1024, 1024)
   let portada
-  try {
-    portada = await loadImage(thumbnail)
-  } catch {
-    portada = await loadImage(THUMB_URL)
-  }
+  try { portada = await loadImage(thumbnail) } catch { portada = await loadImage(THUMB_URL) }
   const size = 200, x = 412, y = 425, r = portada.width / portada.height
   let dw = size, dh = size, ox = 0, oy = 0
-  if (r > 1) {
-    dw = size * r
-    ox = -(dw - size) / 2
-  } else {
-    dh = size / r
-    oy = -(dh - size) / 2
-  }
+  if (r > 1) { dw = size * r; ox = -(dw - size) / 2 } else { dh = size / r; oy = -(dh - size) / 2 }
   oy += 28
   ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, size, size, 25); ctx.clip()
   ctx.drawImage(portada, x + ox, y + oy, dw, dh); ctx.restore()
@@ -86,69 +62,28 @@ const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 
 const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
-async function kyioAudio(ytUrl) {
+/* LOLHUMAN: única API de este comando */
+async function lolAudio(ytUrl) {
   try {
-    const { data } = await axios.get(KYIO_API, {
-      params: { apikey: KYIO_APIKEY, q: ytUrl },
+    const { data } = await axios.get(LOL_API, {
+      params: { apikey: LOL_APIKEY, url: ytUrl },
       headers: { "User-Agent": "Mozilla/5.0" },
-      timeout: 30000
+      timeout: 60000
     })
-    const link = data?.result?.download_url
-    if (!link) return null
-    const r = await axios.get(link, {
+    if (data?.status !== 200) throw new Error(data?.message || "respuesta inválida")
+    const r = data?.result || {}
+    const link = r.link?.link || (typeof r.link === "string" && r.link) || r.download_url || r.url || r.audio?.link || r.audio?.url
+    if (!link) throw new Error("sin link de descarga")
+    const dl = await axios.get(link, {
       responseType: "arraybuffer",
-      timeout: 60000,
-      maxRedirects: 5
+      timeout: 90000,
+      maxRedirects: 5,
+      headers: { "User-Agent": "Mozilla/5.0" }
     })
-    const buf = Buffer.from(r.data)
-    return buf.byteLength > 10000 ? buf : null
+    const buf = Buffer.from(dl.data)
+    return buf.length > 10000 ? buf : null
   } catch (err) {
-    console.error("❌ ERROR KYIO:", err?.response?.status || "", err.message)
-    return null
-  }
-}
-
-async function dvyerAudio(ytUrl) {
-  try {
-    const { data } = await axios.get(DVYER_API, {
-      params: { mode: "link", url: ytUrl, apikey: DVYER_APIKEY },
-      timeout: 30000
-    })
-    const link = data?.ok && (data.download_url || data.stream_url || data.url)
-    if (!link) return null
-    for (let i = 0; i < 15; i++) {
-      try {
-        const r = await axios.get(link, {
-          responseType: "arraybuffer",
-          timeout: 60000,
-          validateStatus: () => true
-        })
-        const ct = String(r.headers["content-type"] || "")
-        if (r.status === 200 && /audio|octet-stream/.test(ct) && r.data.byteLength > 10000) {
-          return Buffer.from(r.data)
-        }
-      } catch {}
-      await new Promise(r => setTimeout(r, 3000))
-    }
-  } catch (err) {
-    console.error("❌ ERROR DVYER:", err?.response?.data || err.message)
-  }
-  return null
-}
-
-async function sylphyAudio(ytUrl) {
-  try {
-    const { data } = await axios.get(
-      `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
-      { timeout: 30000 }
-    )
-    const dl = data?.status && data?.result?.dl_url
-    if (!dl) return null
-    const bin = await axios.get(dl, { responseType: "arraybuffer", timeout: 60000 })
-    const buf = Buffer.from(bin.data)
-    return buf.byteLength > 10000 ? buf : null
-  } catch (err) {
-    console.error("❌ ERROR SYLPHY:", err?.response?.data || err.message)
+    console.error("❌ ERROR LOLHUMAN:", err?.response?.status || "", err?.response?.data?.message || err.message)
     return null
   }
 }
@@ -162,9 +97,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
   if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true })
 
   if (!text) {
-    await sock.sendMessage(chatId, {
-      text: `✳️ Uso:\n*${usedPrefix}play2* <título o artista>\n\n${signature()}`
-    }, { quoted: msg })
+    await sock.sendMessage(chatId, { text: `✳️ Uso:\n*${usedPrefix}play2* <título o artista>\n\n${signature()}` }, { quoted: msg })
     return
   }
 
@@ -192,36 +125,20 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
       `👁 ${Number(views).toLocaleString()} • 📅 ${subido}\n\n` +
       signature()
 
-    const bufferImg = await generarCard({
-      title,
-      artist: allArtists,
-      duration,
-      thumbnail: video.image || video.thumbnail
-    })
-
+    const bufferImg = await generarCard({ title, artist: allArtists, duration, thumbnail: video.image || video.thumbnail })
     await sock.sendMessage(chatId, { image: bufferImg, caption: finalCaption }, { quoted: msg })
 
     if (fs.existsSync(filePath)) {
-      await sock.sendMessage(chatId, {
-        audio: fs.readFileSync(filePath),
-        mimetype: "audio/mpeg",
-        ptt: false
-      }, { quoted: msg })
+      await sock.sendMessage(chatId, { audio: fs.readFileSync(filePath), mimetype: "audio/mpeg", ptt: false }, { quoted: msg })
       await sock.sendMessage(chatId, { react: { text: "⚡", key: msg.key } })
       return
     }
 
-    let audioBuf = await kyioAudio(ytUrl)
-    if (!audioBuf) audioBuf = await dvyerAudio(ytUrl)
-    if (!audioBuf) audioBuf = await sylphyAudio(ytUrl)
+    const audioBuf = await lolAudio(ytUrl)
     if (!audioBuf) throw "No se pudo obtener audio"
 
     fs.writeFileSync(filePath, audioBuf)
-    await sock.sendMessage(chatId, {
-      audio: audioBuf,
-      mimetype: "audio/mpeg",
-      ptt: false
-    }, { quoted: msg })
+    await sock.sendMessage(chatId, { audio: audioBuf, mimetype: "audio/mpeg", ptt: false }, { quoted: msg })
     await sock.sendMessage(chatId, { react: { text: "✅", key: msg.key } })
   } catch (e) {
     console.error("❌ ERROR PLAY2:", e)
