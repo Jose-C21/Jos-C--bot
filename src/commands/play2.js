@@ -4,8 +4,10 @@ import yts from "yt-search"
 import axios from "axios"
 import { createCanvas, loadImage } from "canvas"
 
-const LOL_API = "https://api.lolhuman.xyz/api/ytplay"
-const LOL_APIKEY = "0f1858daee91a3f548edc9cf"
+
+const RAPID_HOST = "youtube-info-download-api.p.rapidapi.com"
+const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
+const RAPID_HEADERS = { "x-rapidapi-host": RAPID_HOST, "x-rapidapi-key": RAPID_KEY }
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 const MAX_SEG = 1800
@@ -62,29 +64,36 @@ const safeFileName = (name = "") => name.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 
 const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
 > ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
 
-/* LOLHUMAN: única API de este comando */
-async function lolAudio(query) {
+/* RAPIDAPI: Start download -> progress (hasta 1000) -> download_url */
+async function rapidAudio(ytUrl) {
   try {
-    const { data } = await axios.get(LOL_API, {
-      params: { apikey: LOL_APIKEY, query },
-      headers: { "User-Agent": "Mozilla/5.0" },
-      timeout: 60000
+    const { data: st } = await axios.get(`https://${RAPID_HOST}/ajax/download.php`, {
+      params: { format: "mp3", url: ytUrl },
+      headers: RAPID_HEADERS,
+      timeout: 30000
     })
-    if (data?.status !== 200) throw new Error(data?.message || "respuesta inválida")
-    const r = data?.result || {}
-    const pick = x => (typeof x === "string" ? x : x?.link || x?.url || x?.download_url)
-    const link = pick(Array.isArray(r.audio) ? r.audio[0] : r.audio) || pick(r.link) || r.download_url || r.url
-    if (!link) { console.error("❌ LOLHUMAN RESULT:", JSON.stringify(r).slice(0, 800)); throw new Error("sin link de descarga") }
-    const dl = await axios.get(link, {
-      responseType: "arraybuffer",
-      timeout: 90000,
-      maxRedirects: 5,
-      headers: { "User-Agent": "Mozilla/5.0" }
-    })
-    const buf = Buffer.from(dl.data)
+    if (!st?.id && !st?.progress_url && !st?.download_url) {
+      console.error("❌ RAPID START:", JSON.stringify(st).slice(0, 500))
+      return null
+    }
+    const pUrl = st.progress_url || `https://${RAPID_HOST}/ajax/progress.php?id=${st.id}`
+    const pHeaders = st.progress_url ? undefined : RAPID_HEADERS
+    let dl = st.download_url || null
+    for (let i = 0; i < 40 && !dl; i++) {
+      await new Promise(r => setTimeout(r, 3000))
+      try {
+        const { data: p } = await axios.get(pUrl, { headers: pHeaders, timeout: 20000 })
+        if (Number(p?.progress) >= 1000 && p?.success && p?.download_url) dl = p.download_url
+      } catch (e) {
+        console.error("❌ RAPID PROGRESS:", e?.response?.status || e.message)
+      }
+    }
+    if (!dl) return null
+    const r = await axios.get(dl, { responseType: "arraybuffer", timeout: 90000, maxRedirects: 5 })
+    const buf = Buffer.from(r.data)
     return buf.length > 10000 ? buf : null
   } catch (err) {
-    console.error("❌ ERROR LOLHUMAN:", err?.response?.status || "", err?.response?.data?.message || err.message)
+    console.error("❌ ERROR RAPID:", err?.response?.status || "", err?.response?.data?.message || err.message)
     return null
   }
 }
@@ -140,7 +149,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
       return
     }
 
-    const audioBuf = await lolAudio(`${title} ${allArtists}`)
+    let audioBuf = await rapidAudio(ytUrl)
     if (!audioBuf) throw "No se pudo obtener audio"
 
     fs.writeFileSync(filePath, audioBuf)
