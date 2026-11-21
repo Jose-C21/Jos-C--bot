@@ -69,7 +69,7 @@ const signature = () => `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊
 async function rapidAudio(ytUrl) {
   try {
     const { data: st } = await axios.get(`https://${RAPID_HOST}/ajax/download.php`, {
-      params: { format: "mp3", audio_quality: 128, url: ytUrl },
+      params: { format: "mp3", url: ytUrl },
       headers: RAPID_HEADERS,
       timeout: 30000
     })
@@ -153,7 +153,7 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
 
     const audioBuf = await rapidAudio(ytUrl)
     if (!audioBuf) throw "No se pudo obtener audio"
-    console.log(`[PLAY2] API: ${clean} ${(audioBuf.length / 1048576).toFixed(1)} MB (mp3, pedido 128, ${video.seconds}s)`)
+    console.log(`[PLAY2] API: ${clean} ${(audioBuf.length / 1048576).toFixed(1)} MB (mp3, ${video.seconds}s)`)
 
     fs.writeFileSync(filePath, audioBuf)
     await sock.sendMessage(chatId, { audio: audioBuf, mimetype: MIME, ptt: false }, { quoted: msg })
