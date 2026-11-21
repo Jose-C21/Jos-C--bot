@@ -105,7 +105,12 @@ export default async function play2(sock, msg, { args, usedPrefix = "." }) {
   try {
     await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } })
 
-    const res = await yts(text)
+    let res
+    for (let i = 0; i < 3; i++) {
+      try { res = await yts({ query: text, hl: "es", gl: "HN" }) } catch (e) { console.error("❌ ERROR YTS:", e?.message || e) }
+      if (res?.videos?.length) break
+      await new Promise(r => setTimeout(r, 1500))
+    }
     if (!res?.videos?.length) throw "Sin resultados"
     const video = res.videos[0]
     if (video.seconds > MAX_SEG) throw "El video es muy largo (máx. 30 min)"
