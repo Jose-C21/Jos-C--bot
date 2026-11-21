@@ -11,6 +11,10 @@ const DVYER_API = "https://dvyer-api.com/ytmp3"
 const SYLPHY_APIKEY = "sylph-aa4117ac"
 const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
 
+const RAPID_HOST = "youtube-info-download-api.p.rapidapi.com"
+const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
+const RAPID_HEADERS = { "x-rapidapi-host": RAPID_HOST, "x-rapidapi-key": RAPID_KEY }
+
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
 function formatearTiempo(segundos) {
@@ -158,7 +162,41 @@ async function dvyerAudio(ytUrl) {
   return null
 }
 
-/* 2️⃣ SYLPHY: respaldo */
+/* 2️⃣ RAPIDAPI: download -> progress (hasta 1000) -> download_url (MP3) */
+async function rapidAudio(ytUrl) {
+  try {
+    const { data: st } = await axios.get(`https://${RAPID_HOST}/ajax/download.php`, {
+      params: { format: "mp3", url: ytUrl },
+      headers: RAPID_HEADERS,
+      timeout: 30000
+    })
+    if (!st?.id && !st?.progress_url && !st?.download_url) {
+      console.error("❌ RAPID START:", JSON.stringify(st).slice(0, 500))
+      return null
+    }
+    const pUrl = st.progress_url || `https://${RAPID_HOST}/ajax/progress.php?id=${st.id}`
+    const pHeaders = st.progress_url ? undefined : RAPID_HEADERS
+    let dl = st.download_url || null
+    for (let i = 0; i < 40 && !dl; i++) {
+      await new Promise(r => setTimeout(r, 3000))
+      try {
+        const { data: p } = await axios.get(pUrl, { headers: pHeaders, timeout: 20000 })
+        if (Number(p?.progress) >= 1000 && p?.success && p?.download_url) dl = p.download_url
+      } catch (e) {
+        console.error("❌ RAPID PROGRESS:", e?.response?.status || e.message)
+      }
+    }
+    if (!dl) return null
+    const r = await axios.get(dl, { responseType: "arraybuffer", timeout: 90000, maxRedirects: 5 })
+    const buf = Buffer.from(r.data)
+    return buf.length > 10000 ? buf : null
+  } catch (err) {
+    console.error("❌ ERROR RAPID:", err?.response?.status || "", err?.response?.data?.message || err.message)
+    return null
+  }
+}
+
+/* 3️⃣ SYLPHY: respaldo */
 async function sylphyAudio(ytUrl) {
   try {
     const { data } = await axios.get(
@@ -245,6 +283,7 @@ export default async function play(sock, msg, { args, usedPrefix = "." }) {
     }
 
     let audioBuf = await dvyerAudio(ytUrl)
+    if (!audioBuf) audioBuf = await rapidAudio(ytUrl)
     if (!audioBuf) audioBuf = await sylphyAudio(ytUrl)
     if (!audioBuf) throw "No se pudo obtener audio"
 
