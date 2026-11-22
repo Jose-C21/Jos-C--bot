@@ -1,5 +1,6 @@
 import axios from "axios"
 import yts from "yt-search"
+import { spawn } from "child_process"
 
 const RAPID_HOST = "spotify-downloader-api-music-search-downloads-discovery.p.rapidapi.com"
 const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
@@ -14,7 +15,7 @@ return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная систе
 async function spotSearch(query){
 
 const { data } = await axios.get(`https://${RAPID_HOST}/search`,{
-params:{ q:query, type:"track", limit:5, noOfTopResult:1 },
+params:{ q:query, type:"track", limit:10, noOfTopResult:1 },
 headers:RAPID_HEADERS,
 timeout:30000
 })
@@ -43,6 +44,22 @@ timeout:120000
 })
 
 return Buffer.from(r.data)
+}
+
+// convertir flac -> mp3 128k con ffmpeg
+function toMp3(input){
+return new Promise((resolve,reject)=>{
+const ff = spawn("ffmpeg",["-i","pipe:0","-vn","-map_metadata","-1","-codec:a","libmp3lame","-b:a","128k","-f","mp3","pipe:1"],{stdio:["pipe","pipe","ignore"]})
+const out = []
+ff.stdout.on("data",d=>out.push(d))
+ff.on("error",reject)
+ff.on("close",c=>{
+const b = Buffer.concat(out)
+c===0 && b.length>10000 ? resolve(b) : reject("Falló la conversión a mp3")
+})
+ff.stdin.on("error",()=>{})
+ff.stdin.end(input)
+})
 }
 
 export default async function spotify(sock,msg,{args=[]}){
@@ -89,15 +106,18 @@ return sock.sendMessage(chatId,{text:"❌ No se encontraron resultados."},{quote
 }
 
 // link mp3: del search si es mp3, si no (flac/vacío) pedir downloadSong; prueba las siguientes si falla
-let song = null, dlUrl = null
-for(const t of list.slice(0,4)){
+let song = null, dlUrl = null, flac = null, conv = false
+for(const t of list.slice(0,8)){
 let u = /\.mp3(\?|$)/i.test(t.downloadUrl || "") ? t.downloadUrl : null
-if(!u && /^[A-Za-z0-9]{22}$/.test(t.id || "")){
+if(!u && !t.downloadUrl && /^[A-Za-z0-9]{22}$/.test(t.id || "")){
 try{ u = await spotLink(t.id) }catch(err){ console.error("[spotify] downloadSong",t.id,err?.response?.status,JSON.stringify(err?.response?.data)) }
 }
 if(u && /\.mp3(\?|$)/i.test(u)){ song = t; dlUrl = u; break }
+if(!flac && (u || t.downloadUrl)) flac = { t, u: u || t.downloadUrl }
 }
-if(!song) throw "No se pudo obtener el audio en mp3"
+// sin mp3: usar el primer flac y convertirlo a mp3 128k
+if(!song && flac){ song = flac.t; dlUrl = flac.u; conv = true }
+if(!song) throw "No se pudo obtener el audio"
 
 // miniatura y duración desde youtube (opcional, no bloquea)
 let thumb = song.cover || null
@@ -109,7 +129,8 @@ if(v){ thumb = thumb || v.thumbnail; dur = dur || v.timestamp }
 }catch{}
 }
 
-const buffer = await spotDownload(dlUrl)
+let buffer = await spotDownload(dlUrl)
+if(conv) buffer = await toMp3(buffer)
 
 // tamaño límite
 if(buffer.length / 1024 / 1024 > 30){
