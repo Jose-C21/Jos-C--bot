@@ -2,8 +2,12 @@
 import axios from "axios"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
-const IG_API_KEY = "lem959" // ← reemplaza por tu apikey real si es distinta
-const IG_ENDPOINT = "https://api.lempi.lat/dl/ig"
+const IG_ENDPOINT = "https://instagram-tiktok-youtube-downloader.p.rapidapi.com/fetch"
+const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
+const IG_HEADERS = {
+  "x-rapidapi-host": "instagram-tiktok-youtube-downloader.p.rapidapi.com",
+  "x-rapidapi-key": RAPID_KEY
+}
 
 function signature() {
   return `\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍`
@@ -72,10 +76,18 @@ ${usedPrefix}instagram https://www.instagram.com/reel/DbEgsesBDhP/${signature()}
       await sock.sendMessage(chatId, { edit: progreso.key, text: steps[i] }).catch(() => {})
     }
 
-    const { data } = await axios.get(IG_ENDPOINT, {
-      params: { url, apikey: IG_API_KEY },
+    const { data: r } = await axios.get(IG_ENDPOINT, {
+      params: { url },
+      headers: IG_HEADERS,
       timeout: 60_000
     })
+
+    // Adapta la respuesta de RapidAPI al formato que usa el resto del comando
+    const toItem = it => ({ tipo: /video/i.test(String(it?.type || it?.media_type || "")) ? "video" : "image", url: it?.download_url || it?.url })
+    const media = r?.type === "album" && Array.isArray(r?.items)
+      ? r.items.map(toItem).filter(m => m.url)
+      : r?.download_url ? [toItem(r)] : []
+    const data = { status: r?.ok === true, media, tipo: r?.type }
 
     if (!data?.status || !Array.isArray(data?.media) || data.media.length === 0) {
       throw new Error("La API no devolvió contenido descargable")
