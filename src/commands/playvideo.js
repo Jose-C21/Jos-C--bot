@@ -2,10 +2,13 @@
 import yts from "yt-search"
 import axios from "axios"
 
-// ✅ NUEVA API (Sylphy)
-const SYLPHY_BASE = "https://sylphy.xyz/download/ytmp4"
-const SYLPHY_API_KEY = "sylphy-MtyAgpx" // ← tu api_key
-const SYLPHY_QUALITY = "720p" // puedes cambiar: 360p, 480p, 720p, etc
+// ✅ NUEVA API (RapidAPI - YouTube Mp4 Downloader)
+const MP4_API = "https://youtube-mp4-downloader.p.rapidapi.com/mp4"
+const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
+const MP4_HEADERS = {
+  "x-rapidapi-host": "youtube-mp4-downloader.p.rapidapi.com",
+  "x-rapidapi-key": RAPID_KEY
+}
 
 function safeFileName(name = "") {
   return String(name)
@@ -47,19 +50,16 @@ export default async function playvideo(sock, msg, { args = [], usedPrefix = "."
 
     const ytUrl = video.url
 
-    // ✅ Resolver mp4 con Sylphy
-    const apiRes = await axios.get(SYLPHY_BASE, {
-      params: {
-        url: ytUrl,
-        q: SYLPHY_QUALITY,
-        api_key: SYLPHY_API_KEY
-      },
+    // ✅ Resolver mp4 con RapidAPI
+    const apiRes = await axios.get(MP4_API, {
+      params: { url: ytUrl },
+      headers: MP4_HEADERS,
       timeout: 60_000
     })
 
     const data = apiRes?.data
-    const videoUrl = data?.result?.dl_url
-    const title = data?.result?.title || video.title || "Video"
+    const videoUrl = data?.download
+    const title = data?.title || video.title || "Video"
 
     if (!videoUrl) {
       await sock.sendMessage(chatId, { text: "❌ No se pudo obtener el video." }, { quoted: msg })
@@ -70,6 +70,7 @@ export default async function playvideo(sock, msg, { args = [], usedPrefix = "."
     // Descargar buffer
     const dl = await axios.get(videoUrl, { responseType: "arraybuffer", timeout: 180_000 })
     const videoBuffer = Buffer.from(dl.data)
+    console.log(`[playvideo] ${(videoBuffer.length / 1048576).toFixed(1)} MB`)
 
     // Enviar video
     await sock.sendMessage(chatId, {
