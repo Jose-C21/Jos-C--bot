@@ -93,7 +93,6 @@ ${usedPrefix}instagram https://www.instagram.com/reel/DbEgsesBDhP/${signature()}
       throw new Error("La API no devolvió contenido descargable")
     }
 
-    const autorUser = data?.autor?.username ? `@${data.autor.username}` : "Desconocido"
     const total = data.media.length
 
     await sock.sendMessage(chatId, { edit: progreso.key, text: "📤 Enviando contenido..." }).catch(() => {})
@@ -108,9 +107,6 @@ ${usedPrefix}instagram https://www.instagram.com/reel/DbEgsesBDhP/${signature()}
 ┄┄┄┄┄┄┄┄┄┄┄┄┄
 ╭ ${tipo === "video" ? "🎬" : "📸"} 𝗧𝗶𝗽𝗼
 ╰▸ ${tipoLabel(data?.tipo)}
-
-╭ 👥 𝗔𝘂𝘁𝗼𝗿
-╰▸ ${autorUser}
 
 ╭ 👤 𝗦𝗼𝗹𝗶𝗰𝗶𝘁𝗮𝗱𝗼 𝗽𝗼𝗿
 ╰▸ ${senderTag}
