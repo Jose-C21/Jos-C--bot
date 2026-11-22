@@ -1,6 +1,7 @@
 import axios from "axios"
 import yts from "yt-search"
-import { spawn } from "child_process"
+import ffmpeg from "fluent-ffmpeg"
+import { Readable, PassThrough } from "stream"
 
 const RAPID_HOST = "spotify-downloader-api-music-search-downloads-discovery.p.rapidapi.com"
 const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
@@ -49,16 +50,20 @@ return Buffer.from(r.data)
 // convertir flac -> mp3 128k con ffmpeg
 function toMp3(input){
 return new Promise((resolve,reject)=>{
-const ff = spawn("ffmpeg",["-i","pipe:0","-vn","-map_metadata","-1","-codec:a","libmp3lame","-b:a","128k","-f","mp3","pipe:1"],{stdio:["pipe","pipe","ignore"]})
-const out = []
-ff.stdout.on("data",d=>out.push(d))
-ff.on("error",reject)
-ff.on("close",c=>{
+const out = [], pass = new PassThrough()
+pass.on("data",d=>out.push(d))
+pass.on("end",()=>{
 const b = Buffer.concat(out)
-c===0 && b.length>10000 ? resolve(b) : reject("Falló la conversión a mp3")
+b.length>10000 ? resolve(b) : reject("Falló la conversión a mp3")
 })
-ff.stdin.on("error",()=>{})
-ff.stdin.end(input)
+ffmpeg(Readable.from(input))
+.noVideo()
+.audioCodec("libmp3lame")
+.audioBitrate(128)
+.outputOptions("-map_metadata","-1")
+.format("mp3")
+.on("error",reject)
+.pipe(pass,{end:true})
 })
 }
 
@@ -106,6 +111,7 @@ return sock.sendMessage(chatId,{text:"❌ No se encontraron resultados."},{quote
 }
 
 // link mp3: del search si es mp3, si no (flac/vacío) pedir downloadSong; prueba las siguientes si falla
+console.log("[spotify] resultados:",JSON.stringify(list.slice(0,8).map(t=>({id:t.id,t:t.title,u:t.downloadUrl}))))
 let song = null, dlUrl = null, flac = null, conv = false
 for(const t of list.slice(0,8)){
 let u = /\.mp3(\?|$)/i.test(t.downloadUrl || "") ? t.downloadUrl : null
