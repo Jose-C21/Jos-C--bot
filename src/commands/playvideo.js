@@ -40,7 +40,12 @@ export default async function playvideo(sock, msg, { args = [], usedPrefix = "."
   try { await sock.sendMessage(chatId, { react: { text: "⏳", key: msg.key } }) } catch {}
 
   try {
-    const resYt = await yts(query)
+    let resYt
+    for (let i = 0; i < 3; i++) {
+      try { resYt = await yts({ query, hl: "es", gl: "HN" }) } catch (e) { console.error("[playvideo] ERROR YTS:", e?.message || e) }
+      if (resYt?.videos?.length) break
+      await new Promise(r => setTimeout(r, 1500))
+    }
     const video = resYt?.videos?.[0]
     if (!video?.url) {
       await sock.sendMessage(chatId, { text: "❌ No se encontraron resultados." }, { quoted: msg })
