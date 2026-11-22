@@ -19,7 +19,7 @@ headers:RAPID_HEADERS,
 timeout:30000
 })
 
-return data?.tracks?.[0] || data?.topResults?.[0] || null
+return data?.tracks?.length ? data.tracks : (data?.topResults || [])
 }
 
 // pedir link de descarga (solo si el search no trajo un mp3)
@@ -82,16 +82,22 @@ try{
 await sock.sendMessage(chatId,{react:{text:"⏳",key:msg.key}})
 
 // buscar en spotify (API)
-const song = await spotSearch(text)
+const list = await spotSearch(text)
 
-if(!song){
+if(!list.length){
 return sock.sendMessage(chatId,{text:"❌ No se encontraron resultados."},{quoted:msg})
 }
 
-// link mp3: del search si es mp3, si no (flac/vacío) pedir downloadSong
-let dlUrl = /\.mp3(\?|$)/i.test(song.downloadUrl || "") ? song.downloadUrl : null
-if(!dlUrl) dlUrl = await spotLink(song.id)
-if(!dlUrl || !/\.mp3(\?|$)/i.test(dlUrl)) throw "No se pudo obtener el audio en mp3"
+// link mp3: del search si es mp3, si no (flac/vacío) pedir downloadSong; prueba las siguientes si falla
+let song = null, dlUrl = null
+for(const t of list.slice(0,4)){
+let u = /\.mp3(\?|$)/i.test(t.downloadUrl || "") ? t.downloadUrl : null
+if(!u && /^[A-Za-z0-9]{22}$/.test(t.id || "")){
+try{ u = await spotLink(t.id) }catch(err){ console.error("[spotify] downloadSong",t.id,err?.response?.status,JSON.stringify(err?.response?.data)) }
+}
+if(u && /\.mp3(\?|$)/i.test(u)){ song = t; dlUrl = u; break }
+}
+if(!song) throw "No se pudo obtener el audio en mp3"
 
 // miniatura y duración desde youtube (opcional, no bloquea)
 let thumb = song.cover || null
@@ -147,7 +153,7 @@ await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
 console.error("[spotify]",e)
 
 await sock.sendMessage(chatId,{
-text:`❌ Error: ${e?.message || e}`
+text:`❌ Error: ${e?.response?.data?.message || e?.message || e}`
 },{quoted:msg})
 
 try{
