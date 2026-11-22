@@ -1,81 +1,48 @@
 import axios from "axios"
 import yts from "yt-search"
-import { gotScraping } from "got-scraping"
 
-const BASE = "https://spotdown.org"
-
-let cachedToken = null
-let tokenExpires = 0
+const RAPID_HOST = "spotify-downloader-api-music-search-downloads-discovery.p.rapidapi.com"
+const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
+const RAPID_HEADERS = { "x-rapidapi-host": RAPID_HOST, "x-rapidapi-key": RAPID_KEY }
 
 // firma (la misma que usas)
 function signature(){
 return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
 }
 
-// obtener token sesión
-async function getSessionToken(){
+// buscar canción por nombre (devuelve 1ra pista con link si está en caché)
+async function spotSearch(query){
 
-if(cachedToken && Date.now() < tokenExpires - 60000) return cachedToken
-
-const r = await gotScraping({
-url:`${BASE}/api/get-session-token`,
-headers:{
-accept:"*/*",
-referer:`${BASE}/es3/track`,
-origin:BASE
-},
-timeout:{request:15000}
+const { data } = await axios.get(`https://${RAPID_HOST}/search`,{
+params:{ q:query, type:"track", limit:5, noOfTopResult:1 },
+headers:RAPID_HEADERS,
+timeout:30000
 })
 
-const data = JSON.parse(r.body)
-
-cachedToken = data.token
-tokenExpires = data.expires || Date.now() + 3600000
-
-return cachedToken
+return data?.tracks?.[0] || data?.topResults?.[0] || null
 }
 
-function authHeaders(token){
-return{
-accept:"*/*",
-referer:`${BASE}/es3/track`,
-origin:BASE,
-"x-session-token":token
-}
-}
+// pedir link de descarga (solo si el search no trajo un mp3)
+async function spotLink(id){
 
-// obtener datos canción
-async function spotDetails(query){
-
-const token = await getSessionToken()
-
-const r = await gotScraping({
-url:`${BASE}/api/song-details?url=${encodeURIComponent(query)}`,
-headers:authHeaders(token),
-timeout:{request:15000}
+const { data } = await axios.get(`https://${RAPID_HOST}/downloadSong`,{
+params:{ songId:id },
+headers:RAPID_HEADERS,
+timeout:60000
 })
 
-return JSON.parse(r.body)
+return data?.downloadUrl || data?.data?.downloadUrl || null
 }
 
 // descargar canción
 async function spotDownload(url){
 
-const token = await getSessionToken()
-
-const r = await gotScraping({
-url:`${BASE}/api/download`,
-method:"POST",
-headers:{
-...authHeaders(token),
-"content-type":"application/json"
-},
-body:JSON.stringify({url}),
-timeout:{request:120000},
-responseType:"buffer"
+const r = await axios.get(url,{
+responseType:"arraybuffer",
+timeout:120000
 })
 
-return r.rawBody
+return Buffer.from(r.data)
 }
 
 export default async function spotify(sock,msg,{args=[]}){
@@ -114,25 +81,29 @@ try{
 
 await sock.sendMessage(chatId,{react:{text:"⏳",key:msg.key}})
 
-// buscar en youtube para obtener metadata
-const search = await yts(text)
+// buscar en spotify (API)
+const song = await spotSearch(text)
 
-if(!search.videos.length){
+if(!song){
 return sock.sendMessage(chatId,{text:"❌ No se encontraron resultados."},{quoted:msg})
 }
 
-const video = search.videos[0]
+// link mp3: del search si es mp3, si no (flac/vacío) pedir downloadSong
+let dlUrl = /\.mp3(\?|$)/i.test(song.downloadUrl || "") ? song.downloadUrl : null
+if(!dlUrl) dlUrl = await spotLink(song.id)
+if(!dlUrl || !/\.mp3(\?|$)/i.test(dlUrl)) throw "No se pudo obtener el audio en mp3"
 
-// buscar datos en spotdown
-const data = await spotDetails(video.title)
-
-const song = data.songs?.[0]
-
-if(!song){
-throw "No se encontró la canción"
+// miniatura y duración desde youtube (opcional, no bloquea)
+let thumb = song.cover || null
+let dur = song.duration ? `${Math.floor(song.duration/60000)}:${String(Math.floor(song.duration/1000)%60).padStart(2,"0")}` : null
+if(!thumb || !dur){
+try{
+const v = (await yts({query:`${song.title} ${song.artist}`,hl:"es",gl:"HN"})).videos?.[0]
+if(v){ thumb = thumb || v.thumbnail; dur = dur || v.timestamp }
+}catch{}
 }
 
-const buffer = await spotDownload(song.url)
+const buffer = await spotDownload(dlUrl)
 
 // tamaño límite
 if(buffer.length / 1024 / 1024 > 30){
@@ -147,16 +118,20 @@ const caption =
   `│  🎶 ${song.title}\n` +
   `│  ───────────────\n` +
   `│  👤 ${song.artist}\n` +
-  `│  ⏱ ${song.duration}\n` +
+  `│  ⏱ ${dur || "—"}\n` +
   `╰───────────────╯\n\n` +
-   
+
   signature()
 
 // enviar info
+if(thumb){
 await sock.sendMessage(chatId,{
-image:{url:song.thumbnail},
+image:{url:thumb},
 caption
 },{quoted:msg})
+}else{
+await sock.sendMessage(chatId,{text:caption},{quoted:msg})
+}
 
 // enviar audio
 await sock.sendMessage(chatId,{
@@ -172,7 +147,7 @@ await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
 console.error("[spotify]",e)
 
 await sock.sendMessage(chatId,{
-text:`❌ Error: ${e}`
+text:`❌ Error: ${e?.message || e}`
 },{quoted:msg})
 
 try{
