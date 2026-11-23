@@ -4,6 +4,10 @@ const RAPID_HOST = "spotify-downloader9.p.rapidapi.com"
 const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
 const RAPID_HEADERS = { "x-rapidapi-host": RAPID_HOST, "x-rapidapi-key": RAPID_KEY }
 
+// descargador (recibe link de spotify)
+const DL_HOST = "spotify-mp3-converter-downloader.p.rapidapi.com"
+const DL_HEADERS = { "x-rapidapi-host": DL_HOST, "x-rapidapi-key": RAPID_KEY, "Content-Type": "application/json" }
+
 // firma (la misma que usas)
 function signature(){
 return `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|частная система\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦`
@@ -21,23 +25,22 @@ timeout:30000
 return data?.data?.tracks?.items?.[0] || null
 }
 
-// obtener link de descarga (mp3)
+// obtener link de descarga (mp3) con el link de spotify
 async function spotLink(id){
 
-const { data } = await axios.get(`https://${RAPID_HOST}/downloadSong`,{
-params:{ songId:id },
-headers:RAPID_HEADERS,
-timeout:60000
-})
+const { data } = await axios.post(`https://${DL_HOST}/s/a/track`,
+{ url:`https://open.spotify.com/track/${id}` },
+{ headers:DL_HEADERS, timeout:60000 })
 
 return data?.data || null
 }
 
 // descargar canción
-async function spotDownload(url){
+async function spotDownload(url,headers={}){
 
 const r = await axios.get(url,{
 responseType:"arraybuffer",
+headers,
 timeout:120000
 })
 
@@ -89,7 +92,7 @@ return sock.sendMessage(chatId,{text:"❌ No se encontraron resultados."},{quote
 
 // link de descarga
 const d = await spotLink(found.id)
-if(!d?.downloadLink) throw "No se pudo obtener el audio"
+if(!d?.download?.url) throw "No se pudo obtener el audio"
 
 const song = {
 title: d.title || found.name,
@@ -97,10 +100,11 @@ artist: d.artist || found.artists?.items?.map(a=>a.profile?.name).filter(Boolean
 thumbnail: found.albumOfTrack?.coverArt?.slice(-1)[0]?.url || d.cover || null
 }
 
-const ms = d.duration || found.duration?.totalMilliseconds || 0
+const ms = d.durationMs || found.duration?.totalMilliseconds || 0
 const duration = ms ? `${Math.floor(ms/60000)}:${String(Math.floor(ms/1000)%60).padStart(2,"0")}` : "—"
 
-const buffer = await spotDownload(d.downloadLink)
+const buffer = await spotDownload(d.download.url,d.download.headers)
+console.log(`[spotify] ${(buffer.length/1024/1024).toFixed(2)} MB | esperado ${duration} | ${d.title}`)
 
 // tamaño límite
 if(buffer.length / 1024 / 1024 > 30){
