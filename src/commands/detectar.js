@@ -8,11 +8,15 @@ import axios from "axios"
 
 const shazam = new Shazam()
 
-const SKY_APIKEY = "sk_2fea7c1a-0c7d-429c-bbb7-7a3b936ef4f4"
-const SKY_API = "https://api-sky.ultraplus.click/youtube/resolve"
+const DVYER_APIKEY = "dvyer090168434816"
+const DVYER_API = "https://dvyer-api.com/ytmp3"
 
-const SYLPHY_APIKEY = "sylphy-MtyAgpx"
-const SYLPHY_API = "https://sylphy.xyz/download/v2/ytmp3"
+const SYLPHY_APIKEY = "sylph-aa4117ac"
+const SYLPHY_API = "https://sylphyy.xyz/download/v2/ytmp3"
+
+const RAPID_HOST = "youtube-info-download-api.p.rapidapi.com"
+const RAPID_KEY = process.env.RAPIDAPI_KEY || "8b004a7ff9msh658214a8fb106f2p1213c3jsn5047c465b710"
+const RAPID_HEADERS = { "x-rapidapi-host": RAPID_HOST, "x-rapidapi-key": RAPID_KEY }
 
 const THUMB_URL = "https://i.postimg.cc/zvGnpW8F/7-C5-CF8-AB-92-E7-45-F5-89-D5-97291-B10761-D.png"
 
@@ -49,6 +53,88 @@ return t.replace(new RegExp(`\\b${e}\\b`,"g"),es)
 return ("hace "+out).trim()
 }
 
+/* 1️⃣ DVYER: pide el link y reintenta hasta que el audio esté listo */
+async function dvyerAudio(ytUrl) {
+  try {
+    const { data } = await axios.get(DVYER_API, {
+      params: { mode: "link", url: ytUrl, apikey: DVYER_APIKEY },
+      timeout: 30000
+    })
+
+    const link = data?.ok && (data.download_url || data.stream_url || data.url)
+    if (!link) return null
+
+    for (let i = 0; i < 15; i++) {
+      try {
+        const r = await axios.get(link, {
+          responseType: "arraybuffer",
+          timeout: 60000,
+          validateStatus: () => true
+        })
+        const ct = String(r.headers["content-type"] || "")
+        if (r.status === 200 && /audio|octet-stream/.test(ct) && r.data.length > 10000) {
+          return Buffer.from(r.data)
+        }
+      } catch {}
+      await new Promise(r => setTimeout(r, 3000))
+    }
+  } catch (err) {
+    console.error("❌ ERROR DVYER:", err?.response?.data || err.message)
+  }
+  return null
+}
+
+/* 2️⃣ RAPIDAPI: download -> progress (hasta 1000) -> download_url (MP3) */
+async function rapidAudio(ytUrl) {
+  try {
+    const { data: st } = await axios.get(`https://${RAPID_HOST}/ajax/download.php`, {
+      params: { format: "mp3", url: ytUrl },
+      headers: RAPID_HEADERS,
+      timeout: 30000
+    })
+    if (!st?.id && !st?.progress_url && !st?.download_url) {
+      console.error("❌ RAPID START:", JSON.stringify(st).slice(0, 500))
+      return null
+    }
+    const pUrl = st.progress_url || `https://${RAPID_HOST}/ajax/progress.php?id=${st.id}`
+    const pHeaders = st.progress_url ? undefined : RAPID_HEADERS
+    let dl = st.download_url || null
+    for (let i = 0; i < 40 && !dl; i++) {
+      await new Promise(r => setTimeout(r, 3000))
+      try {
+        const { data: p } = await axios.get(pUrl, { headers: pHeaders, timeout: 20000 })
+        if (Number(p?.progress) >= 1000 && p?.success && p?.download_url) dl = p.download_url
+      } catch (e) {
+        console.error("❌ RAPID PROGRESS:", e?.response?.status || e.message)
+      }
+    }
+    if (!dl) return null
+    const r = await axios.get(dl, { responseType: "arraybuffer", timeout: 90000, maxRedirects: 5 })
+    const buf = Buffer.from(r.data)
+    return buf.length > 10000 ? buf : null
+  } catch (err) {
+    console.error("❌ ERROR RAPID:", err?.response?.status || "", err?.response?.data?.message || err.message)
+    return null
+  }
+}
+
+/* 3️⃣ SYLPHY: respaldo */
+async function sylphyAudio(ytUrl) {
+  try {
+    const { data } = await axios.get(
+      `${SYLPHY_API}?url=${encodeURIComponent(ytUrl)}&api_key=${SYLPHY_APIKEY}`,
+      { timeout: 30000 }
+    )
+    const dl = data?.status && data?.result?.dl_url
+    if (!dl) return null
+    const bin = await axios.get(dl, { responseType: "arraybuffer", timeout: 60000 })
+    return Buffer.from(bin.data)
+  } catch (err) {
+    console.error("❌ ERROR SYLPHY:", err?.response?.data || err.message)
+    return null
+  }
+}
+
 export default async function detectar(sock,msg){
 
 const chatId = msg?.key?.remoteJid
@@ -73,6 +159,8 @@ return sock.sendMessage(chatId,{
 text:"❌ El mensaje respondido no es audio ni video."
 },{quoted:msg})
 }
+
+let infoSent = false
 
 try{
 
@@ -236,6 +324,7 @@ caption:
 
 ${signature()}`
 },{quoted:msg})
+infoSent = true
 
 await sock.sendMessage(chatId,{
 audio:fs.readFileSync(filePath),
@@ -251,51 +340,15 @@ return
 
 const downloadPromise = (async()=>{
 
-let audioUrl=null
+let audioBuf = await dvyerAudio(video.url)
+if(!audioBuf) audioBuf = await rapidAudio(video.url)
+if(!audioBuf) audioBuf = await sylphyAudio(video.url)
+if(!audioBuf) return null
 
-try{
+fs.writeFileSync(filePath,audioBuf)
+return audioBuf
 
-const sylphy = await axios.get(
-`${SYLPHY_API}?url=${encodeURIComponent(video.url)}&api_key=${SYLPHY_APIKEY}`
-)
-
-audioUrl = sylphy.data?.result?.dl_url
-
-}catch{}
-
-if(!audioUrl){
-
-const apiRes = await axios.post(
-SKY_API,
-{url:video.url,type:"audio",format:"mp3"},
-{
-headers:{
-"Content-Type":"application/json",
-apikey:SKY_APIKEY
-}
-}
-)
-
-const resultApi = apiRes.data?.result || apiRes.data?.data
-
-audioUrl =
-resultApi?.media?.dl_download ||
-resultApi?.media?.direct
-
-if(audioUrl?.startsWith("/")){
-audioUrl="https://api-sky.ultraplus.click"+audioUrl
-}
-
-}
-
-const audio = await axios.get(audioUrl,{
-responseType:"arraybuffer",
-timeout:60000
-})
-
-fs.writeFileSync(filePath,Buffer.from(audio.data))
-
-})()
+})().catch(()=>null)
 
 /* ENVIAR CAPTION RÁPIDO */
 
@@ -319,10 +372,17 @@ caption:
 
 ${signature()}`
 },{quoted:msg})
+infoSent = true
 
 /* ESPERAR AUDIO */
 
-await downloadPromise
+if(!(await downloadPromise)){
+await sock.sendMessage(chatId,{
+text:"❌ No fue posible enviar el audio, por favor busca la canción con el comando *.play*"
+},{quoted:msg})
+await sock.sendMessage(chatId,{react:{text:"❌",key:msg.key}})
+return
+}
 
 const fkontak={
 key:{
@@ -354,7 +414,9 @@ await sock.sendMessage(chatId,{react:{text:"✅",key:msg.key}})
 console.error("[detectar]",err)
 
 await sock.sendMessage(chatId,{
-text:"❌ No se pudo identificar la canción."
+text: infoSent
+? "❌ No fue posible enviar el audio, por favor busca la canción con el comando *.play*"
+: "❌ No se pudo identificar la canción."
 },{quoted:msg})
 
 await sock.sendMessage(chatId,{react:{text:"❌",key:msg.key}})
