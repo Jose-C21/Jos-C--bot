@@ -12,6 +12,7 @@ import {
 
 const MAX_AUDIO_SEG = 16
 const MAX_VIDEO_SEG = 16
+const MAX_VIDEO_TOLERANCE = 0.9 // acepta hasta 16.9 s en videos de ~16 s
 const GUARDA_MS = 2 * 60 * 1000
 const MAX_BYTES = 25 * 1024 * 1024
 const MAX_STICKER_BYTES = 950 * 1000
@@ -126,7 +127,7 @@ async function aWebp(media, ext, seg, p) {
 
 async function crearSticker(media, ext, seg) {
   const limite = MAX_STICKER_BYTES - 2000
-  const deseado = Math.min(seg, 15)
+  const deseado = Math.min(seg, MAX_AUDIO_SEG)
   const prueba = Math.min(seg, 6)
   let elegido = null
 
@@ -196,8 +197,8 @@ const AYUDA = (p, c) =>
 Convierte un video en un sticker que suena al tocarlo.
 
 *Con un video que ya tiene sonido:*
-• Respóndele con *${p}${c}*
-• O envíalo con *${p}${c}* en el pie de foto
+- Respóndele con *${p}${c}*
+- O envíalo con *${p}${c}* en el pie de foto
 
 *Con una imagen, sticker o video sin sonido:*
 1️⃣ Responde a un audio o nota de voz con *${p}${c}* (se guarda 2 minutos)
@@ -307,7 +308,7 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       guardados.set(clave, { buf: ogg, t: Date.now() })
       await reaccion(sock, msg, "✅")
       return responder(
-        `*✅ Audio guardado* (recortado a ${MAX_AUDIO_SEG} s máx.).\n> Ahora responde a la imagen, video o sticker con *${usedPrefix}${command}*. Vence en 5 minutos.`
+        `*✅ Audio guardado* (recortado a ${MAX_AUDIO_SEG} s máx.).\n> Ahora responde a la imagen, video o sticker con *${usedPrefix}${command}*. Vence en 2 minutos.`
       )
     }
 
@@ -322,9 +323,10 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
     if (esVideo) {
       const inf = await info(media, ext)
-      console.log(`[saudio] video original ${inf.dur.toFixed(1)}s | audio: ${inf.tieneAudio ? "si" : "no"}`)
-      if (inf.dur > MAX_VIDEO_SEG) {
-        throw new Error(`El video dura ${Math.round(inf.dur)} s. Usa uno de ${MAX_VIDEO_SEG} s o menos.`)
+      const limiteReal = MAX_VIDEO_SEG + MAX_VIDEO_TOLERANCE
+      console.log(`[saudio] video original ${inf.dur.toFixed(1)}s (límite ${limiteReal.toFixed(1)}s) | audio: ${inf.tieneAudio ? "si" : "no"}`)
+      if (inf.dur > limiteReal) {
+        throw new Error(`El video dura ${inf.dur.toFixed(1)} s. Usa uno de ${MAX_VIDEO_SEG} s o menos.`)
       }
       if (inf.tieneAudio) audio = await aNotaDeVoz(media, ext)
     }
