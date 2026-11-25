@@ -1,18 +1,3 @@
-// src/commands/saudio.js
-// .saudio (alias: .stickeraudio, .stsonido, .sonido)  -> STICKER CON SONIDO nativo de WhatsApp (icono 🔊)
-// .saudio2 (alias: .saudiob)                          -> modo alterno: sticker + nota de voz aparte
-// Si el envío nativo falla, el bot usa solo el modo alterno.
-//
-// Uso:
-//  1) Responde a un VIDEO/GIF con sonido  -> sticker animado + el audio del mismo video (máx. 10 s)
-//  2) Para imagen / video / sticker SIN sonido:
-//       a) responde a un audio o nota de voz con .saudio  -> queda guardado 5 minutos
-//       b) responde a la imagen/video/sticker con .saudio -> sticker + ese audio
-//  3) .saudio solo -> muestra las instrucciones
-//
-// Formato: Message.audioStickerMessage (campo 134) = FutureProofMessage que envuelve un stickerMessage;
-// el sonido va dentro del sticker (campo 26). Baileys aún no trae ese campo, por eso se arma a mano.
-
 import fs from "fs"
 import path from "path"
 import { spawn } from "child_process"
@@ -25,17 +10,17 @@ import {
   downloadContentFromMessage
 } from "baileys"
 
-const MAX_AUDIO_SEG = 10            // WhatsApp usa 10 s máximo para el sonido de un sticker
-const MAX_VIDEO_SEG = 20            // videos más largos se rechazan
-const GUARDA_MS = 5 * 60 * 1000     // un audio guardado dura 5 minutos
+const MAX_AUDIO_SEG = 20
+const MAX_VIDEO_SEG = 20
+const GUARDA_MS = 5 * 60 * 1000
 const MAX_BYTES = 25 * 1024 * 1024
-const MAX_STICKER_BYTES = 950 * 1000 // WhatsApp rechaza stickers de más de ~1 MB
-const PTT = false                    // si el audio no suena en tu celular, prueba true
+const MAX_STICKER_BYTES = 950 * 1000
+const PTT = false
 
 const TMP_DIR = path.join(process.cwd(), "tmp", "saudio")
 try { fs.mkdirSync(TMP_DIR, { recursive: true }) } catch {}
 
-const guardados = new Map() // remitente -> { buf, t }
+const guardados = new Map()
 
 const tmp = (ext) => path.join(TMP_DIR, `sa-${randomBytes(6).toString("hex")}.${ext}`)
 
@@ -63,7 +48,6 @@ async function conTemporal(buf, ext, fn) {
   try { return await fn(f) } finally { try { fs.unlinkSync(f) } catch {} }
 }
 
-// Duración (segundos) y si tiene pista de audio (usa solo ffmpeg)
 function info(buf, ext) {
   return conTemporal(buf, ext, (f) => new Promise((resolve) => {
     const p = spawn("ffmpeg", ["-hide_banner", "-i", f], { stdio: ["ignore", "ignore", "pipe"] })
@@ -78,7 +62,6 @@ function info(buf, ext) {
   }))
 }
 
-// Cualquier audio/video -> nota de voz ogg/opus de hasta 10 s
 function aNotaDeVoz(buf, ext) {
   return conTemporal(buf, ext, async (entrada) => {
     const salida = tmp("ogg")
@@ -92,7 +75,6 @@ function aNotaDeVoz(buf, ext) {
   })
 }
 
-// ── EXIF del sticker (mismo que utils/sticker-exif.js) ──
 function buildExif(metadata = {}) {
   const json = {
     "sticker-pack-id": "https://github.com/DikaArdnt/Hisoka-Morou",
@@ -130,7 +112,6 @@ async function ponerExif(buf, metadata) {
   }
 }
 
-// ── Crear sticker webp (baja fps y calidad por pasos hasta quedar bajo ~1 MB) ──
 async function crearSticker(media, ext, seg) {
   const pasos = [{ fps: 15, q: 50 }, { fps: 12, q: 40 }, { fps: 10, q: 30 }, { fps: 8, q: 20 }]
   for (const p of pasos) {
@@ -140,7 +121,8 @@ async function crearSticker(media, ext, seg) {
         "-vf", `fps=${p.fps},scale=512:512:force_original_aspect_ratio=increase,crop=512:512`,
         "-loop", "0", "-c:v", "libwebp", "-q:v", String(p.q), "-compression_level", "6", "-preset", "default", salida]))
       const b = fs.readFileSync(salida)
-      if (b.length <= MAX_STICKER_BYTES - 2000) return b // margen para el exif
+      console.log(`[saudio] sticker ${seg}s | ${p.fps}fps q${p.q} | ${(b.length / 1024).toFixed(0)} KB`)
+      if (b.length <= MAX_STICKER_BYTES - 2000) return b
     } finally { try { fs.unlinkSync(salida) } catch {} }
   }
   throw new Error("No pude reducir el sticker a menos de 1 MB. Usa un video más corto.")
@@ -159,7 +141,6 @@ const extDe = (mime = "") => {
   return "bin"
 }
 
-// ── Mensaje objetivo: el citado, o el propio (video/imagen con .saudio en el pie de foto) ──
 function getCtx(msg) {
   const m = msg?.message || {}
   return (
@@ -202,7 +183,6 @@ _El sticker y el audio llegan juntos._
 
 ${signature()}`
 
-// ── Utilidades de protobuf (para armar el campo que Baileys aún no conoce) ──
 const varint = (n) => {
   const o = []
   while (n > 127) { o.push((n & 127) | 128); n = Math.floor(n / 128) }
@@ -212,14 +192,12 @@ const varint = (n) => {
 const campoBytes = (numero, datos) =>
   Buffer.concat([varint(numero * 8 + 2), varint(datos.length), Buffer.from(datos)])
 
-// FutureProofMessage{ message = Message{ stickerMessage = StickerMessage{ ...sticker, audioMessage(26) } } }
 function armarAudioSticker(stickerBytes, audioBytes) {
   const stickerConSonido = Buffer.concat([Buffer.from(stickerBytes), campoBytes(26, audioBytes)])
-  const mensajeInterno = campoBytes(26, stickerConSonido) // Message.stickerMessage = 26
-  return campoBytes(1, mensajeInterno)                    // FutureProofMessage.message = 1
+  const mensajeInterno = campoBytes(26, stickerConSonido)
+  return campoBytes(1, mensajeInterno)
 }
 
-// Hace que proto.Message.encode agregue el campo 134 (audioStickerMessage) cuando el mensaje lo trae
 function parchearEncode() {
   if (proto.Message.__audioStickerParche) return
   const original = proto.Message.encode
@@ -232,7 +210,6 @@ function parchearEncode() {
   proto.Message.__audioStickerParche = true
 }
 
-// Envío nativo: sticker con sonido (icono de altavoz)
 async function enviarNativo(sock, chatId, stickerBuf, oggBuf, segundos) {
   parchearEncode()
 
@@ -260,7 +237,6 @@ async function enviarNativo(sock, chatId, stickerBuf, oggBuf, segundos) {
   await sock.relayMessage(chatId, mensaje, { messageId: generateMessageIDV2(sock.user?.id) })
 }
 
-// Modo alterno: sticker y luego el audio como nota de voz respondiendo al sticker
 async function enviarSeparado(sock, chatId, msg, stickerBuf, oggBuf) {
   const enviado = await sock.sendMessage(chatId, { sticker: stickerBuf }, { quoted: msg })
   await sock.sendMessage(
@@ -298,7 +274,6 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
   const mime = node?.mimetype || ""
 
   try {
-    // ── Guardar un audio para usarlo luego ──
     if (tipo === "audio") {
       await reaccion(sock, msg, "⏳")
       const buf = await descargar(node, "audio")
@@ -312,7 +287,6 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       )
     }
 
-    // ── Hacer el sticker ──
     await reaccion(sock, msg, "⏳")
     const media = await descargar(node, tipo)
     if (!media?.length) throw new Error("No pude descargar el archivo.")
@@ -324,13 +298,13 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
     if (esVideo) {
       const inf = await info(media, ext)
+      console.log(`[saudio] video original ${inf.dur.toFixed(1)}s | audio: ${inf.tieneAudio ? "si" : "no"}`)
       if (inf.dur > MAX_VIDEO_SEG) {
         throw new Error(`El video dura ${Math.round(inf.dur)} s. Usa uno de ${MAX_VIDEO_SEG} s o menos.`)
       }
       if (inf.tieneAudio) audio = await aNotaDeVoz(media, ext)
     }
 
-    // Si el video no tiene sonido (o es imagen/sticker), usamos el audio guardado
     if (!audio) {
       const g = guardados.get(clave)
       if (g && Date.now() - g.t <= GUARDA_MS) audio = g.buf
@@ -347,7 +321,7 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
     let stk
     if (tipo === "sticker") {
-      stk = media // si ya era sticker, se reutiliza tal cual
+      stk = media
       if (stk.length > MAX_STICKER_BYTES) {
         throw new Error("El sticker pesa más de 1 MB y WhatsApp no lo acepta con sonido.")
       }
@@ -360,11 +334,14 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       })
     }
 
+    console.log(`[saudio] audio ${dur.toFixed(1)}s (usado ${segundos}s) | sticker final ${(stk.length / 1024).toFixed(0)} KB | modo ${modoAlterno ? "alterno" : "nativo"}`)
+
     if (modoAlterno) {
       await enviarSeparado(sock, chatId, msg, stk, audio)
     } else {
       try {
         await enviarNativo(sock, chatId, stk, audio, segundos)
+        console.log("[saudio] enviado nativo OK")
       } catch (e) {
         console.error("[saudio] el envío nativo falló, uso el modo alterno:", e)
         await enviarSeparado(sock, chatId, msg, stk, audio)
