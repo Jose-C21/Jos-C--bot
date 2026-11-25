@@ -44,6 +44,7 @@ import { privateMirror } from "./privateMirror.js"
 import antipersona from "../commands/antipersona.js"
 import { antiPersonaObserve } from "./antipersonaWatch.js"
 import instagram from "../commands/instagram.js"
+import checkbaileys from "../commands/checkbaileys.js"
 
 import pausarconteo from "../commands/pausarconteo.js"
 import reanudarconteo from "../commands/reanudarconteo.js"
@@ -89,6 +90,7 @@ const COMMANDS = {
   tourl,
   debugview,
   sumar,
+  checkbaileys,
   setsticker,
   spotify,
   addlista,
