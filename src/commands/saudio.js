@@ -23,6 +23,48 @@ try { fs.mkdirSync(TMP_DIR, { recursive: true }) } catch {}
 
 const guardados = new Map()
 
+const COOLDOWN_MS = 2 * 60 * 1000
+const COOLDOWN_PATH = path.join(process.cwd(), "data", "cooldown_saudio.json")
+
+function guardarCooldowns(db) {
+  try {
+    fs.mkdirSync(path.dirname(COOLDOWN_PATH), { recursive: true })
+    fs.writeFileSync(COOLDOWN_PATH, JSON.stringify(db))
+  } catch {}
+}
+
+function leerCooldowns() {
+  let db = {}
+  try { db = JSON.parse(fs.readFileSync(COOLDOWN_PATH, "utf8") || "{}") } catch {}
+  const ahora = Date.now()
+  let cambio = false
+  for (const k of Object.keys(db)) {
+    if (!(db[k] > ahora)) { delete db[k]; cambio = true }
+  }
+  if (cambio) guardarCooldowns(db)
+  return db
+}
+
+function ponerCooldown(clave) {
+  const db = leerCooldowns()
+  db[clave] = Date.now() + COOLDOWN_MS
+  guardarCooldowns(db)
+  const t = setTimeout(leerCooldowns, COOLDOWN_MS + 500)
+  t.unref?.()
+}
+
+function quitarCooldown(clave) {
+  const db = leerCooldowns()
+  if (clave in db) {
+    delete db[clave]
+    guardarCooldowns(db)
+  }
+}
+
+function tiempo(seg) {
+  return seg >= 60 ? `${Math.floor(seg / 60)} min ${seg % 60} s` : `${seg} s`
+}
+
 const tmp = (ext) => path.join(TMP_DIR, `sa-${randomBytes(6).toString("hex")}.${ext}`)
 
 function signature() {
@@ -275,7 +317,7 @@ async function reaccion(sock, msg, emoji) {
   try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }) } catch {}
 }
 
-export default async function saudio(sock, msg, { command = "saudio", usedPrefix = ".", senderNum } = {}) {
+export default async function saudio(sock, msg, { command = "saudio", usedPrefix = ".", senderNum, isOwner } = {}) {
   const chatId = msg?.key?.remoteJid
   if (!chatId) return
 
@@ -298,6 +340,9 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
   const mime = node?.mimetype || ""
 
+  let cooldownPuesto = false
+  let exito = false
+
   try {
     if (tipo === "audio") {
       await reaccion(sock, msg, "⏳")
@@ -310,6 +355,19 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       return responder(
         `*✅ Audio guardado* (recortado a ${MAX_AUDIO_SEG} s máx.).\n> Ahora responde a la imagen, video o sticker con *${usedPrefix}${command}*. Vence en 2 minutos.`
       )
+    }
+
+    const ahora = Date.now()
+    const hasta = leerCooldowns()[clave] || 0
+    if (!isOwner && hasta > ahora) {
+      await reaccion(sock, msg, "⏳")
+      return responder(
+        `⏳ *Espera ${tiempo(Math.ceil((hasta - ahora) / 1000))}* para volver a usar *${usedPrefix}${command}*.`
+      )
+    }
+    if (!isOwner) {
+      ponerCooldown(clave)
+      cooldownPuesto = true
     }
 
     await reaccion(sock, msg, "⏳")
@@ -375,10 +433,13 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
     }
 
     guardados.delete(clave)
+    exito = true
     await reaccion(sock, msg, "✅")
   } catch (e) {
     console.error("[saudio]", e)
     await reaccion(sock, msg, "❌")
     await responder(`*❌ No pude hacerlo.*\n> ${e?.message || "Error desconocido"}`)
+  } finally {
+    if (cooldownPuesto && !exito) quitarCooldown(clave)
   }
 }
