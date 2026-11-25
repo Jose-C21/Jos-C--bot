@@ -11,7 +11,7 @@ import fs from "fs"
 import path from "path"
 
 import activos from "../commands/activos.js"
-
+import saudio from "../commands/saudio.js"
 import { checkRateLimit, buildUserMentionJid, buildUserMentionTag } from "./ratelimit.js"
 import reportar from "../commands/reportar.js"
 import escanear from "../commands/escanear.js"
@@ -100,6 +100,7 @@ const COMMANDS = {
   testaudiosticker,
   testestado,
   clima,
+  saudio, stickeraudio: saudio, stsonido: saudio, sonido: saudio, saudio2: saudio, saudiob: saudio,
   pausarconteo,
 reanudarconteo,
 estadoconteo,
