@@ -10,9 +10,9 @@ import {
   downloadContentFromMessage
 } from "baileys"
 
-const MAX_AUDIO_SEG = 600
-const MAX_VIDEO_SEG = 600
-const GUARDA_MS = 5 * 60 * 1000
+const MAX_AUDIO_SEG = 15
+const MAX_VIDEO_SEG = 15
+const GUARDA_MS = 2 * 60 * 1000
 const MAX_BYTES = 25 * 1024 * 1024
 const MAX_STICKER_BYTES = 950 * 1000
 const PTT = false
@@ -190,16 +190,20 @@ async function descargar(node, tipo) {
   return Buffer.concat(chunks)
 }
 
-const AYUDA = (p, c) => `*🔊 STICKER CON AUDIO*
+const AYUDA = (p, c) =>
+`-┊ *Sticker con sonido* 🔊
 
-*Opción 1:* responde a un *video o GIF con sonido* con *${p}${c}* (o envía el video con *${p}${c}* en el pie de foto)
-> Te hago el sticker y mando el audio del video (máx. ${MAX_AUDIO_SEG} s).
+Convierte un video en un sticker que suena al tocarlo.
 
-*Opción 2:* para una imagen o video sin sonido
-> 1) Responde a un *audio o nota de voz* con *${p}${c}* (queda guardado 5 min)
-> 2) Responde a la *imagen, video o sticker* con *${p}${c}*
+*Con un video que ya tiene sonido:*
+• Respóndele con *${p}${c}*
+• O envíalo con *${p}${c}* en el pie de foto
 
-_El sticker y el audio llegan juntos._
+*Con una imagen, sticker o video sin sonido:*
+1️⃣ Responde a un audio o nota de voz con *${p}${c}* (se guarda 2 minutos)
+2️⃣ Después responde a la imagen, sticker o video con *${p}${c}*
+
+⏱ Duración máxima: ${MAX_AUDIO_SEG} segundos
 
 ${signature()}`
 
