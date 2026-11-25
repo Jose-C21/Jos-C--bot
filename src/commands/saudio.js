@@ -10,8 +10,8 @@ import {
   downloadContentFromMessage
 } from "baileys"
 
-const MAX_AUDIO_SEG = 15
-const MAX_VIDEO_SEG = 15
+const MAX_AUDIO_SEG = 16
+const MAX_VIDEO_SEG = 16
 const GUARDA_MS = 2 * 60 * 1000
 const MAX_BYTES = 25 * 1024 * 1024
 const MAX_STICKER_BYTES = 950 * 1000
