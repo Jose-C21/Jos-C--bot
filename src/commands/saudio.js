@@ -9,6 +9,7 @@ import {
   generateMessageIDV2,
   downloadContentFromMessage
 } from "baileys"
+import { buildUserMentionJid, buildUserMentionTag } from "../core/ratelimit.js"
 
 const MAX_AUDIO_SEG = 16
 const MAX_VIDEO_SEG = 16
@@ -62,7 +63,7 @@ function quitarCooldown(clave) {
 }
 
 function tiempo(seg) {
-  return seg >= 60 ? `${Math.floor(seg / 60)} min ${seg % 60} s` : `${seg} s`
+  return seg >= 60 ? `${Math.floor(seg / 60)} ᴍɪɴ ${seg % 60} ꜱ` : `${seg} ꜱ`
 }
 
 const tmp = (ext) => path.join(TMP_DIR, `sa-${randomBytes(6).toString("hex")}.${ext}`)
@@ -361,9 +362,13 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
     const hasta = leerCooldowns()[clave] || 0
     if (!isOwner && hasta > ahora) {
       await reaccion(sock, msg, "⏳")
-      return responder(
-        `⏳ *Espera ${tiempo(Math.ceil((hasta - ahora) / 1000))}* para volver a usar *${usedPrefix}${command}*.`
-      )
+      return sock.sendMessage(chatId, {
+        text:
+          `⏳ ${buildUserMentionTag(sock, msg)}\n\n` +
+          `-┊ *ᴇꜱᴘᴇʀᴀ ${tiempo(Math.ceil((hasta - ahora) / 1000))}* ᴘᴀʀᴀ ᴠᴏʟᴠᴇʀ ᴀ ᴜꜱᴀʀ *${usedPrefix}${command}*\n\n` +
+          signature(),
+        mentions: [buildUserMentionJid(sock, msg)]
+      }, { quoted: msg })
     }
     if (!isOwner) {
       ponerCooldown(clave)
