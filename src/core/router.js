@@ -45,6 +45,8 @@ import antipersona from "../commands/antipersona.js"
 import { antiPersonaObserve } from "./antipersonaWatch.js"
 import instagram from "../commands/instagram.js"
 import checkbaileys from "../commands/checkbaileys.js"
+import testaudiosticker from "../commands/testaudiosticker.js"
+
 
 import pausarconteo from "../commands/pausarconteo.js"
 import reanudarconteo from "../commands/reanudarconteo.js"
@@ -95,6 +97,7 @@ const COMMANDS = {
   spotify,
   addlista,
   jokai,
+  testaudiosticker,
   testestado,
   clima,
   pausarconteo,
