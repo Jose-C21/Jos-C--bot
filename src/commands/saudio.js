@@ -112,23 +112,40 @@ async function ponerExif(buf, metadata) {
   }
 }
 
+const PASOS = [{ fps: 15, q: 50 }, { fps: 12, q: 40 }, { fps: 10, q: 30 }, { fps: 8, q: 20 }]
+
+async function aWebp(media, ext, seg, p) {
+  const salida = tmp("webp")
+  try {
+    await conTemporal(media, ext, (f) => run("ffmpeg", ["-y", "-v", "error", "-i", f, "-t", String(seg), "-an",
+      "-vf", `fps=${p.fps},scale=512:512:force_original_aspect_ratio=increase,crop=512:512`,
+      "-loop", "0", "-c:v", "libwebp", "-q:v", String(p.q), "-compression_level", "6", "-preset", "default", salida]))
+    return fs.readFileSync(salida)
+  } finally { try { fs.unlinkSync(salida) } catch {} }
+}
+
 async function crearSticker(media, ext, seg) {
-  const pasos = [{ fps: 15, q: 50 }, { fps: 12, q: 40 }, { fps: 10, q: 30 }, { fps: 8, q: 20 }]
-  let ultimo = null
-  for (const p of pasos) {
-    const salida = tmp("webp")
-    try {
-      await conTemporal(media, ext, (f) => run("ffmpeg", ["-y", "-v", "error", "-i", f, "-t", String(seg), "-an",
-        "-vf", `fps=${p.fps},scale=512:512:force_original_aspect_ratio=increase,crop=512:512`,
-        "-loop", "0", "-c:v", "libwebp", "-q:v", String(p.q), "-compression_level", "6", "-preset", "default", salida]))
-      const b = fs.readFileSync(salida)
-      ultimo = b
-      console.log(`[saudio] sticker ${seg}s | ${p.fps}fps q${p.q} | ${(b.length / 1024).toFixed(0)} KB`)
-      if (b.length <= MAX_STICKER_BYTES - 2000) return b
-    } finally { try { fs.unlinkSync(salida) } catch {} }
+  const limite = MAX_STICKER_BYTES - 2000
+  const deseado = Math.min(seg, 15)
+  const prueba = Math.min(seg, 6)
+  let elegido = null
+
+  for (const p of PASOS) {
+    const b = await aWebp(media, ext, prueba, p)
+    const caben = Math.floor(limite / (b.length / prueba))
+    console.log(`[saudio] prueba ${prueba}s ${p.fps}fps q${p.q}: ${(b.length / 1024).toFixed(0)} KB -> caben ~${caben}s`)
+    elegido = { p, caben }
+    if (caben >= deseado) break
   }
-  console.log(`[saudio] AVISO: el sticker de ${seg}s pesa ${(ultimo.length / 1024).toFixed(0)} KB (mas de 1 MB), se envia igual para probar`)
-  return ultimo
+
+  let dur = Math.max(2, Math.min(seg, elegido.caben))
+  for (let i = 0; i < 4; i++) {
+    const b = await aWebp(media, ext, dur, elegido.p)
+    console.log(`[saudio] sticker ${dur}s (audio ${seg}s) | ${elegido.p.fps}fps q${elegido.p.q} | ${(b.length / 1024).toFixed(0)} KB`)
+    if (b.length <= limite) return b
+    dur = Math.max(2, Math.floor(dur * 0.9 * limite / b.length))
+  }
+  throw new Error("No pude reducir el sticker a menos de 1 MB. Usa un video más corto.")
 }
 
 const extDe = (mime = "") => {
