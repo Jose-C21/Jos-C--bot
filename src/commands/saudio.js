@@ -10,8 +10,8 @@ import {
   downloadContentFromMessage
 } from "baileys"
 
-const MAX_AUDIO_SEG = 20
-const MAX_VIDEO_SEG = 20
+const MAX_AUDIO_SEG = 600
+const MAX_VIDEO_SEG = 600
 const GUARDA_MS = 5 * 60 * 1000
 const MAX_BYTES = 25 * 1024 * 1024
 const MAX_STICKER_BYTES = 950 * 1000
@@ -114,6 +114,7 @@ async function ponerExif(buf, metadata) {
 
 async function crearSticker(media, ext, seg) {
   const pasos = [{ fps: 15, q: 50 }, { fps: 12, q: 40 }, { fps: 10, q: 30 }, { fps: 8, q: 20 }]
+  let ultimo = null
   for (const p of pasos) {
     const salida = tmp("webp")
     try {
@@ -121,11 +122,13 @@ async function crearSticker(media, ext, seg) {
         "-vf", `fps=${p.fps},scale=512:512:force_original_aspect_ratio=increase,crop=512:512`,
         "-loop", "0", "-c:v", "libwebp", "-q:v", String(p.q), "-compression_level", "6", "-preset", "default", salida]))
       const b = fs.readFileSync(salida)
+      ultimo = b
       console.log(`[saudio] sticker ${seg}s | ${p.fps}fps q${p.q} | ${(b.length / 1024).toFixed(0)} KB`)
       if (b.length <= MAX_STICKER_BYTES - 2000) return b
     } finally { try { fs.unlinkSync(salida) } catch {} }
   }
-  throw new Error("No pude reducir el sticker a menos de 1 MB. Usa un video más corto.")
+  console.log(`[saudio] AVISO: el sticker de ${seg}s pesa ${(ultimo.length / 1024).toFixed(0)} KB (mas de 1 MB), se envia igual para probar`)
+  return ultimo
 }
 
 const extDe = (mime = "") => {
@@ -327,7 +330,7 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       }
     } else {
       const senderName = msg?.pushName || "Usuario Desconocido"
-      const base = await crearSticker(media, ext, segundos)
+      const base = await crearSticker(media, ext, Math.min(segundos, 8))
       stk = await ponerExif(base, {
         packname: `⟢ ${senderName} `,
         author: `𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱 - 「 𝐽𝑜𝑠𝑒 𝐶 | 𝐾𝑎𝑡ℎ𝑦 𝑍 」`
