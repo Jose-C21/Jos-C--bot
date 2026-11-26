@@ -62,6 +62,51 @@ function quitarCooldown(clave) {
   }
 }
 
+const MAX_STICKERS = 30
+const BLOQUEO_MS = 3 * 60 * 60 * 1000
+const LIMITE_PATH = path.join(process.cwd(), "data", "limite_saudio.json")
+
+function guardarLimites(db) {
+  try {
+    fs.mkdirSync(path.dirname(LIMITE_PATH), { recursive: true })
+    fs.writeFileSync(LIMITE_PATH, JSON.stringify(db))
+  } catch {}
+}
+
+function leerLimites() {
+  let db = {}
+  try { db = JSON.parse(fs.readFileSync(LIMITE_PATH, "utf8") || "{}") } catch {}
+  const ahora = Date.now()
+  let cambio = false
+  for (const k of Object.keys(db)) {
+    const e = db[k]
+    if (!e || typeof e !== "object" || (e.hasta && e.hasta <= ahora)) { delete db[k]; cambio = true }
+  }
+  if (cambio) guardarLimites(db)
+  return db
+}
+
+function sumarSticker(clave) {
+  const db = leerLimites()
+  const e = db[clave] || { n: 0, hasta: 0 }
+  e.n += 1
+  if (e.n >= MAX_STICKERS) {
+    e.hasta = Date.now() + BLOQUEO_MS
+    const t = setTimeout(leerLimites, BLOQUEO_MS + 1000)
+    t.unref?.()
+  }
+  db[clave] = e
+  guardarLimites(db)
+  return e
+}
+
+function tiempoLargo(seg) {
+  const min = Math.max(1, Math.ceil(seg / 60))
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return h > 0 ? `${h} ʜ ${m} ᴍɪɴ` : `${m} ᴍɪɴ`
+}
+
 function tiempo(seg) {
   return seg >= 60 ? `${Math.floor(seg / 60)} ᴍɪɴ ${seg % 60} ꜱ` : `${seg} ꜱ`
 }
@@ -359,6 +404,20 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
     }
 
     const ahora = Date.now()
+
+    const bloqueoHasta = leerLimites()[clave]?.hasta || 0
+    if (!isOwner && bloqueoHasta > ahora) {
+      await reaccion(sock, msg, "🚫")
+      return sock.sendMessage(chatId, {
+        text:
+          `🚫 ${buildUserMentionTag(sock, msg)}\n\n` +
+          `-┊ *ʟɪᴍɪᴛᴇ ᴀʟᴄᴀɴᴢᴀᴅᴏ:* ʜɪᴄɪꜱᴛᴇ ${MAX_STICKERS} ꜱᴛɪᴄᴋᴇʀꜱ ᴄᴏɴ ꜱᴏɴɪᴅᴏ\n` +
+          `-┊ ᴘᴏᴅʀᴀꜱ ᴠᴏʟᴠᴇʀ ᴀ ᴜꜱᴀʀ *${usedPrefix}${command}* ᴇɴ *${tiempoLargo(Math.ceil((bloqueoHasta - ahora) / 1000))}*\n\n` +
+          signature(),
+        mentions: [buildUserMentionJid(sock, msg)]
+      }, { quoted: msg })
+    }
+
     const hasta = leerCooldowns()[clave] || 0
     if (!isOwner && hasta > ahora) {
       await reaccion(sock, msg, "⏳")
@@ -439,6 +498,21 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
     guardados.delete(clave)
     exito = true
+
+    if (!isOwner) {
+      const e = sumarSticker(clave)
+      if (e.hasta) {
+        await sock.sendMessage(chatId, {
+          text:
+            `🚫 ${buildUserMentionTag(sock, msg)}\n\n` +
+            `-┊ *ʟɪᴍɪᴛᴇ ᴀʟᴄᴀɴᴢᴀᴅᴏ:* ʜɪᴄɪꜱᴛᴇ ${MAX_STICKERS} ꜱᴛɪᴄᴋᴇʀꜱ ᴄᴏɴ ꜱᴏɴɪᴅᴏ\n` +
+            `-┊ ᴘᴏᴅʀᴀꜱ ᴠᴏʟᴠᴇʀ ᴀ ᴜꜱᴀʀ *${usedPrefix}${command}* ᴇɴ *${tiempoLargo(BLOQUEO_MS / 1000)}*\n\n` +
+            signature(),
+          mentions: [buildUserMentionJid(sock, msg)]
+        }, { quoted: msg }).catch(() => {})
+      }
+    }
+
     await reaccion(sock, msg, "✅")
   } catch (e) {
     console.error("[saudio]", e)
