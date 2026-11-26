@@ -24,45 +24,7 @@ try { fs.mkdirSync(TMP_DIR, { recursive: true }) } catch {}
 
 const guardados = new Map()
 
-const COOLDOWN_MS = 2 * 60 * 1000
-const COOLDOWN_PATH = path.join(process.cwd(), "data", "cooldown_saudio.json")
-
-function guardarCooldowns(db) {
-  try {
-    fs.mkdirSync(path.dirname(COOLDOWN_PATH), { recursive: true })
-    fs.writeFileSync(COOLDOWN_PATH, JSON.stringify(db))
-  } catch {}
-}
-
-function leerCooldowns() {
-  let db = {}
-  try { db = JSON.parse(fs.readFileSync(COOLDOWN_PATH, "utf8") || "{}") } catch {}
-  const ahora = Date.now()
-  let cambio = false
-  for (const k of Object.keys(db)) {
-    if (!(db[k] > ahora)) { delete db[k]; cambio = true }
-  }
-  if (cambio) guardarCooldowns(db)
-  return db
-}
-
-function ponerCooldown(clave) {
-  const db = leerCooldowns()
-  db[clave] = Date.now() + COOLDOWN_MS
-  guardarCooldowns(db)
-  const t = setTimeout(leerCooldowns, COOLDOWN_MS + 500)
-  t.unref?.()
-}
-
-function quitarCooldown(clave) {
-  const db = leerCooldowns()
-  if (clave in db) {
-    delete db[clave]
-    guardarCooldowns(db)
-  }
-}
-
-const MAX_STICKERS = 30
+const MAX_STICKERS = 3
 const BLOQUEO_MS = 3 * 60 * 60 * 1000
 const LIMITE_PATH = path.join(process.cwd(), "data", "limite_saudio.json")
 
@@ -100,15 +62,18 @@ function sumarSticker(clave) {
   return e
 }
 
+const AVISO = (sock, msg, p, c, seg) =>
+  `🚫 ${buildUserMentionTag(sock, msg)}\n\n` +
+  `-┊ *ʟɪᴍɪᴛᴇ ᴀʟᴄᴀɴᴢᴀᴅᴏ:* ʜɪᴄɪꜱᴛᴇ ${MAX_STICKERS} ꜱᴛɪᴄᴋᴇʀꜱ ᴄᴏɴ ꜱᴏɴɪᴅᴏ\n` +
+  `-┊ ᴘᴀʀᴀ ᴇᴠɪᴛᴀʀ ꜱᴘᴀᴍ ʏ ǫᴜᴇ ᴄᴏɴᴠᴇʀꜱᴇɴ ᴍᴀꜱ, ɴᴏ ᴇꜱᴛᴀʀ ꜱᴏʟᴏ ʜᴀᴄɪᴇɴᴅᴏ ꜱᴛɪᴄᴋᴇʀꜱ 💬\n` +
+  `-┊ ᴘᴏᴅʀᴀꜱ ᴠᴏʟᴠᴇʀ ᴀ ᴜꜱᴀʀ *${p}${c}* ᴇɴ *${tiempoLargo(seg)}*\n\n` +
+  signature()
+
 function tiempoLargo(seg) {
   const min = Math.max(1, Math.ceil(seg / 60))
   const h = Math.floor(min / 60)
   const m = min % 60
   return h > 0 ? `${h} ʜ ${m} ᴍɪɴ` : `${m} ᴍɪɴ`
-}
-
-function tiempo(seg) {
-  return seg >= 60 ? `${Math.floor(seg / 60)} ᴍɪɴ ${seg % 60} ꜱ` : `${seg} ꜱ`
 }
 
 const tmp = (ext) => path.join(TMP_DIR, `sa-${randomBytes(6).toString("hex")}.${ext}`)
@@ -386,9 +351,6 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
   const mime = node?.mimetype || ""
 
-  let cooldownPuesto = false
-  let exito = false
-
   try {
     if (tipo === "audio") {
       await reaccion(sock, msg, "⏳")
@@ -405,33 +367,13 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
     const ahora = Date.now()
 
-    const bloqueoHasta = leerLimites()[clave]?.hasta || 0
-    if (!isOwner && bloqueoHasta > ahora) {
+    const lim = leerLimites()[clave]
+    if (!isOwner && lim && lim.n >= MAX_STICKERS && lim.hasta > ahora) {
       await reaccion(sock, msg, "🚫")
       return sock.sendMessage(chatId, {
-        text:
-          `🚫 ${buildUserMentionTag(sock, msg)}\n\n` +
-          `-┊ *ʟɪᴍɪᴛᴇ ᴀʟᴄᴀɴᴢᴀᴅᴏ:* ʜɪᴄɪꜱᴛᴇ ${MAX_STICKERS} ꜱᴛɪᴄᴋᴇʀꜱ ᴄᴏɴ ꜱᴏɴɪᴅᴏ\n` +
-          `-┊ ᴘᴏᴅʀᴀꜱ ᴠᴏʟᴠᴇʀ ᴀ ᴜꜱᴀʀ *${usedPrefix}${command}* ᴇɴ *${tiempoLargo(Math.ceil((bloqueoHasta - ahora) / 1000))}*\n\n` +
-          signature(),
+        text: AVISO(sock, msg, usedPrefix, command, Math.ceil((lim.hasta - ahora) / 1000)),
         mentions: [buildUserMentionJid(sock, msg)]
       }, { quoted: msg })
-    }
-
-    const hasta = leerCooldowns()[clave] || 0
-    if (!isOwner && hasta > ahora) {
-      await reaccion(sock, msg, "⏳")
-      return sock.sendMessage(chatId, {
-        text:
-          `⏳ ${buildUserMentionTag(sock, msg)}\n\n` +
-          `-┊ *ᴇꜱᴘᴇʀᴀ ${tiempo(Math.ceil((hasta - ahora) / 1000))}* ᴘᴀʀᴀ ᴠᴏʟᴠᴇʀ ᴀ ᴜꜱᴀʀ *${usedPrefix}${command}*\n\n` +
-          signature(),
-        mentions: [buildUserMentionJid(sock, msg)]
-      }, { quoted: msg })
-    }
-    if (!isOwner) {
-      ponerCooldown(clave)
-      cooldownPuesto = true
     }
 
     await reaccion(sock, msg, "⏳")
@@ -497,28 +439,13 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
     }
 
     guardados.delete(clave)
-    exito = true
 
-    if (!isOwner) {
-      const e = sumarSticker(clave)
-      if (e.hasta) {
-        await sock.sendMessage(chatId, {
-          text:
-            `🚫 ${buildUserMentionTag(sock, msg)}\n\n` +
-            `-┊ *ʟɪᴍɪᴛᴇ ᴀʟᴄᴀɴᴢᴀᴅᴏ:* ʜɪᴄɪꜱᴛᴇ ${MAX_STICKERS} ꜱᴛɪᴄᴋᴇʀꜱ ᴄᴏɴ ꜱᴏɴɪᴅᴏ\n` +
-            `-┊ ᴘᴏᴅʀᴀꜱ ᴠᴏʟᴠᴇʀ ᴀ ᴜꜱᴀʀ *${usedPrefix}${command}* ᴇɴ *${tiempoLargo(BLOQUEO_MS / 1000)}*\n\n` +
-            signature(),
-          mentions: [buildUserMentionJid(sock, msg)]
-        }, { quoted: msg }).catch(() => {})
-      }
-    }
+    if (!isOwner) sumarSticker(clave)
 
     await reaccion(sock, msg, "✅")
   } catch (e) {
     console.error("[saudio]", e)
     await reaccion(sock, msg, "❌")
     await responder(`*❌ No pude hacerlo.*\n> ${e?.message || "Error desconocido"}`)
-  } finally {
-    if (cooldownPuesto && !exito) quitarCooldown(clave)
   }
 }
