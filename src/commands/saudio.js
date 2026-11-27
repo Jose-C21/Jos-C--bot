@@ -129,12 +129,12 @@ function aNotaDeVoz(buf, ext) {
   })
 }
 
-function aMp3(buf, ext) {
+function aAac(buf, ext) {
   return conTemporal(buf, ext, async (entrada) => {
-    const salida = tmp("mp3")
+    const salida = tmp("m4a")
     try {
       await run("ffmpeg", ["-y", "-v", "error", "-i", entrada, "-t", String(MAX_AUDIO_SEG), "-vn",
-        "-ac", "1", "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "64k", "-f", "mp3", salida])
+        "-ac", "1", "-ar", "44100", "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", "-f", "mp4", salida])
       return fs.readFileSync(salida)
     } finally { try { fs.unlinkSync(salida) } catch {} }
   })
@@ -368,8 +368,8 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       const buf = await descargar(node, "audio")
       if (!buf?.length) throw new Error("No pude descargar el audio.")
       if (buf.length > MAX_BYTES) throw new Error("El audio es demasiado pesado.")
-      const mp3 = await aMp3(buf, extDe(mime))
-      guardados.set(clave, { buf: mp3, t: Date.now(), mp3: true })
+      const m4a = await aAac(buf, extDe(mime))
+      guardados.set(clave, { buf: m4a, t: Date.now(), aac: true })
       await reaccion(sock, msg, "✅")
       return responder(
         `*✅ Audio guardado* (recortado a ${MAX_AUDIO_SEG} s máx.).\n> Ahora responde a la imagen, video o sticker con *${usedPrefix}${command}*. Vence en 2 minutos.`
@@ -395,7 +395,7 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
     const ext = extDe(mime)
     const esVideo = tipo === "video"
     let audio = null
-    let audioMp3 = false
+    let audioAac = false
 
     if (esVideo) {
       const inf = await info(media, ext)
@@ -409,7 +409,7 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
     if (!audio) {
       const g = guardados.get(clave)
-      if (g && Date.now() - g.t <= GUARDA_MS) { audio = g.buf; audioMp3 = !!g.mp3 }
+      if (g && Date.now() - g.t <= GUARDA_MS) { audio = g.buf; audioAac = !!g.aac }
     }
     if (!audio) {
       await reaccion(sock, msg, "❌")
@@ -418,10 +418,10 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       )
     }
 
-    const dur = (await info(audio, audioMp3 ? "mp3" : "ogg").catch(() => ({ dur: 0 }))).dur
+    const dur = (await info(audio, audioAac ? "m4a" : "ogg").catch(() => ({ dur: 0 }))).dur
     const segundos = Math.max(1, Math.min(MAX_AUDIO_SEG, Math.round(dur) || 1))
 
-    const audioMime = audioMp3 ? "audio/mpeg" : "audio/ogg; codecs=opus"
+    const audioMime = audioAac ? "audio/mp4" : "audio/ogg; codecs=opus"
     let stk
     if (tipo === "sticker") {
       stk = media
