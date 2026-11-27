@@ -43,6 +43,12 @@ function tiempoTranscurrido(ts) {
   return "unos segundos"
 }
 
+const LN = "┄┄┄┄┄┄┄┄┄┄┄┄┄"
+const caja = (titulo, pie, bloques) =>
+  `> ⟢ ${titulo} ⟣\n${LN}\n` +
+  bloques.map(([ico, tit, val]) => `╭ ${ico} ${tit}\n╰▸ ${val}`).join("\n\n") +
+  `\n${LN}\n> ${pie}${SIGNATURE}`
+
 // Normaliza JID — quita device suffix, funciona con @lid y @s.whatsapp.net
 function normalizeJid(jid = "") {
   return String(jid).replace(/:[\d]+@/, "@").trim()
@@ -97,60 +103,31 @@ async function getGroupName(sock, chatId) {
 // ── Aviso: alguien mencionó / respondió a un usuario AFK ─
 
 async function enviarAvisoAFK(sock, chatId, entry, quienMencionoJid, groupName) {
-  const afkNum = entry.num
-  const afkJid = entry.jid
-
   await sock.sendMessage(chatId, {
-    text:
-`╭─〔 🌙 𝗨𝗦𝗨𝗔𝗥𝗜𝗢 𝗔𝗨𝗦𝗘𝗡𝗧𝗘 〕─⬣
-
-👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
-@${afkNum}
-
-📝 𝗥𝗮𝘇ó𝗻:
-${entry.razon}
-
-⏳ 𝗔𝘂𝘀𝗲𝗻𝘁𝗲 𝗱𝗲𝘀𝗱𝗲:
-${tiempoTranscurrido(entry.activadoEn)}
-
-🏷️ 𝗚𝗿𝘂𝗽𝗼:
-${groupName}
-
-💬 𝗘𝘀𝘁𝗲 𝘂𝘀𝘂𝗮𝗿𝗶𝗼 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗔𝗙𝗞.
-✨ 𝗧𝗲 𝗿𝗲𝘀𝗽𝗼𝗻𝗱𝗲𝗿á 𝗰𝘂𝗮𝗻𝗱𝗼 𝗿𝗲𝗴𝗿𝗲𝘀𝗲.
-
-╰────────────────⬣${SIGNATURE}`,
-    mentions: [afkJid, quienMencionoJid]
+    text: caja("ᴜꜱᴜᴀʀɪᴏ ᴀᴜꜱᴇɴᴛᴇ", "ᴇꜱᴛᴇ ᴜꜱᴜᴀʀɪᴏ ꜱᴇ ᴇɴᴄᴜᴇɴᴛʀᴀ ᴀꜰᴋ · ᴛᴇ ʀᴇꜱᴘᴏɴᴅᴇʀᴀ ᴀʟ ʀᴇɢʀᴇꜱᴀʀ", [
+      ["👤", "𝗨𝘀𝘂𝗮𝗿𝗶𝗼", `@${entry.num}`],
+      ["📝", "𝗥𝗮𝘇ó𝗻", entry.razon],
+      ["⏳", "𝗔𝘂𝘀𝗲𝗻𝘁𝗲 𝗱𝗲𝘀𝗱𝗲", tiempoTranscurrido(entry.activadoEn)],
+      ["🏷️", "𝗚𝗿𝘂𝗽𝗼", groupName]
+    ]),
+    mentions: [entry.jid, quienMencionoJid]
   }).catch(() => {})
 }
 
 // ── Aviso: el usuario AFK volvió ─────────────────────────
 
-async function enviarAvisoVuelta(sock, chatId, entry, userJid) {
-  const userNum  = entry.num
-  const conteo   = entry.menciones || 0
+async function enviarAvisoVuelta(sock, chatId, entry, userJid, conteo = entry.menciones || 0) {
   const conteoTx = conteo === 0
-    ? "📢 𝗡𝗮𝗱𝗶𝗲 𝘁𝗲 𝗺𝗲𝗻𝗰𝗶𝗼𝗻ó\n𝗱𝘂𝗿𝗮𝗻𝘁𝗲 𝘁𝘂 𝗮𝘂𝘀𝗲𝗻𝗰𝗶𝗮."
-    : `📢 𝗗𝘂𝗿𝗮𝗻𝘁𝗲 𝘁𝘂 𝗮𝘂𝘀𝗲𝗻𝗰𝗶𝗮\n𝘁𝗲 𝗺𝗲𝗻𝗰𝗶𝗼𝗻𝗮𝗿𝗼𝗻 *${conteo}* ${conteo === 1 ? "vez" : "veces"}.`
+    ? "Nadie te mencionó durante tu ausencia"
+    : `Te mencionaron ${conteo} ${conteo === 1 ? "vez" : "veces"}`
 
   await sock.sendMessage(chatId, {
-    text:
-`╭─〔 🔔 𝗗𝗘 𝗩𝗨𝗘𝗟𝗧𝗔 𝗘𝗡 𝗟Í𝗡𝗘𝗔 〕─⬣
-
-👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
-@${userNum}
-
-⏳ 𝗧𝗶𝗲𝗺𝗽𝗼 𝗔𝗙𝗞:
-${tiempoTranscurrido(entry.activadoEn)}
-
-📝 𝗠𝗼𝘁𝗶𝘃𝗼:
-${entry.razon}
-
-${conteoTx}
-
-✅ 𝗬𝗮 𝘀𝗲 𝗲𝗻𝗰𝘂𝗲𝗻𝘁𝗿𝗮 𝗱𝗶𝘀𝗽𝗼𝗻𝗶𝗯𝗹𝗲.
-
-╰────────────────⬣${SIGNATURE}`,
+    text: caja("ᴅᴇ ᴠᴜᴇʟᴛᴀ ᴇɴ ʟɪɴᴇᴀ", "✅ ʏᴀ ꜱᴇ ᴇɴᴄᴜᴇɴᴛʀᴀ ᴅɪꜱᴘᴏɴɪʙʟᴇ", [
+      ["👤", "𝗨𝘀𝘂𝗮𝗿𝗶𝗼", `@${entry.num}`],
+      ["⏳", "𝗧𝗶𝗲𝗺𝗽𝗼 𝗔𝗙𝗞", tiempoTranscurrido(entry.activadoEn)],
+      ["📝", "𝗠𝗼𝘁𝗶𝘃𝗼", entry.razon],
+      ["📢", "𝗠𝗲𝗻𝗰𝗶𝗼𝗻𝗲𝘀", conteoTx]
+    ]),
     mentions: [userJid]
   }).catch(() => {})
 }
@@ -190,6 +167,14 @@ export async function afkWatcher(sock, msg) {
 
       volvioDe = { ...entry }
       delete db[key]
+      if (entry.global && entry.globalId) {
+        for (const k2 of Object.keys(db)) {
+          if (db[k2].globalId === entry.globalId) {
+            volvioDe.menciones = (volvioDe.menciones || 0) + (db[k2].menciones || 0)
+            delete db[k2]
+          }
+        }
+      }
       writeDB(db)
       break
     }
