@@ -116,6 +116,21 @@ function info(buf, ext) {
   }))
 }
 
+function detalleAudio(buf, ext, etiqueta) {
+  return conTemporal(buf, ext, (f) => new Promise((resolve) => {
+    const p = spawn("ffmpeg", ["-hide_banner", "-i", f], { stdio: ["ignore", "ignore", "pipe"] })
+    let err = ""
+    p.stderr.on("data", d => (err += d))
+    p.on("error", () => resolve())
+    p.on("close", () => {
+      const d = err.match(/Duration:\s*([\d:.]+).*?bitrate:\s*([^\n]+)/)
+      const a = err.match(/Stream #[^\n]*Audio:[^\n]+/)
+      console.log(`[saudio][audio ${etiqueta}] ${(buf.length / 1024).toFixed(1)} KB | cabecera ${buf.slice(0, 4).toString("latin1")} | dur ${d?.[1] || "?"} | bitrate ${(d?.[2] || "?").trim()} | ${a ? a[0].replace(/^Stream #\S+\s*/, "") : "SIN AUDIO"}`)
+      resolve()
+    })
+  }))
+}
+
 function aNotaDeVoz(buf, ext) {
   return conTemporal(buf, ext, async (entrada) => {
     const salida = tmp("ogg")
@@ -301,6 +316,8 @@ async function enviarNativo(sock, chatId, stickerBuf, oggBuf, segundos) {
   const audioMsg = au?.audioMessage
   if (!stickerMsg || !audioMsg) throw new Error("No se pudo subir el sticker o el audio.")
 
+  console.log("[saudio][audioMsg subido]", { mimetype: audioMsg.mimetype, seconds: audioMsg.seconds, ptt: audioMsg.ptt, fileLength: String(audioMsg.fileLength), waveform: !!audioMsg.waveform, mediaKey: !!audioMsg.mediaKey, directPath: !!audioMsg.directPath })
+  console.log("[saudio][stickerMsg subido]", { mimetype: stickerMsg.mimetype, isAnimated: stickerMsg.isAnimated, fileLength: String(stickerMsg.fileLength), width: stickerMsg.width, height: stickerMsg.height })
   audioMsg.mimetype = "audio/ogg; codecs=opus"
   audioMsg.seconds = segundos
   audioMsg.ptt = PTT
@@ -357,7 +374,9 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       const buf = await descargar(node, "audio")
       if (!buf?.length) throw new Error("No pude descargar el audio.")
       if (buf.length > MAX_BYTES) throw new Error("El audio es demasiado pesado.")
+      await detalleAudio(buf, extDe(mime), `GUARDADO original (mime ${mime})`)
       const ogg = await aNotaDeVoz(buf, extDe(mime))
+      await detalleAudio(ogg, "ogg", "GUARDADO convertido")
       guardados.set(clave, { buf: ogg, t: Date.now() })
       await reaccion(sock, msg, "✅")
       return responder(
@@ -392,7 +411,11 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       if (inf.dur > limiteReal) {
         throw new Error(`El video dura ${inf.dur.toFixed(1)} s. Usa uno de ${MAX_VIDEO_SEG} s o menos.`)
       }
-      if (inf.tieneAudio) audio = await aNotaDeVoz(media, ext)
+      if (inf.tieneAudio) {
+        await detalleAudio(media, ext, `VIDEO original (mime ${mime})`)
+        audio = await aNotaDeVoz(media, ext)
+        await detalleAudio(audio, "ogg", "VIDEO convertido")
+      }
     }
 
     if (!audio) {
