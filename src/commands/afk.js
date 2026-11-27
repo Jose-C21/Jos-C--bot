@@ -20,6 +20,12 @@ function writeDB(db) {
   try { ensureDB(); fs.writeFileSync(AFK_PATH, JSON.stringify(db, null, 2)) } catch {}
 }
 
+const LN = "┄┄┄┄┄┄┄┄┄┄┄┄┄"
+const caja = (titulo, pie, bloques) =>
+  `> ⟢ ${titulo} ⟣\n${LN}\n` +
+  bloques.map(([ico, tit, val]) => `╭ ${ico} ${tit}\n╰▸ ${val}`).join("\n\n") +
+  `\n${LN}\n> ${pie}${SIGNATURE}`
+
 function tiempoTranscurrido(ts) {
   const diff = Date.now() - ts
   const s = Math.floor(diff / 1000)
@@ -37,16 +43,83 @@ function makeKey(groupId, userKey) {
   return `${groupId}::${userKey}`
 }
 
-export default async function afk(sock, msg, { args = [], usedPrefix = "." }) {
+function soloDigits(j = "") { return String(j).split("@")[0].split(":")[0].replace(/[^0-9]/g, "") }
+
+// Grupos donde están el bot y el owner → entradas AFK globales
+async function grupoDelOwner(sock, ids) {
+  const out = []
+  let todos = {}
+  try { todos = await sock.groupFetchAllParticipating() } catch {}
+  for (const g of Object.values(todos)) {
+    const p = (g.participants || []).find(p =>
+      [p.id, p.lid, p.phoneNumber].some(x => x && ids.has(soloDigits(x)))
+    )
+    if (p) out.push({ groupId: g.id, jid: p.id })
+  }
+  return out
+}
+
+export default async function afk(sock, msg, { args = [], usedPrefix = ".", isOwner = false }) {
   try {
     const chatId = msg?.key?.remoteJid
     if (!chatId) return
 
-    // Solo funciona en grupos
     const isGroup = String(chatId).endsWith("@g.us")
+    const subCmd = (args[0] || "").toLowerCase()
+
+    // ── PRIVADO: solo owners → AFK en todos los grupos ──────
     if (!isGroup) {
+      if (!isOwner) {
+        return await sock.sendMessage(chatId, {
+          text: caja("ᴀꜰᴋ", "ᴇꜱᴛᴇ ᴄᴏᴍᴀɴᴅᴏ ꜱᴏʟᴏ ꜰᴜɴᴄɪᴏɴᴀ ᴇɴ ɢʀᴜᴘᴏꜱ", [["❌", "𝗦𝗼𝗹𝗼 𝗴𝗿𝘂𝗽𝗼𝘀", "Usa .afk dentro de un grupo"]])
+        }, { quoted: msg })
+      }
+
+      const razonPv = args.join(" ").trim()
+      if (!razonPv || ["lista", "on", "estado", "status"].includes(subCmd) && args.length === 1) {
+        return await sock.sendMessage(chatId, {
+          text: caja("ᴀꜰᴋ ɢʟᴏʙᴀʟ", "ᴇʟ ᴀꜰᴋ ꜱᴇ ǫᴜɪᴛᴀ ᴀʟ ᴇꜱᴄʀɪʙɪʀ ᴇɴ ᴜɴ ɢʀᴜᴘᴏ", [
+            ["📌", "𝗨𝘀𝗼", `${usedPrefix}afk <razón>`],
+            ["💬", "𝗘𝗷𝗲𝗺𝗽𝗹𝗼", `${usedPrefix}afk durmiendo`],
+            ["🌐", "𝗔𝗹𝗰𝗮𝗻𝗰𝗲", "Todos los grupos donde estamos tú y yo"]
+          ])
+        }, { quoted: msg })
+      }
+
+      const senderJid = getSenderJid(msg)
+      let dec = senderJid
+      try { if (sock?.decodeJid) dec = sock.decodeJid(senderJid) } catch {}
+      const ids = new Set([
+        jidToNumber(senderJid), jidToNumber(dec),
+        soloDigits(msg?.key?.remoteJidAlt), soloDigits(msg?.key?.participantAlt)
+      ].filter(Boolean))
+      const globalId = jidToNumber(dec) || jidToNumber(senderJid)
+
+      const grupos = await grupoDelOwner(sock, ids)
+      if (!grupos.length) {
+        return await sock.sendMessage(chatId, {
+          text: caja("ᴀꜰᴋ ɢʟᴏʙᴀʟ", "ɴᴏ ᴇɴᴄᴏɴᴛʀᴇ ɢʀᴜᴘᴏꜱ ᴄᴏɴ ᴀᴍʙᴏꜱ", [["⚠️", "𝗦𝗶𝗻 𝗴𝗿𝘂𝗽𝗼𝘀", "No aparezco en ningún grupo contigo"]])
+        }, { quoted: msg })
+      }
+
+      const db = readDB()
+      for (const k of Object.keys(db)) if (db[k].globalId === globalId) delete db[k]
+      const ahora = Date.now()
+      for (const g of grupos) {
+        const dbKey = makeKey(g.groupId, g.jid)
+        db[dbKey] = {
+          dbKey, groupId: g.groupId, jid: g.jid, num: soloDigits(g.jid),
+          razon: razonPv, activadoEn: ahora, global: true, globalId
+        }
+      }
+      writeDB(db)
+
+      try { await sock.sendMessage(chatId, { react: { text: "🌙", key: msg.key } }) } catch {}
       return await sock.sendMessage(chatId, {
-        text: `❌ El comando AFK solo funciona en grupos.${SIGNATURE}`
+        text: caja("ᴀꜰᴋ ɢʟᴏʙᴀʟ ᴀᴄᴛɪᴠᴀᴅᴏ", "ᴀᴠɪꜱᴏ ᴀᴄᴛɪᴠᴏ ᴇɴ ᴛᴏᴅᴏꜱ ʟᴏꜱ ɢʀᴜᴘᴏꜱ", [
+          ["📝", "𝗥𝗮𝘇ó𝗻", razonPv],
+          ["🏷️", "𝗚𝗿𝘂𝗽𝗼𝘀", `${grupos.length}`]
+        ])
       }, { quoted: msg })
     }
 
@@ -56,41 +129,24 @@ export default async function afk(sock, msg, { args = [], usedPrefix = "." }) {
     const userNum = jidToNumber(decodedJid) || jidToNumber(senderJid)
     const userKey = decodedJid || senderJid
 
-    // Clave única: grupo + usuario
     const dbKey  = makeKey(chatId, userKey)
-    const subCmd = (args[0] || "").toLowerCase()
     const db     = readDB()
 
     // ── .afk lista → ver todos los AFK de ESTE grupo ────────
     if (subCmd === "lista") {
-      // Filtrar solo entradas de este grupo
       const enEsteGrupo = Object.values(db).filter(e => e.groupId === chatId)
 
       if (!enEsteGrupo.length) {
         return await sock.sendMessage(chatId, {
-          text:
-`╭─〔 📋 𝗟𝗜𝗦𝗧𝗔 𝗔𝗙𝗞 〕─⬣
-
-✅ 𝗡𝗶𝗻𝗴ú𝗻 𝗺𝗶𝗲𝗺𝗯𝗿𝗼
-𝗱𝗲 𝗲𝘀𝘁𝗲 𝗴𝗿𝘂𝗽𝗼
-𝗲𝘀𝘁á 𝗲𝗻 𝗔𝗙𝗞.
-
-╰────────────────⬣${SIGNATURE}`
+          text: caja("ʟɪꜱᴛᴀ ᴀꜰᴋ", "ɴᴀᴅɪᴇ ᴇꜱᴛᴀ ᴀꜰᴋ ᴇɴ ᴇꜱᴛᴇ ɢʀᴜᴘᴏ", [["✅", "𝗘𝘀𝘁𝗮𝗱𝗼", "Ningún miembro en AFK"]])
         }, { quoted: msg })
       }
 
       const mentions = enEsteGrupo.map(e => e.jid)
-      const lineas = enEsteGrupo.map((e, i) =>
-        `${i + 1}. @${e.num}\n   📝 ${e.razon}\n   ⏳ ${tiempoTranscurrido(e.activadoEn)}`
-      ).join("\n\n")
-
       return await sock.sendMessage(chatId, {
-        text:
-`╭─〔 🌙 𝗟𝗜𝗦𝗧𝗔 𝗔𝗙𝗞 〕─⬣
-
-${lineas}
-
-╰────────────────⬣${SIGNATURE}`,
+        text: caja("ʟɪꜱᴛᴀ ᴀꜰᴋ", `${enEsteGrupo.length} ᴜꜱᴜᴀʀɪᴏ(ꜱ) ᴇɴ ᴀꜰᴋ`,
+          enEsteGrupo.map((e, i) => ["🌙", `𝗨𝘀𝘂𝗮𝗿𝗶𝗼 ${i + 1}`,
+            `@${e.num}\n   📝 ${e.razon}\n   ⏳ ${tiempoTranscurrido(e.activadoEn)}`])),
         mentions
       }, { quoted: msg })
     }
@@ -98,46 +154,21 @@ ${lineas}
     // ── Sin argumentos → ayuda ───────────────────────────────
     if (!subCmd) {
       return await sock.sendMessage(chatId, {
-        text:
-`╭─〔 🌙 𝗖𝗢𝗠𝗔𝗡𝗗𝗢 𝗔𝗙𝗞 〕─⬣
-
-📌 𝗨𝘀𝗼:
-
-✅ 𝗔𝗰𝘁𝗶𝘃𝗮𝗿:
-${usedPrefix}afk <razón>
-
-📋 𝗩𝗲𝗿 𝗔𝗙𝗞 𝗱𝗲𝗹 𝗴𝗿𝘂𝗽𝗼:
-${usedPrefix}afk lista
-
-𝗘𝗷𝗲𝗺𝗽𝗹𝗼𝘀:
-• ${usedPrefix}afk estudiando
-• ${usedPrefix}afk en una reunión
-• ${usedPrefix}afk durmiendo
-
-💡 𝗘𝗹 𝗔𝗙𝗞 𝘀𝗲 𝗾𝘂𝗶𝘁𝗮 𝘀𝗼𝗹𝗼
-𝗰𝘂𝗮𝗻𝗱𝗼 𝗲𝘀𝗰𝗿𝗶𝗯𝗮𝘀 𝗲𝗻 𝗲𝗹 𝗴𝗿𝘂𝗽𝗼.
-
-╰────────────────⬣${SIGNATURE}`
+        text: caja("ᴄᴏᴍᴀɴᴅᴏ ᴀꜰᴋ", "ᴇʟ ᴀꜰᴋ ꜱᴇ ǫᴜɪᴛᴀ ᴀʟ ᴇꜱᴄʀɪʙɪʀ ᴇɴ ᴇʟ ɢʀᴜᴘᴏ", [
+          ["✅", "𝗔𝗰𝘁𝗶𝘃𝗮𝗿", `${usedPrefix}afk <razón>`],
+          ["📋", "𝗩𝗲𝗿 𝗔𝗙𝗞 𝗱𝗲𝗹 𝗴𝗿𝘂𝗽𝗼", `${usedPrefix}afk lista`],
+          ["💬", "𝗘𝗷𝗲𝗺𝗽𝗹𝗼𝘀", `${usedPrefix}afk estudiando\n   ${usedPrefix}afk en una reunión\n   ${usedPrefix}afk durmiendo`]
+        ])
       }, { quoted: msg })
     }
 
     // ── Subcomandos reservados sin razón ─────────────────────
     if (subCmd === "on" || subCmd === "estado" || subCmd === "status") {
       return await sock.sendMessage(chatId, {
-        text:
-`⚠️ 𝗥𝗮𝘇ó𝗻 𝗿𝗲𝗾𝘂𝗲𝗿𝗶𝗱𝗮
-
-𝗗𝗲𝗯𝗲𝘀 𝗶𝗻𝗱𝗶𝗰𝗮𝗿 𝘂𝗻𝗮 𝗿𝗮𝘇ó𝗻
-𝗽𝗮𝗿𝗮 𝗮𝗰𝘁𝗶𝘃𝗮𝗿 𝗲𝗹 𝗺𝗼𝗱𝗼 𝗔𝗙𝗞.
-
-📌 𝗘𝗷𝗲𝗺𝗽𝗹𝗼𝘀:
-
-• ${usedPrefix}afk estudiando
-• ${usedPrefix}afk trabajando
-• ${usedPrefix}afk durmiendo
-• ${usedPrefix}afk en una reunión
-
-${SIGNATURE}`
+        text: caja("ʀᴀᴢᴏ́ɴ ʀᴇǫᴜᴇʀɪᴅᴀ", "ɪɴᴅɪᴄᴀ ᴜɴᴀ ʀᴀᴢᴏ́ɴ ᴘᴀʀᴀ ᴀᴄᴛɪᴠᴀʀ ᴇʟ ᴀꜰᴋ", [
+          ["⚠️", "𝗥𝗮𝘇ó𝗻 𝗿𝗲𝗾𝘂𝗲𝗿𝗶𝗱𝗮", "Debes indicar una razón"],
+          ["💬", "𝗘𝗷𝗲𝗺𝗽𝗹𝗼𝘀", `${usedPrefix}afk estudiando\n   ${usedPrefix}afk durmiendo`]
+        ])
       }, { quoted: msg })
     }
 
@@ -157,20 +188,10 @@ ${SIGNATURE}`
     try { await sock.sendMessage(chatId, { react: { text: "🌙", key: msg.key } }) } catch {}
 
     return await sock.sendMessage(chatId, {
-      text:
-`╭─〔 🌙 𝗔𝗙𝗞 𝗔𝗖𝗧𝗜𝗩𝗔𝗗𝗢 〕─⬣
-
-👤 𝗨𝘀𝘂𝗮𝗿𝗶𝗼:
-@${userNum}
-
-📝 𝗥𝗮𝘇ó𝗻:
-${razon}
-
-🔕 𝗟𝗮𝘀 𝗺𝗲𝗻𝗰𝗶𝗼𝗻𝗲𝘀 𝘆 𝗿𝗲𝘀𝗽𝘂𝗲𝘀𝘁𝗮𝘀
-𝗺𝗼𝘀𝘁𝗿𝗮𝗿á𝗻 𝗲𝘀𝘁𝗲 𝗮𝘃𝗶𝘀𝗼
-𝗮𝘂𝘁𝗼𝗺á𝘁𝗶𝗰𝗮𝗺𝗲𝗻𝘁𝗲.
-
-╰────────────────⬣${SIGNATURE}`,
+      text: caja("ᴀꜰᴋ ᴀᴄᴛɪᴠᴀᴅᴏ", "ʟᴀꜱ ᴍᴇɴᴄɪᴏɴᴇꜱ ʏ ʀᴇꜱᴘᴜᴇꜱᴛᴀꜱ ᴍᴏꜱᴛʀᴀʀᴀɴ ᴇꜱᴛᴇ ᴀᴠɪꜱᴏ", [
+        ["👤", "𝗨𝘀𝘂𝗮𝗿𝗶𝗼", `@${userNum}`],
+        ["📝", "𝗥𝗮𝘇ó𝗻", razon]
+      ]),
       mentions: [userKey]
     }, { quoted: msg })
 
@@ -178,17 +199,7 @@ ${razon}
     console.error("[afk cmd] ERROR:", e)
     try {
       await sock.sendMessage(msg?.key?.remoteJid, {
-        text:
-`╭─〔 ❌ 𝗘𝗥𝗥𝗢𝗥 𝗔𝗙𝗞 〕─⬣
-
-⚠️ 𝗢𝗰𝘂𝗿𝗿𝗶ó 𝘂𝗻 𝗲𝗿𝗿𝗼𝗿
-𝗮𝗹 𝗽𝗿𝗼𝗰𝗲𝘀𝗮𝗿 𝗲𝗹
-𝗰𝗼𝗺𝗮𝗻𝗱𝗼 𝗔𝗙𝗞.
-
-🔄 𝗜𝗻𝘁é𝗻𝘁𝗮𝗹𝗼
-𝗻𝘂𝗲𝘃𝗮𝗺𝗲𝗻𝘁𝗲.
-
-╰────────────────⬣${SIGNATURE}`
+        text: caja("ᴇʀʀᴏʀ ᴀꜰᴋ", "ɪɴᴛᴇ́ɴᴛᴀʟᴏ ɴᴜᴇᴠᴀᴍᴇɴᴛᴇ", [["⚠️", "𝗘𝗿𝗿𝗼𝗿", "Ocurrió un error al procesar el comando AFK"]])
       }, { quoted: msg })
     } catch {}
   }
