@@ -129,6 +129,17 @@ function aNotaDeVoz(buf, ext) {
   })
 }
 
+function aMp3(buf, ext) {
+  return conTemporal(buf, ext, async (entrada) => {
+    const salida = tmp("mp3")
+    try {
+      await run("ffmpeg", ["-y", "-v", "error", "-i", entrada, "-t", String(MAX_AUDIO_SEG), "-vn",
+        "-ac", "1", "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "64k", "-f", "mp3", salida])
+      return fs.readFileSync(salida)
+    } finally { try { fs.unlinkSync(salida) } catch {} }
+  })
+}
+
 function buildExif(metadata = {}) {
   const json = {
     "sticker-pack-id": "https://github.com/DikaArdnt/Hisoka-Morou",
@@ -288,20 +299,20 @@ function parchearEncode() {
   proto.Message.__audioStickerParche = true
 }
 
-async function enviarNativo(sock, chatId, stickerBuf, oggBuf, segundos) {
+async function enviarNativo(sock, chatId, stickerBuf, oggBuf, segundos, mime = "audio/ogg; codecs=opus") {
   parchearEncode()
 
   const subida = { upload: sock.waUploadToServer }
   const st = await prepareWAMessageMedia({ sticker: stickerBuf }, subida)
   const au = await prepareWAMessageMedia(
-    { audio: oggBuf, mimetype: "audio/ogg; codecs=opus", ptt: PTT, seconds: segundos },
+    { audio: oggBuf, mimetype: mime, ptt: PTT, seconds: segundos },
     subida
   )
   const stickerMsg = st?.stickerMessage
   const audioMsg = au?.audioMessage
   if (!stickerMsg || !audioMsg) throw new Error("No se pudo subir el sticker o el audio.")
 
-  audioMsg.mimetype = "audio/ogg; codecs=opus"
+  audioMsg.mimetype = mime
   audioMsg.seconds = segundos
   audioMsg.ptt = PTT
 
@@ -315,11 +326,11 @@ async function enviarNativo(sock, chatId, stickerBuf, oggBuf, segundos) {
   await sock.relayMessage(chatId, mensaje, { messageId: generateMessageIDV2(sock.user?.id) })
 }
 
-async function enviarSeparado(sock, chatId, msg, stickerBuf, oggBuf) {
+async function enviarSeparado(sock, chatId, msg, stickerBuf, oggBuf, mime = "audio/ogg; codecs=opus") {
   const enviado = await sock.sendMessage(chatId, { sticker: stickerBuf }, { quoted: msg })
   await sock.sendMessage(
     chatId,
-    { audio: oggBuf, mimetype: "audio/ogg; codecs=opus", ptt: true },
+    { audio: oggBuf, mimetype: mime, ptt: mime.includes("ogg") },
     { quoted: enviado || msg }
   )
 }
@@ -357,8 +368,8 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       const buf = await descargar(node, "audio")
       if (!buf?.length) throw new Error("No pude descargar el audio.")
       if (buf.length > MAX_BYTES) throw new Error("El audio es demasiado pesado.")
-      const ogg = await aNotaDeVoz(buf, extDe(mime))
-      guardados.set(clave, { buf: ogg, t: Date.now() })
+      const mp3 = await aMp3(buf, extDe(mime))
+      guardados.set(clave, { buf: mp3, t: Date.now(), mp3: true })
       await reaccion(sock, msg, "✅")
       return responder(
         `*✅ Audio guardado* (recortado a ${MAX_AUDIO_SEG} s máx.).\n> Ahora responde a la imagen, video o sticker con *${usedPrefix}${command}*. Vence en 2 minutos.`
@@ -384,6 +395,7 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
     const ext = extDe(mime)
     const esVideo = tipo === "video"
     let audio = null
+    let audioMp3 = false
 
     if (esVideo) {
       const inf = await info(media, ext)
@@ -397,7 +409,7 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
 
     if (!audio) {
       const g = guardados.get(clave)
-      if (g && Date.now() - g.t <= GUARDA_MS) audio = g.buf
+      if (g && Date.now() - g.t <= GUARDA_MS) { audio = g.buf; audioMp3 = !!g.mp3 }
     }
     if (!audio) {
       await reaccion(sock, msg, "❌")
@@ -406,9 +418,10 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
       )
     }
 
-    const dur = (await info(audio, "ogg").catch(() => ({ dur: 0 }))).dur
+    const dur = (await info(audio, audioMp3 ? "mp3" : "ogg").catch(() => ({ dur: 0 }))).dur
     const segundos = Math.max(1, Math.min(MAX_AUDIO_SEG, Math.round(dur) || 1))
 
+    const audioMime = audioMp3 ? "audio/mpeg" : "audio/ogg; codecs=opus"
     let stk
     if (tipo === "sticker") {
       stk = media
@@ -427,14 +440,14 @@ export default async function saudio(sock, msg, { command = "saudio", usedPrefix
     console.log(`[saudio] audio ${dur.toFixed(1)}s (usado ${segundos}s) | sticker final ${(stk.length / 1024).toFixed(0)} KB | modo ${modoAlterno ? "alterno" : "nativo"}`)
 
     if (modoAlterno) {
-      await enviarSeparado(sock, chatId, msg, stk, audio)
+      await enviarSeparado(sock, chatId, msg, stk, audio, audioMime)
     } else {
       try {
-        await enviarNativo(sock, chatId, stk, audio, segundos)
+        await enviarNativo(sock, chatId, stk, audio, segundos, audioMime)
         console.log("[saudio] enviado nativo OK")
       } catch (e) {
         console.error("[saudio] el envío nativo falló, uso el modo alterno:", e)
-        await enviarSeparado(sock, chatId, msg, stk, audio)
+        await enviarSeparado(sock, chatId, msg, stk, audio, audioMime)
       }
     }
 
