@@ -24,7 +24,7 @@ try { fs.mkdirSync(TMP_DIR, { recursive: true }) } catch {}
 
 const guardados = new Map()
 
-const MAX_STICKERS = 3
+const MAX_STICKERS = 5
 const BLOQUEO_MS = 3 * 60 * 60 * 1000
 const LIMITE_PATH = path.join(process.cwd(), "data", "limite_saudio.json")
 
