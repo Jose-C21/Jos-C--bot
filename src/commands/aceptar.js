@@ -4,14 +4,15 @@ import { getSenderJid, jidToNumber } from "../utils/jid.js"
 const SIGNATURE =
   "\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍"
 
-const MAX_POR_COMANDO = 50    
+const MIN_POR_COMANDO = 5     
+const MAX_POR_COMANDO = 200   
 const LOTE = 5                
 const PAUSA_MIN_MS = 3000     
 const PAUSA_MAX_MS = 6000
 const ESPERA_ENTRE_USOS_MS = 2 * 60 * 1000  
 
 const enCurso = new Set()     
-const ultimoUso = new Map()   
+const ultimoUso = new Map()    
 
 const LN = "┄┄┄┄┄┄┄┄┄┄┄┄┄"
 const caja = (titulo, pie, bloques) =>
@@ -73,8 +74,12 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
       return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", "ᴇʟ ʙᴏᴛ ᴀᴄᴇᴘᴛᴀ ʟᴀꜱ ᴍᴀ́ꜱ ᴀɴᴛɪɢᴜᴀꜱ ᴘʀɪᴍᴇʀᴏ", [
         ["📥", "𝗣𝗲𝗻𝗱𝗶𝗲𝗻𝘁𝗲𝘀", `${pendientes.length}`],
         ["📌", "𝗨𝘀𝗼", `${usedPrefix}aceptar 20\n   ${usedPrefix}aceptar todas`],
-        ["⚙️", "𝗟𝗶́𝗺𝗶𝘁𝗲", `${MAX_POR_COMANDO} por uso, lento y con descansos`]
+        ["⚙️", "𝗟𝗶́𝗺𝗶𝘁𝗲", `de ${MIN_POR_COMANDO} a ${MAX_POR_COMANDO} por uso, lento y con descansos`]
       ]))
+    }
+
+    if (!todas && n < MIN_POR_COMANDO) {
+      return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", "ᴇʟɪɢᴇ ᴅᴇ 5 ᴀ 200", [["⚠️", "𝗠𝗶́𝗻𝗶𝗺𝗼", `${MIN_POR_COMANDO} (usa ${usedPrefix}aceptar ${MIN_POR_COMANDO} a ${usedPrefix}aceptar ${MAX_POR_COMANDO})`]]))
     }
 
     if (!pendientes.length) {
