@@ -16,6 +16,12 @@ const ADMINS_CONFIANZA = [
   "208272208490541",
 ]
 
+// 💞 Kathy: su foto de perfil solo la pueden ver los owners (número real + LID)
+const KATHY_IDS = [
+  "18057074359",
+  "19580839829625",
+]
+
 // ✅ Firma que ya usas
 const FIRMA =
 `⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱
@@ -94,6 +100,20 @@ export default async function perfil(sock, msg, { args = [], usedPrefix = "." })
         `• O escribe un número: *${usedPrefix}perfil 50499998888*\n\n` +
         `⚠️ Si la foto es privada, te saldrá una imagen por defecto.`
       await sock.sendMessage(chatId, { text: help }, { quoted: msg })
+      return
+    }
+
+    // 🔒 Foto de Kathy: solo owners
+    if (KATHY_IDS.includes(limpiarId(targetJid)) && !isOwner && !fromMe) {
+      await sock.sendMessage(chatId, { react: { text: "🚫", key: msg.key } }).catch(() => {})
+      await sock.sendMessage(
+        chatId,
+        {
+          text: `🚫 *@${jidToNumber(decoded)}*, no tienes permiso para ver la foto de perfil de *@${jidToNumber(targetJid)}* 💢`,
+          mentions: [decoded, targetJid],
+        },
+        { quoted: msg }
+      )
       return
     }
 
