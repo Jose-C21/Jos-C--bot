@@ -15,7 +15,7 @@ import saudio from "../commands/saudio.js"
 import { checkRateLimit, buildUserMentionJid, buildUserMentionTag } from "./ratelimit.js"
 import reportar from "../commands/reportar.js"
 import escanear from "../commands/escanear.js"
-
+import aceptar from "../commands/aceptar.js"
 import sticker from "../commands/sticker.js"
 import play from "../commands/play.js"
 import resetsession from "../commands/resetsession.js"
@@ -108,6 +108,7 @@ estadoconteo,
   ts: textsticker,
   playvideo,
   escanear,
+  aceptar,
   golpear,
   afk,
   antiporno,
