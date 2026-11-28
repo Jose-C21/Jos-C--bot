@@ -1,14 +1,17 @@
-// src/commands/aceptar.js
-// Uso: .aceptar 20  → acepta las 20 solicitudes más antiguas | .aceptar todas
 import config from "../config.js"
 import { getSenderJid, jidToNumber } from "../utils/jid.js"
 
 const SIGNATURE =
   "\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍"
 
-const MAX_POR_COMANDO = 200   // tope de seguridad por uso
-const LOTE = 20               // cuántas se aceptan por petición
-const PAUSA_MS = 1500         // pausa entre lotes (evita límites de WhatsApp)
+const MAX_POR_COMANDO = 50    // tope de seguridad por uso
+const LOTE = 5                // cuántas se aceptan por petición
+const PAUSA_MIN_MS = 3000     // pausa al azar entre lotes (3 a 6 s)
+const PAUSA_MAX_MS = 6000
+const ESPERA_ENTRE_USOS_MS = 2 * 60 * 1000  // descanso por grupo entre un uso y otro
+
+const enCurso = new Set()     // grupos que están aceptando ahora mismo
+const ultimoUso = new Map()   // grupo -> hora en que terminó el último uso
 
 const LN = "┄┄┄┄┄┄┄┄┄┄┄┄┄"
 const caja = (titulo, pie, bloques) =>
@@ -18,6 +21,7 @@ const caja = (titulo, pie, bloques) =>
 
 const digitos = (j = "") => String(j).split("@")[0].split(":")[0].replace(/[^0-9]/g, "")
 const pausa = (ms) => new Promise(r => setTimeout(r, ms))
+const pausaAzar = () => pausa(PAUSA_MIN_MS + Math.floor(Math.random() * (PAUSA_MAX_MS - PAUSA_MIN_MS)))
 
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
   const owners = (config.owners || []).map(String)
@@ -69,7 +73,7 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
       return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", "ᴇʟ ʙᴏᴛ ᴀᴄᴇᴘᴛᴀ ʟᴀꜱ ᴍᴀ́ꜱ ᴀɴᴛɪɢᴜᴀꜱ ᴘʀɪᴍᴇʀᴏ", [
         ["📥", "𝗣𝗲𝗻𝗱𝗶𝗲𝗻𝘁𝗲𝘀", `${pendientes.length}`],
         ["📌", "𝗨𝘀𝗼", `${usedPrefix}aceptar 20\n   ${usedPrefix}aceptar todas`],
-        ["⚙️", "𝗟𝗶́𝗺𝗶𝘁𝗲", `${MAX_POR_COMANDO} por uso`]
+        ["⚙️", "𝗟𝗶́𝗺𝗶𝘁𝗲", `${MAX_POR_COMANDO} por uso, lento y con descansos`]
       ]))
     }
 
@@ -78,11 +82,27 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
       return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", "ɴᴏ ʜᴀʏ ɴᴀᴅᴀ ᴘᴏʀ ᴀᴄᴇᴘᴛᴀʀ", [["📭", "𝗣𝗲𝗻𝗱𝗶𝗲𝗻𝘁𝗲𝘀", "0 solicitudes"]]))
     }
 
+    if (enCurso.has(chatId)) {
+      return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ", "ᴇꜱᴘᴇʀᴀ ᴀǫᴜᴇ ᴛᴇʀᴍɪɴᴇ", [["⏳", "𝗘𝗻 𝗽𝗿𝗼𝗰𝗲𝘀𝗼", "Ya estoy aceptando solicitudes en este grupo"]]))
+    }
+    const falta = ESPERA_ENTRE_USOS_MS - (Date.now() - (ultimoUso.get(chatId) || 0))
+    if (!isOwner && !fromMe && falta > 0) {
+      return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ", "ᴘᴀʀᴀ ᴇᴠɪᴛᴀʀ ʟɪᴍɪᴛᴇꜱ ᴅᴇ ᴡʜᴀᴛꜱᴀᴘᴘ", [["⏳", "𝗗𝗲𝘀𝗰𝗮𝗻𝘀𝗼", `Espera ${Math.ceil(falta / 1000)} s para volver a usarlo`]]))
+    }
+
     const objetivo = Math.min(n, pendientes.length, MAX_POR_COMANDO)
     const lista = pendientes.slice(0, objetivo).map(p => p.jid).filter(Boolean)
 
+    const segEstimados = Math.ceil(lista.length / LOTE) * ((PAUSA_MIN_MS + PAUSA_MAX_MS) / 2000)
+    await responder(caja("ᴀᴄᴇᴘᴛᴀɴᴅᴏ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", "ʟᴇɴᴛᴏ ᴘᴀʀᴀ ᴇᴠɪᴛᴀʀ ʟɪᴍɪᴛᴇꜱ ᴅᴇ ᴡʜᴀᴛꜱᴀᴘᴘ", [
+      ["📥", "𝗘𝗻 𝗰𝗼𝗹𝗮", `${lista.length}`],
+      ["⏱", "𝗧𝗶𝗲𝗺𝗽𝗼 𝗮𝗽𝗿𝗼𝘅.", `${Math.max(1, Math.round(segEstimados))} s`]
+    ]))
+
+    enCurso.add(chatId)
     let aceptadas = 0
     let fallidas = 0
+    try {
     for (let i = 0; i < lista.length; i += LOTE) {
       const lote = lista.slice(i, i + LOTE)
       try {
@@ -93,7 +113,11 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
         console.error("[aceptar] lote falló:", e?.message || e)
         fallidas += lote.length
       }
-      if (i + LOTE < lista.length) await pausa(PAUSA_MS)
+      if (i + LOTE < lista.length) await pausaAzar()
+    }
+    } finally {
+      enCurso.delete(chatId)
+      ultimoUso.set(chatId, Date.now())
     }
 
     await reaccion(aceptadas ? "✅" : "❌")
