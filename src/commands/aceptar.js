@@ -25,6 +25,19 @@ const caja = (titulo, pie, bloques) =>
 
 const digitos = (j = "") => String(j).split("@")[0].split(":")[0].replace(/[^0-9]/g, "")
 const pausa = (ms) => new Promise(r => setTimeout(r, ms))
+async function reabrir(sock, chatId) {
+  for (let i = 0; i < 3; i++) {
+    try {
+      await sock.groupSettingUpdate(chatId, "not_announcement")
+      return true
+    } catch (e) {
+      console.error("[aceptar] no pude abrir el grupo:", e?.message || e)
+      await pausa(2000)
+    }
+  }
+  return false
+}
+
 const pausaAzar = () => pausa(PAUSA_MIN_MS + Math.floor(Math.random() * (PAUSA_MAX_MS - PAUSA_MIN_MS)))
 
 function isOwnerByNumbers({ senderNum, senderNumDecoded }) {
@@ -50,7 +63,6 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
     const isOwner = isOwnerByNumbers({ senderNum: jidToNumber(senderJid), senderNumDecoded: jidToNumber(decoded) })
     const fromMe = !!msg.key?.fromMe
 
-    // ¿quien lo usa es admin / owner?
     const md = await sock.groupMetadata(chatId)
     const esAdmin = (id) => (md.participants || []).some(p =>
       p.admin && [p.id, p.lid, p.phoneNumber].some(x => x && digitos(x) === digitos(id)))
@@ -58,7 +70,6 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
       return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ", "ꜱᴏʟᴏ ᴀᴅᴍɪɴꜱ ʏ ᴏᴡɴᴇʀꜱ", [["⛔", "𝗦𝗶𝗻 𝗽𝗲𝗿𝗺𝗶𝘀𝗼", "Solo los administradores o el owner pueden aceptar solicitudes"]]))
     }
 
-    // ¿el bot es admin?
     const botIds = [sock.user?.id, sock.user?.lid].filter(Boolean)
     if (!botIds.some(esAdmin)) {
       return await responder(caja("ᴀᴄᴇᴘᴛᴀʀ", "ʜᴀᴢ ᴀᴅᴍɪɴ ᴀʟ ʙᴏᴛ ᴘᴀʀᴀ ᴜꜱᴀʀʟᴏ", [["⚠️", "𝗕𝗼𝘁 𝘀𝗶𝗻 𝗮𝗱𝗺𝗶𝗻", "Necesito ser administrador del grupo"]]))
@@ -102,15 +113,28 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
     const lista = pendientes.slice(0, objetivo).map(p => p.jid).filter(Boolean)
 
     const segEstimados = Math.ceil(lista.length / LOTE) * ((PAUSA_MIN_MS + PAUSA_MAX_MS) / 2000) + Math.floor(lista.length / DESCANSO_CADA) * ((DESCANSO_MIN_MS + DESCANSO_MAX_MS) / 2000)
-    await responder(caja("ᴀᴄᴇᴘᴛᴀɴᴅᴏ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", "ʟᴇɴᴛᴏ ᴘᴀʀᴀ ᴇᴠɪᴛᴀʀ ʟɪᴍɪᴛᴇꜱ ᴅᴇ ᴡʜᴀᴛꜱᴀᴘᴘ", [
+    enCurso.add(chatId)
+    let aceptadas = 0
+    let fallidas = 0
+    let cerrado = false
+    let reabierto = null
+    try {
+    if (!md.announce) {
+      try {
+        await sock.groupSettingUpdate(chatId, "announcement")
+        cerrado = true
+      } catch (e) {
+        console.error("[aceptar] no pude cerrar el grupo:", e?.message || e)
+      }
+    }
+
+    await responder(caja("ᴀᴄᴇᴘᴛᴀɴᴅᴏ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", cerrado ? "ᴇʟ ɢʀᴜᴘᴏ ꜱᴇ ᴀʙʀɪʀᴀ́ ᴀʟ ᴛᴇʀᴍɪɴᴀʀ" : "ʟᴇɴᴛᴏ ᴘᴀʀᴀ ᴇᴠɪᴛᴀʀ ʟɪᴍɪᴛᴇꜱ ᴅᴇ ᴡʜᴀᴛꜱᴀᴘᴘ", [
+      ...(cerrado ? [["🔒", "𝗚𝗿𝘂𝗽𝗼", "Se cerrará el grupo mientras acepto las solicitudes"]] : []),
       ["📥", "𝗘𝗻 𝗰𝗼𝗹𝗮", `${lista.length}`],
       ["⏱", "𝗧𝗶𝗲𝗺𝗽𝗼 𝗮𝗽𝗿𝗼𝘅.", segEstimados >= 90 ? `${Math.round(segEstimados / 60)} min` : `${Math.max(1, Math.round(segEstimados))} s`]
     ]))
 
-    enCurso.add(chatId)
-    let aceptadas = 0
-    let fallidas = 0
-    try {
+
     for (let i = 0; i < lista.length; i += LOTE) {
       const lote = lista.slice(i, i + LOTE)
       try {
@@ -128,6 +152,7 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
       }
     }
     } finally {
+      if (cerrado) reabierto = await reabrir(sock, chatId)
       enCurso.delete(chatId)
       ultimoUso.set(chatId, Date.now())
     }
@@ -137,7 +162,8 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
     return await responder(caja("ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ ᴀᴄᴇᴘᴛᴀᴅᴀꜱ", "ʟᴀꜱ ᴍᴀ́ꜱ ᴀɴᴛɪɢᴜᴀꜱ ᴘʀɪᴍᴇʀᴏ", [
       ["✅", "𝗔𝗰𝗲𝗽𝘁𝗮𝗱𝗮𝘀", `${aceptadas}`],
       ...(fallidas ? [["⚠️", "𝗡𝗼 𝘀𝗲 𝗽𝘂𝗱𝗶𝗲𝗿𝗼𝗻", `${fallidas}`]] : []),
-      ["📥", "𝗣𝗲𝗻𝗱𝗶𝗲𝗻𝘁𝗲𝘀", `${restantes}`]
+      ["📥", "𝗣𝗲𝗻𝗱𝗶𝗲𝗻𝘁𝗲𝘀", `${restantes}`],
+      ...(cerrado ? [["🔓", "𝗚𝗿𝘂𝗽𝗼", reabierto ? "Abierto de nuevo" : `No pude abrirlo, usa ${usedPrefix}open`]] : [])
     ]))
   } catch (e) {
     console.error("[aceptar] ERROR:", e)
