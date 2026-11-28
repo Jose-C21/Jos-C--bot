@@ -4,14 +4,14 @@ import { getSenderJid, jidToNumber } from "../utils/jid.js"
 const SIGNATURE =
   "\n\n⟣ ©️ 𝓬𝓸𝓹𝔂𝓻𝓲𝓰𝓱𝓽|𝘑𝘊𝘒𝘡𝘐𝘯𝘧𝘪𝘯𝘪𝘵𝘺𝘓𝘰𝘰𝘱\n> ⟣ 𝗖𝗿𝗲𝗮𝘁𝗼𝗿𝘀 & 𝗗𝗲𝘃: 𝐽𝑜𝑠𝑒 𝐶 - 𝐾𝑎𝑡ℎ𝑦 𝑍"
 
-const MAX_POR_COMANDO = 50    // tope de seguridad por uso
-const LOTE = 5                // cuántas se aceptan por petición
-const PAUSA_MIN_MS = 3000     // pausa al azar entre lotes (3 a 6 s)
+const MAX_POR_COMANDO = 50    
+const LOTE = 5                
+const PAUSA_MIN_MS = 3000     
 const PAUSA_MAX_MS = 6000
-const ESPERA_ENTRE_USOS_MS = 2 * 60 * 1000  // descanso por grupo entre un uso y otro
+const ESPERA_ENTRE_USOS_MS = 2 * 60 * 1000  
 
-const enCurso = new Set()     // grupos que están aceptando ahora mismo
-const ultimoUso = new Map()   // grupo -> hora en que terminó el último uso
+const enCurso = new Set()     
+const ultimoUso = new Map()   
 
 const LN = "┄┄┄┄┄┄┄┄┄┄┄┄┄"
 const caja = (titulo, pie, bloques) =>
