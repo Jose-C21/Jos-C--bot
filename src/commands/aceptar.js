@@ -6,13 +6,16 @@ const SIGNATURE =
 
 const MIN_POR_COMANDO = 5     
 const MAX_POR_COMANDO = 200   
-const LOTE = 5                
+const LOTE = 1                
 const PAUSA_MIN_MS = 3000     
 const PAUSA_MAX_MS = 6000
+const DESCANSO_CADA = 10       
+const DESCANSO_MIN_MS = 10000 
+const DESCANSO_MAX_MS = 20000
 const ESPERA_ENTRE_USOS_MS = 2 * 60 * 1000  
 
 const enCurso = new Set()     
-const ultimoUso = new Map()    
+const ultimoUso = new Map()   
 
 const LN = "┄┄┄┄┄┄┄┄┄┄┄┄┄"
 const caja = (titulo, pie, bloques) =>
@@ -98,10 +101,10 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
     const objetivo = Math.min(n, pendientes.length, MAX_POR_COMANDO)
     const lista = pendientes.slice(0, objetivo).map(p => p.jid).filter(Boolean)
 
-    const segEstimados = Math.ceil(lista.length / LOTE) * ((PAUSA_MIN_MS + PAUSA_MAX_MS) / 2000)
+    const segEstimados = Math.ceil(lista.length / LOTE) * ((PAUSA_MIN_MS + PAUSA_MAX_MS) / 2000) + Math.floor(lista.length / DESCANSO_CADA) * ((DESCANSO_MIN_MS + DESCANSO_MAX_MS) / 2000)
     await responder(caja("ᴀᴄᴇᴘᴛᴀɴᴅᴏ ꜱᴏʟɪᴄɪᴛᴜᴅᴇꜱ", "ʟᴇɴᴛᴏ ᴘᴀʀᴀ ᴇᴠɪᴛᴀʀ ʟɪᴍɪᴛᴇꜱ ᴅᴇ ᴡʜᴀᴛꜱᴀᴘᴘ", [
       ["📥", "𝗘𝗻 𝗰𝗼𝗹𝗮", `${lista.length}`],
-      ["⏱", "𝗧𝗶𝗲𝗺𝗽𝗼 𝗮𝗽𝗿𝗼𝘅.", `${Math.max(1, Math.round(segEstimados))} s`]
+      ["⏱", "𝗧𝗶𝗲𝗺𝗽𝗼 𝗮𝗽𝗿𝗼𝘅.", segEstimados >= 90 ? `${Math.round(segEstimados / 60)} min` : `${Math.max(1, Math.round(segEstimados))} s`]
     ]))
 
     enCurso.add(chatId)
@@ -118,7 +121,11 @@ export default async function aceptar(sock, msg, { args = [], usedPrefix = "." }
         console.error("[aceptar] lote falló:", e?.message || e)
         fallidas += lote.length
       }
-      if (i + LOTE < lista.length) await pausaAzar()
+      if (i + LOTE < lista.length) {
+        const hechas = i + LOTE
+        if (hechas % DESCANSO_CADA === 0) await pausa(DESCANSO_MIN_MS + Math.floor(Math.random() * (DESCANSO_MAX_MS - DESCANSO_MIN_MS)))
+        else await pausaAzar()
+      }
     }
     } finally {
       enCurso.delete(chatId)
